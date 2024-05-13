@@ -20,5 +20,5 @@ A column wrapped in fluidRow
 Fluid Column - Shiny fluidRow + Column
 }
 \examples{
-owEDA::flucol(12, 0, shiny::h5("HEY"))
+AEDi::flucol(12, 0, shiny::h5("HEY"))
 }

@@ -11,18 +11,18 @@ sidebar_ui <- function() {
     shiny::tags$div(
       shiny::hr(),
       shiny::h5(
-        "Oliver Wyman",
+        "Rodrigo Borges",
         shiny::br(),
-        "Exploratory Data Analysis",
+        "Análise Exploratória de Dados e indicadores",
         shiny::br(),
-        "Shiny Application",
+        "Aplicativo Shiny",
         shiny::br(),
         paste0(
           "App Version: ",
           desc::desc_get_version(
             file = system.file(
               "DESCRIPTION",
-              package = "owEDA"
+              package = "AEDi"
             )
           )
         ),
@@ -35,54 +35,54 @@ sidebar_ui <- function() {
     shinydashboard::sidebarMenu(
       id = "sidebar_menus",
       shinydashboard::menuItem(
-        "Data Upload",
+        "Upload de Dados-Fontes",
         tabName = "upload_data",
         icon = shiny::icon("cloud-upload"),
         selected = TRUE
       ),
       shinydashboard::menuItem(
-        "Data Diagnostics",
+        "Diagnóstico de Dados",
         tabName = "diagnostics",
         icon = shiny::icon("cogs")
       ),
       shinydashboard::menuItem(
-        "Data Dictionary",
+        "Dicionário de Dados",
         tabName = "data_dictionary",
         icon = shiny::icon("list")
       ),
       shinydashboard::menuItem(
-        "Data Insights",
+        "Insights s/Dados",
         tabName = "insights",
         icon = shiny::icon("lightbulb"),
         startExpanded = FALSE,
         shinydashboard::menuSubItem(
-          "Distributions",
+          "Distribuições",
           tabName = "distributions",
           icon = shiny::icon("area-chart"),
         ),
         shinydashboard::menuSubItem(
-          "Univariate Analysis",
+          "Análise Univariada",
           tabName = "univariate",
           icon = shiny::icon("line-chart")
         ),
         shinydashboard::menuSubItem(
-          "Bi-Variate Analysis",
+          "Análise Bi-Variada",
           tabName = "bivariate",
           icon = shiny::icon("bar-chart")
         )
       ),
       shinydashboard::menuItem(
-        "Data Modelling",
+        "Modelagem de Dados",
         tabName = "model",
         icon = shiny::icon("calculator"),
         startExpanded = FALSE,
         shinydashboard::menuSubItem(
-          "Predictor Relationships",
+          "Relações preditoras",
           tabName = "predictors",
           icon = shiny::icon("balance-scale"),
         ),
         shinydashboard::menuSubItem(
-          "Feature Engineering",
+          "Engenharia de Indicador",
           tabName = "feature",
           icon = shiny::icon("sliders")
         )

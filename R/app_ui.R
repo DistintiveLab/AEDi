@@ -29,7 +29,7 @@ app_ui <- function() {
 }
 
 
-#' Add External Resources for owEDA
+#' Add External Resources for AEDi
 #'
 #' @return invisible
 #' @export
@@ -39,7 +39,7 @@ app_ui <- function() {
 add_external_resources <- function(){
 
   shiny::addResourcePath(
-    'www', system.file('app/www', package = 'owEDA')
+    'www', system.file('app/www', package = 'AEDi')
   )
 
   shiny::tags$head(

@@ -1,4 +1,4 @@
 library(testthat)
-library(owEDA)
+library(AEDi)
 
-test_check("owEDA")
+test_check("AEDi")

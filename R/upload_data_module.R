@@ -133,7 +133,7 @@ upload_data <- function(input, output, session) {
 
   # volumes for shinyFiles inputs
   volumes <- c(
-    'Demo Data' = fs::path_package("owEDA", "extdata"),
+    'Demo Data' = fs::path_package("AEDi", "extdata"),
     'Home' = fs::path_home(),
     'Documents' = fs::path(fs::path_home(), "Documents"),
     shinyFiles::getVolumes()()
