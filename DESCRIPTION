@@ -1,21 +1,15 @@
-Package: owEDA
-Title: Oliver Wyman Exploratory Data Analysis Package
+Package: AEDi
+Title: Pacote de inclusão de fontes de dados, indicadores, e filtros de variáveis
 Version: 0.0.1
 Authors@R: 
-    c(person(given = "Jimmy",
-             family = "Briggs",
+    c(person(given = "Rodrigo",
+             family = "Borges",
              role = c("aut", "cre"),
-             email = "jimmy.briggs@oliverwyman.com"),
-      person(given = "Scott",
-             family = "Sobel",
-             role = "ctb",
-             email = "scott.sobel@oliverwyman.com"),
-      person(given = "Oliver Wyman Actuarial Consulting, Inc.",
-             role = "fnd"))
-Description: Interactive EDA.
+             email = "rodrigo@borges.net.br"))
+Description: AED interativa e adição de dados.
 License: MIT + file LICENSE
-URL: https://github.com/jimbrig2011/owEDA
-BugReports: https://github.com/jimbrig2011/owEDA/issues
+URL: https://github.com/rodrigoesborges/AEDi
+BugReports: https://github.com/rodrigoesborges/AEDi/issues
 Imports: 
     base,
     desc,

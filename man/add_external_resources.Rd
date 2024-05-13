@@ -2,7 +2,7 @@
 % Please edit documentation in R/app_ui.R
 \name{add_external_resources}
 \alias{add_external_resources}
-\title{Add External Resources for owEDA}
+\title{Add External Resources for AEDi}
 \usage{
 add_external_resources()
 }
@@ -10,5 +10,5 @@ add_external_resources()
 invisible
 }
 \description{
-Add External Resources for owEDA
+Add External Resources for AEDi
 }

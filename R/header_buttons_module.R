@@ -13,7 +13,7 @@ header_buttons_ui <- function(id, contacts = NULL) {
   refresh <- shiny::tags$li(
     shiny::actionLink(
       ns("refresh"),
-      "Refresh",
+      "Atualizar",
       shiny::icon("refresh")
     ),
     class = "dropdown"
@@ -21,7 +21,7 @@ header_buttons_ui <- function(id, contacts = NULL) {
 
   help <- shiny::tags$li(
     shiny::actionLink(ns("help"),
-                      label = "Help",
+                      label = "Ajuda",
                       icon = shiny::icon("info-circle")),
     class = "dropdown"
   )
@@ -81,10 +81,10 @@ header_buttons <- function(input, output, session, help_path = "docs/help.Rmd") 
     shinyWidgets::confirmSweetAlert(
       session = session,
       inputId = session$ns("confirmrefresh"),
-      title = "Confirm Application Refresh?",
-      text = "All progress will be lost.",
+      title = "Confirmar Recarregamento do App?",
+      text = "Todo progresso será perdido.",
       type = "question",
-      btn_labels = c("Cancel", "Confirm"),
+      btn_labels = c("Cancelar", "Confirmar"),
       closeOnClickOutside = TRUE
     )
 
@@ -98,7 +98,7 @@ header_buttons <- function(input, output, session, help_path = "docs/help.Rmd") 
 
   shiny::observeEvent(input$help, {
     shiny::showModal(
-      shiny::modalDialog(title = shiny::div(shiny::icon("info-circle"), "Help"),
+      shiny::modalDialog(title = shiny::div(shiny::icon("info-circle"), "Ajuda"),
                          easyClose = TRUE,
                          fade = TRUE,
                          size = "l",

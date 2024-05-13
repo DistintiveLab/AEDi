@@ -6,7 +6,7 @@
 right_sidebar_ui <- function() {
 
   shinydashboardPlus::dashboardControlbar(
-    background = "dark"
+    skin = "dark"
   )
 
 }
