@@ -2,10 +2,10 @@
 #'
 #' @return HTML for app's right-sidebar
 #' @export
-#' @importFrom shinydashboardPlus rightSidebar
+#' @importFrom shinydashboardPlus dashboardControlbar
 right_sidebar_ui <- function() {
 
-  shinydashboardPlus::rightSidebar(
+  shinydashboardPlus::dashboardControlbar(
     background = "dark"
   )
 
