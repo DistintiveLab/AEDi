@@ -1,9 +1,9 @@
 
 #  ------------------------------------------------------------------------
 #
-# Title : owEDA Development History Code
-#    By : Jimmy Briggs
-#  Date : 2019-11-12
+# Título : AEDi Histórico de Desenvolvimento
+#    Por : Rodrigo Borges (baseado em trabalho de Jimmy Briggs)
+#  Date : 2024-05-12
 #
 #  ------------------------------------------------------------------------
 
@@ -17,8 +17,8 @@ pacman::p_load(
 
 # Initialize Package ------------------------------------------------------
 
-# setwd("~/Work/Oliver-Wyman/Packages")
-usethis::create_package("owEDA")
+# setwd("~/pRojetos/AEDi")
+usethis::create_package("AEDi")
 
 # ignore this script from build
 usethis::use_build_ignore("devhist.R")
@@ -45,16 +45,16 @@ usethis::use_git()
 usethis::use_github(private = TRUE)
 
 # Edit DESCRIPTION --------------------------------------------------------
-desc::desc_set(Title = "Oliver Wyman Exploratory Data Analysis Package",
-               Description = "Interactive EDA.")
+desc::desc_set(Title = "Rodrigo Borges AEDI",
+               Description = "AED interativa")
 
 # add authors
-desc::desc_add_author(given = "Scott",
-                      family = "Sobel",
-                      role = "ctb",
-                      email = "scott.sobel@oliverwyman.com")
+desc::desc_add_author(given = "Rodrigo",
+                      family = "Borges",
+                      role = c("auth","crea"),
+                      email = "rodrigo@borges.net.br")
 
-desc::desc_add_author(given = "Oliver Wyman Actuarial Consulting, Inc.",
+desc::desc_add_author(given = "Lab Cidades Ufes",
                       role = "fnd")
 
 # license

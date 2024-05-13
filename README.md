@@ -1,7 +1,9 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# Exploratory Data Analysis
+# 
+
+# Rodrigo Borges AED - Backend amigável para inclusão de indicadores (baseado em oweda) <img src='man/figures/logo.png' align="right" height="13.5" />
 
 <!-- badges: start -->
 
@@ -11,74 +13,78 @@ Experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 WIP](https://www.repostatus.org/badges/latest/wip.svg)](http://www.repostatus.org/#wip)
 <!-- badges: end -->
 
-## General Overview
+## Visão Geral
 
-The goal of **EDA** is to:
+O objetivo do AEDi é:
 
-  - Save Time
-  - Improve Efficiency
-  - Improve Project Analysis Quality
-  - Priduce Artifacts for Export Internally and Externally to Excel,
-    PowerPoint, and Word
+- Economizar tempo
 
-## Installation
+- Melhorar a eficiência
 
-> Since **EDA** is a private repository make sure you have a GitHub
-> PAT (personal access token) setup and have permission before
-> attempting to install the package. See [Usethis Setup
-> Guide](https://usethis.r-lib.org/articles/articles/usethis-setup.html#get-and-store-a-github-personal-access-token)
-> for more details on setting this up.
+- Aprimorar a qualidade da análise de projetos
 
-You can install from [GitHub](https://github.com/) with:
+- Produzir artefatos para exportação interna e externa para Excel,
+  PowerPoint e Word
+
+## Instalação
+
+Você pode instalar a partir do [GitHub](https://github.com/) com:
 
 ``` r
-remotes::install_github("jimbrig2011/EDA")
+remotes::install_github("rodrigoesborges/AEDi")
 
 # or
 
 require(devtools)
-devtools::install_github("jimbrig2011/EDA")
+devtools::install_github("rodrigoesborges/AEDi")
 ```
 
-## Run Application
+## Execução do Aplicativo
 
-After installing the package, you can run the app simply with:
+Após instalar o pacote, você pode executar o aplicativo simplesmente
+com:
 
 ``` r
-EDA::run_app()
+AEDi::run_app()
 ```
 
 ## Roadmap
 
-**EDA** desires to provide the following features:
+**AEDi** deseja fornecer os seguintes recursos:
 
-  - Data Upload Management:
-    
-      - Support easy data upload for a various number of possible data
-        types (xlsx, csv, txt, etc).
-      - Support advanced settings to upload different types of data
-        (i.e. merge across excel tabs, headers, lines to skip, etc.)
-      - Implement a “control totals” feature which allows user to
-        preview the sums of numeric columns and validate / reconcile.
-      - Allow user to create their own datasets from uploaded files via
-        merging and transforming them
-      - Provide initial summary statistics on data and preview data
-        itself
+- Gerenciamento de upload de dados:
 
-  - Data Diagnostics
+  - Suporte para upload fácil de dados para vários tipos de dados
+    possíveis (xlsx, csv, txt, etc.).
 
-  - Data Dictionary
+  - Suporte a configurações avançadas para upload de diferentes tipos de
+    dados (por exemplo, mesclar em guias do Excel, cabeçalhos, linhas
+    para pular, etc.).
 
-  - Data Validation Report
+  - Implementar um recurso de “totais de controle” que permite ao
+    usuário visualizar as somas das colunas numéricas e
+    validar/reconciliar.
 
-  - Data Summaries
+  - Permitir ao usuário criar seus próprios conjuntos de dados a partir
+    de arquivos carregados por meio da mesclagem e transformação deles.
 
-  - Data Visualization
+  - Fornecer estatísticas de resumo iniciais sobre os dados e visualizar
+    os próprios dados.
 
-  - Export to PDF, PowerPoint, CSV, Excel, and Email
+- Diagnóstico de Dados
 
-  - Multivariate Analysis
+- Dicionário de Dados
 
-  - Feature Engineering / Variable Importance
+- Relatório de Validação de Dados
 
-  - Record Linkage
+- Resumos de Dados
+
+- Visualização de Dados
+
+- Exportar para PDF, PowerPoint, CSV, Excel e Email
+
+- Análise Multivariada
+
+- Engenharia de Recursos / Importância da Variável
+
+- Vinculação de Registro
