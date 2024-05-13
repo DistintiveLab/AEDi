@@ -20,11 +20,11 @@ upload_data_ui <- function(id) {
 
   shinydashboard::tabBox(
     id = ns("data_upload"),
-    title = icon_text("cloud-upload", "Upload and Explore Data"), #"search", "Preview:"),
+    title = icon_text("cloud-upload", "Carregue e Explore Dados"), #"search", "Preview:"),
     width = 12,
 
     shiny::tabPanel(
-      title = icon_text("file", "Data Files Summary"),
+      title = icon_text("file", "Resumo de Arquivos de Dados"),
       width = 12,
       flucol(
         shiny::div(
@@ -32,8 +32,8 @@ upload_data_ui <- function(id) {
           # shinyWidgets::panel(
           shinyFiles::shinyFilesButton(
             id = ns("upload_file"),
-            label = "Upload by File",
-            title = "Select File(s) for Upload:",
+            label = "Faça upload",
+            title = "Selecione Arquivo(s) para Upload:",
             multiple = TRUE,
             # buttonType = "primary",
             icon = shiny::icon(
@@ -42,8 +42,8 @@ upload_data_ui <- function(id) {
           ),
           shinyFiles::shinyDirButton(
             id = ns("upload_folder"),
-            label = "Upload by Folder",
-            title = "Select a Folder for Upload:",
+            label = "Upload por pasta",
+            title = "Selecione uma pasta para Upload:",
             # buttonType = "primary",
             icon = shiny::icon(
               "folder-open"
@@ -51,8 +51,8 @@ upload_data_ui <- function(id) {
           ) %>% shinyjs::disabled(),
           shinyFiles::shinySaveButton(
             id = ns("save_file"),
-            label = "Save to File",
-            title = "Select a File to Save To:",
+            label = "Salvar para Arquivo",
+            title = "Selecione um arquivo para salvar:",
             # buttonType = "primary",
             icon = shiny::icon(
               "save"
@@ -70,7 +70,7 @@ upload_data_ui <- function(id) {
     ),
 
     shiny::tabPanel(
-      title = icon_text("table", "Data Table"),
+      title = icon_text("table", "Tabela de Dados"),
       flucol(
         shiny::div(
           # style = "inline; float:left",
@@ -96,7 +96,7 @@ upload_data_ui <- function(id) {
       title = icon_text("list", "Variables"),
       flucol(
 
-        "Work In Progress"
+        "Trabalho em Andamento"
 
       )
     )
@@ -196,9 +196,9 @@ upload_data <- function(input, output, session) {
         num_rows = selected_files_data_dims()$rows,
         num_cols = selected_files_data_dims()$cols,
         last_modified = as.Date.character(file.mtime(path)),
-        size = paste0(prettyNum(size, big.mark = ",", digits = 0, format = "d"), " Bytes"),
+        size = paste0(prettyNum(size, big.mark = ".",decimal.mark = ",", digits = 2, format = "d"), " Bytes"),
         custom_name = fs::path_ext_remove(name),
-        custom_desc = "Brief Description..."
+        custom_desc = "Breve Descrição..."
       )
   })
 
@@ -223,7 +223,7 @@ upload_data <- function(input, output, session) {
           list(
             extend = 'collection',
             buttons = c('csv', 'excel', 'pdf'),
-            text = 'Download'
+            text = 'Baixar'
           )
         ),
         paging = FALSE,
@@ -238,18 +238,18 @@ upload_data <- function(input, output, session) {
       class = "stripe cell-border",
       rownames = FALSE,
       colnames = c(
-        "Index",
-        "File",
-        "Path",
-        "Type",
-        "# Rows",
-        "# Columns",
-        "Last Modified",
-        "Size",
-        "Custom Name",
-        "Custom Description"
+        "Índice",
+        "Arquivo",
+        "Local",
+        "Tipo",
+        "# Linhas",
+        "# Colunas",
+        "Última modificação",
+        "Tamanho",
+        "Nome personalizado",
+        "Descrição personalizada"
       ),
-      caption = paste0("Sumary of Uploaded Data Files:"),
+      caption = paste0("Resumo de arquivos de dados carregados:"),
       style = "bootstrap",
       extensions = c("Buttons", "KeyTable"),
       editable = list(
@@ -266,7 +266,7 @@ upload_data <- function(input, output, session) {
 
     shinyWidgets::pickerInput(
       session$ns("data_picker"),
-      label = "Select Data to Display Below:",
+      label = "Selecione os Dados a Mostrar Abaixo:",
       choices = names(selected_files_data()),
       selected = names(selected_files_data())[1],
       width = "300px",
@@ -299,7 +299,7 @@ upload_data <- function(input, output, session) {
       ),
       class = "stripe cell-border",
       rownames = tibble::has_rownames(hold),
-      caption = paste0("Preview of Uploaded Dataset:"),
+      caption = paste0("Vista Prévia do Conjunto de Dados Carregado:"),
       style = "bootstrap",
       extensions = "Buttons"
     )
