@@ -3,7 +3,8 @@
 #' @return tagList for app's UI
 #' @export
 #' @importFrom shiny tagList
-#' @importFrom shinydashboardPlus dashboardPagePlus
+#' @importFrom shinydashboardPlus dashboardPage
+
 app_ui <- function() {
 
   shiny::tagList(
@@ -12,11 +13,11 @@ app_ui <- function() {
     add_external_resources(),
 
     # shinydashboardPagePlus with right_sidebar
-    shinydashboardPlus::dashboardPagePlus(
+    shinydashboardPlus::dashboardPage(
       header = header_ui(),
       sidebar = sidebar_ui(),
       body = body_ui(),
-      rightsidebar = right_sidebar_ui(),
+      controlbar = right_sidebar_ui(),
       # footer = footer_ui(),
       # title = "OW EDA",
       skin = "black" #,
