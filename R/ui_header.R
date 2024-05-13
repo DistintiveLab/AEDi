@@ -4,7 +4,7 @@
 #'
 #' @return HTML for app header
 #' @export
-#' @importFrom shinydashboardPlus dashboardHeaderPlus
+#' @importFrom shinydashboardPlus dashboardHeader
 header_ui <- function() {
 
   # contacts
@@ -13,15 +13,16 @@ header_ui <- function() {
     contact_item("Scott Sobel", "Project Manager", "614-227-6225", "scott.sobel@oliverwyman.com")
   )
 
-  shinydashboardPlus::dashboardHeaderPlus(
+  shinydashboardPlus::dashboardHeader(
     title = shiny::tags$img(
       src = "www/ow_logo_new.png",
       width = 200
     ),
-    enable_rightsidebar = TRUE,
-    rightSidebarIcon = "dashboard",
+    #enable_controlbar = TRUE,
+    controlbarIcon = "dashboard",
     # left_menu = header_left_menu_ui(),
     # fixed = TRUE,
     .list = header_buttons_ui("header", contacts = contacts)
+
   )
 }
