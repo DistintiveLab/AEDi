@@ -84,7 +84,7 @@ upload_data_ui <- function(id) {
     ),
 
     shiny::tabPanel(
-      title = icon_text("book", "Summary"),
+      title = icon_text("book", "Resumo"),
       flucol(
         shiny::uiOutput(ns("data_summary"))
       )
