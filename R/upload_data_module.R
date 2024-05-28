@@ -585,11 +585,11 @@ tipocarga <- reactive({
       write(vfonte,vars_fonte)
     }
     filtro <- input$filtraVars
-    if (nchar(filtro) > 0) {
+    if (length(filtro) > 0) {
       vfonte <-
     vfonte[
       grepl(
-        x = items,
+        x = vfonte,
         pattern = input$subsetChooseListText,
         ignore.case = TRUE
       )
