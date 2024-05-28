@@ -6,7 +6,11 @@
 right_sidebar_ui <- function() {
 
   shinydashboardPlus::dashboardControlbar(
-    skin = "dark"
+    skin = "dark",
+    shinydashboardPlus::controlbarItem(
+      "Ajuda",
+      icon("question-circle")
+    )
   )
 
 }

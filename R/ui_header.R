@@ -9,14 +9,15 @@ header_ui <- function() {
 
   # contacts
   contacts <- c(
-    contact_item("Rodrigo Borges", "Developer", "XXX-XXX-XXX", "rodrigo@borges.net.br"),
-    contact_item("Rodrigo Franklin", "Project Manager", "XXX-XXX-XXXX", "labcidades@ufes.br")
+    contact_item("Rodrigo Franklin", "Coordenador", "XXX-XXX-XXXX", "labcidades@ufes.br"),
+    contact_item("Lauriete Caneva","Coordenadora", "XXX-XXX-XXXX","email"),
+    contact_item("Rodrigo Borges", "Dev./Cientista de Dados", "XXX-XXX-XXX", "rodrigo@borges.net.br")
   )
 
   shinydashboardPlus::dashboardHeader(
     title = shiny::tags$img(
-      src = "www/ow_logo_new.png",
-      width = 200
+      src = "www/OW-Wide.png",
+      width = 120
     ),
     #enable_controlbar = TRUE,
     controlbarIcon = "dashboard",
