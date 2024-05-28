@@ -14,13 +14,14 @@
 #' @importFrom shinydashboard box
 #' @importFrom shinyFiles shinyFilesButton shinyDirButton shinySaveButton
 #' @importFrom shinyjs disabled
+#' @importFrom sortable bucket_list rank_list add_rank_list
 upload_data_ui <- function(id) {
 
   ns <- shiny::NS(id)
 
   shinydashboard::tabBox(
     id = ns("data_upload"),
-    title = icon_text("cloud-upload", "Carregue e Explore Dados"), #"search", "Preview:"),
+    title = icon_text("cloud-upload", "Carregue e Explore Dados"), #"procure", "Vista prévia:"),
     width = 12,
 
     shiny::tabPanel(
@@ -29,26 +30,22 @@ upload_data_ui <- function(id) {
       flucol(
         shiny::div(
           style = "inline; float:left",
-          # shinyWidgets::panel(
-          shinyFiles::shinyFilesButton(
-            id = ns("upload_file"),
-            label = "Faça upload",
-            title = "Selecione Arquivo(s) para Upload:",
-            multiple = TRUE,
-            # buttonType = "primary",
-            icon = shiny::icon(
-              "file"
-            )
-          ),
-          shinyFiles::shinyDirButton(
-            id = ns("upload_folder"),
-            label = "Upload por pasta",
-            title = "Selecione uma pasta para Upload:",
-            # buttonType = "primary",
-            icon = shiny::icon(
-              "folder-open"
-            )
-          ) %>% shinyjs::disabled(),
+          selectInput(
+            inputId = ns("sourcetype"),
+            label = "Tipo de Fonte",
+            choices = c(
+              "url fixo"=1,
+              "arquivo local"=2,
+              "dados.gov.br"=3,
+              "ckan"=4,
+              "ibge"=5,
+              "ipeadata"=6,
+              "bcb"=7,
+              "arquivo do servidor" = 8,
+              "url de pasta ou combinada" = 9),
+            selected=4),
+          textInput(ns("nomefonte"),"Nome curto para fonte","nova_fonte",width="100px","Indique um nome para a fonte"),
+          uiOutput(ns("cargatipo")),
           shinyFiles::shinySaveButton(
             id = ns("save_file"),
             label = "Salvar para Arquivo",
@@ -57,8 +54,9 @@ upload_data_ui <- function(id) {
             icon = shiny::icon(
               "save"
             )
-          ) %>% shinyjs::disabled()
+          )%>% shinyjs::disabled()
         ),
+
         # shiny::br(),
         DT::DTOutput(
           ns("files_table")
@@ -93,13 +91,38 @@ upload_data_ui <- function(id) {
     ),
 
     shiny::tabPanel(
-      title = icon_text("list", "Variables"),
+      title = icon_text("list", "Variáveis e Indicadores"),
+      fluidRow(
+        column(5,textInput(
+        inputId = ns("filtraVars"),
+        label = "Insira texto para filtrar variáveis de interesse",
+        value = "ano"
+      )
+      ),
+      column(1),
+      column(5,
+          textInput(
+            inputId= ns("nome_indicador"),
+            label = "Insira nome para o indicador",
+            value="nome_indicador"
+          ))
+      ),
       flucol(
-
+        shinymath::mathInput(ns("equacao"),"Insira equação"),
+        actionButton(ns("previaindicador"),"Rodar!"),
+        verbatimTextOutput(ns("text_r"), placeholder = TRUE),
         "Trabalho em Andamento"
 
+      ),
+      fluidRow(
+        shiny::uiOutput(ns("mapeiavars")),
+        shiny::uiOutput(ns("selecionados"))#,
+#        shiny::uiOutput(ns("resultados_dragdrop"))
+      ),
+      fluidRow(
+        shiny::uiOutput(ns("grupo_filtro"))
       )
-    )
+      )
   )
 
 }
@@ -123,6 +146,7 @@ upload_data_ui <- function(id) {
 #' @importFrom purrr map set_names map_dbl
 #' @importFrom rio import
 #' @importFrom shiny reactive req observe renderUI
+#' @importFrom shinymath latex2r
 #' @importFrom shinyFiles getVolumes shinyFileChoose parseFilePaths
 #' @importFrom shinyWidgets pickerInput pickerOptions
 #' @importFrom summarytools dfSummary
@@ -130,6 +154,163 @@ upload_data <- function(input, output, session) {
 
   # namespace
   ns <- session$ns
+
+    r <- reactiveVal(if(dir.exists("manipula/metadados")){
+    sort(unique(unlist(
+      lapply(list.files("manipula/metadados",pattern="*.csv",full.names =T),
+             \(x){read.csv(x)[[1]]}))))
+  })
+
+
+    fvars <-  observe({
+      filtro <- input$filtraVars
+      vfonte <- sort(unique(unlist(
+        lapply(list.files("manipula/metadados",pattern="*.csv",full.names =T),
+               \(x){read.csv(x)[[1]]}))))
+
+      r(vfonte)
+    if (nchar(filtro) > 0) {
+      vfonte <-
+        vfonte[
+          grepl(
+            x = vfonte,
+            pattern = input$filtraVars,
+            ignore.case = TRUE
+          )
+        ]
+    } else {
+      vfonte <- vfonte
+    }
+      r(vfonte)
+    })
+
+  output$mapeiavars <- renderUI({
+      column(
+        width = 5,
+        sortable::bucket_list(
+          header = "seleciones as variáveis",
+          group_name = ns("varsdestino"),
+          orientation = "horizontal",
+          class = "tamanho_max",
+          sortable::add_rank_list(
+            text = "Arraste daqui",
+            labels = r(),
+            options = sortable::sortable_options(sort = T),
+            input_id = ns("varsfontes")
+          )
+        )
+      )
+
+  })
+
+  output$selecionados <- renderUI({
+    column(5,
+           sortable::bucket_list(
+             header = "... para aqui",
+             orientation = "vertical",
+             group_name = ns("varsdestino"),
+             sortable::add_rank_list(
+               text = "A",
+               labels = NULL,
+               input_id = ns("varA")
+             ),
+             sortable::add_rank_list(
+               text = "B",
+               labels = NULL,
+               input_id = ns("varB")
+             ),
+             sortable::add_rank_list(
+               text = "C",
+               labels = NULL,
+               input_id = ns("varC")
+             ),
+             sortable::add_rank_list(
+               text = "D",
+               labels = NULL,
+               input_id = ns("varD")
+             )
+           )
+           )
+  })
+
+  output$grupo_filtro <-  renderUI({
+    tagList(
+      column(9,
+           sortable::bucket_list(
+             header = "Filtro/Grupo",
+             orientation = "horizontal",
+             group_name = ns("varsdestino"),
+             sortable::add_rank_list(
+               text = "Agrupar por",
+               labels = NULL,
+               input_id = ns("varGroup")
+             ),
+             sortable::add_rank_list(
+               text = "Filtrar por",
+               labels = NULL,
+               input_id = ns("varFilter")
+             )
+           )
+    ),
+    column(3,
+           tags$br(),
+           tags$br(),
+           tags$br(),
+           shinyWidgets::textInputIcon(icon = icon("filter"),label = "Valor do filtro:",
+                         value="",placeholder = "ex: > 2022",inputId = ns("valueFilter")))
+    )
+  })
+  output$resultados_dragdrop <- renderUI({
+    tagList(
+      fluidRow(
+        column(
+          width = 12,
+          tags$b("Resultados"),
+          column(
+            width = 12,
+
+            tags$p("Variável A"),
+            verbatimTextOutput(ns("results_1")),
+
+            tags$p("Variável B"),
+            verbatimTextOutput(ns("results_2")),
+
+            tags$p("Variável C"),
+            verbatimTextOutput(ns("results_3"))
+          )
+        )
+      )
+    )
+  })
+
+  # debugei <- observe({
+  #
+  #   print("Rodou uma vez o debugei")
+  #   input$filtraVars
+  #   input$varsfontes
+  #   input$varA
+  #   })
+
+  output$results_1 <- #reactive({
+#    print(reactiveValuesToList(input))
+    renderPrint({
+      input$varA
+
+#      debugei() # This matches the input_id of the first rank list
+    }
+    )
+  #})
+
+
+  output$results_2 <-
+    renderPrint(
+      input$varB # This matches the input_id of the second rank list
+    )
+  output$results_3 <-
+    renderPrint(
+      input$varC # Matches the group_name of the bucket list
+      # print(reactiveValuesToList(input))
+    )
 
   # volumes for shinyFiles inputs
   volumes <- c(
@@ -139,16 +320,129 @@ upload_data <- function(input, output, session) {
     shinyFiles::getVolumes()()
   )
 
+
   # observers for each button
-  shinyFiles::shinyFileChoose(input, "upload_file", session = session, roots = volumes)
+ # shinyFiles::shinyFileChoose(input, "upload_file", session = session, roots = volumes)
   # shinyFiles::shinyDirChoose(input, "upload_folder", roots = volumes)
   # shinyFiles::shinyFileSave(input, "save_file", roots = volumes)
 
-  # parse selected files
-  selected_files <- shiny::reactive({
-    shiny::req(input$upload_file)
-    shinyFiles::parseFilePaths(volumes, input$upload_file)
+
+  # uiOutput dependable on selectbox sourcetype
+
+tipocarga <- reactive({
+  req(input$sourcetype)
+
+
+  if ( input$sourcetype == "2") {
+    shiny::fileInput(
+      inputId =  ns("upload_file"),
+      label = "upload (csv,xlsx)",
+      #title = "Selecione Arquivo(s) para Upload:",
+      multiple = FALSE,
+      placeholder = "Nenhum arquivo selecionado",
+      # buttonType = "primary",
+      buttonLabel = shiny::icon(
+        "file"
+      ))
+  } else  if (input$sourcetype == "1") {
+
+  shiny::textInput( ns("upload_file"),label="URL",placeholder="https://...",width="200px")
+  } else if (input$sourcetype == "8") {
+    shinyWidgets::panel(
+      shinyFiles::shinyFilesButton(
+        id = ns("upload_file"),
+        label = "Faça upload",
+        title = "Selecione Arquivo(s) para Upload:",
+        multiple = TRUE,
+        # buttonType = "primary",
+        icon = shiny::icon(
+          "file"
+        )
+      )
+    )
+  }
+
+})
+
+  output$cargatipo <- renderUI({
+    tipocarga()
+
   })
+
+  ##Math insira equação
+  math = eventReactive(input$previaindicador, input$equacao)
+
+  output$text_r <-  renderText({
+    nfonte <- input$nomefonte
+    nind <- input$nome_indicador
+    baseq <- shinymath::latex2r(math())
+    fltro <- ifelse(is.null(input$varFilter),"",input$varFilter)
+    fltrov <- input$valueFilter
+    grpo <- input$varGroup
+    somasna <- \(x){sum(x,na.rm=T)}
+    prepara <- nfonte
+    if(length(prepara)>0) {
+    if(length(grpo)>0){
+      prepara <- paste0(prepara,"|> group_by(",paste0(grpo,collapse=","),")|>
+                        summarize(across(where(is.numeric),somasna),across(where(is.character),first))|>
+                        group_by(",grpo,")")
+    }
+    if (nchar(fltro)>0 & nchar(fltrov)>0){
+      prepara <- paste0(prepara,"|> filter(",filtro,filtrov,")")
+    }
+    vex <- c(length(input$varA)>0,
+             length(input$varB)>0 ,
+             length(input$varC)>0,
+             length(input$varD)>0)
+    varsval <- letters[1:4][vex]
+    valvars <- c(input$varA,input$varB,input$varC,input$varD)[vex]
+    names(valvars) <- varsval
+    print(valvars)
+    codigo <- paste0(nind," <- ",prepara," |>
+                     rename(setNames(c('",paste0(valvars,collapse="','"),
+                "'), c('",paste0(varsval,collapse="','"),"'))) |>
+                transmute(",nind," = ",baseq,")")
+    codigo
+    } else {baseq}
+
+    })
+
+
+  selected_files <- reactive({
+    shiny::req(input$upload_file,input$nomefonte)
+    dir.create(paste0("coleta/dados/",input$nomefonte),showWarnings = F,recursive = T)
+    extensao <- gsub(".*(\\.[^.]+)$","\\1",input$upload_file)
+    vars_fonte <- paste0("manipula/metadados/",input$nomefonte,extensao)
+    nomea <- paste0(input$nomefonte,extensao)
+
+    narq <- paste0('coleta/dados/',input$nomefonte,"/",nomea)
+    if (input$sourcetype == 2 ) {
+
+
+      readr::write_csv(readr::read_csv(nomea),narq)
+      paste0(getwd(),narq)
+    } else
+      if (input$sourcetype == 1 ) {
+
+      download.file(input$upload_file,narq,method="wget")
+      }
+    datapath=narq
+    data.frame(name=nomea,size=file.size(narq),type=extensao,
+               datapath=narq)
+
+    })
+
+
+
+
+
+
+
+  # parse selected files
+  # selected_files <- shiny::reactive({
+  #   shiny::req(input$upload_file)
+  #   shinyFiles::parseFilePaths(volumes, input$upload_file)
+  # })
 
   shiny::observe({
     req(selected_files())
@@ -160,6 +454,7 @@ upload_data <- function(input, output, session) {
     shiny::req(selected_files())
 
     paths <- selected_files() %>% dplyr::pull(datapath)
+    print(paths)
 
     purrr::map(
       paths,
@@ -260,6 +555,51 @@ upload_data <- function(input, output, session) {
   })
 
   shiny::observe(str(input$files_table_cell_edit))
+
+  metadata_writer <- observe( {
+    shiny::req(selected_files_data(), input$data_picker,
+               input$upload_file,input$nomefonte,input$filtraVars)
+    if (is.reactive(selected_files_data) || is.reactive(input$data_picker) || is.reactive(input$upload_file) ||
+        is.reactive(input$filtraVars)) {
+      extensao <- gsub(".*(\\.[^.]+)$","\\1",input$upload_file)
+      nomea <- paste0(input$nomefonte,extensao)
+    narq <- paste0('coleta/dados/',input$nomefonte,"/",nomea)
+
+    vars_fonte <- paste0("manipula/metadados/",input$nomefonte,extensao)
+    print(paste("atualiza metadados de ",narq))
+    if (extensao == ".csv") {
+      if (ncol(read.csv(narq,nrows=10))==1) {
+        if (ncol(read.csv2(narq,nrows=10))==1) {
+          if (ncol(read.csv(narq,nrows=10,skip = 1))==1) {
+            vfonte <- names(read.csv2(narq,nrows = 10,skip=1))[-1]
+          } else {
+            vfonte <- names(read.csv(narq,nrows = 10,skip=1))[-1]
+          }
+
+        } else {
+          vfonte <- names(read.csv2(narq,nrows = 10))[-1]
+        }
+      } else {
+        vfonte <- names(read.csv(narq,nrows = 10))[-1]
+      }
+      write(vfonte,vars_fonte)
+    }
+    filtro <- input$filtraVars
+    if (nchar(filtro) > 0) {
+      vfonte <-
+    vfonte[
+      grepl(
+        x = items,
+        pattern = input$subsetChooseListText,
+        ignore.case = TRUE
+      )
+    ]
+    }
+    r(vfonte)
+  }
+    }
+  )
+
 
   output$data_picker <- shiny::renderUI({
     shiny::req(selected_files_data())
