@@ -1,3 +1,31 @@
 .dataTables_wrapper .dt-buttons {
   float:right;
+
+
 }
+.tamanho_max .bucket-list {
+  max-height: 354px;
+  overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.default-sortable .rank-list {
+  min-height: 25px;
+}
+.tamanho_max .rank-list {
+    flex: 1 0 auto;
+    -webkit-border-radius: 3px;
+    border-radius: 5px;
+    background-color: white;
+    margin: 5px;
+    min-height: 45px;
+}
+ .tamanho_max .rank-list-item {
+    border-radius: 3px;
+    display: block;
+    margin:5px;
+    padding: 10px 15px;
+    background-color: #f8f8f8;
+    border: 1px solid #ddd;
+    overflow: hidden;
+ }
