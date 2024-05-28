@@ -25,7 +25,7 @@ upload_data_ui <- function(id) {
     width = 12,
 
     shiny::tabPanel(
-      title = icon_text("file", "Resumo de Arquivos de Dados"),
+      title = icon_text("file", "Inserção de Fonte"),
       width = 12,
       flucol(
         shiny::div(
