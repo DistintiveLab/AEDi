@@ -387,8 +387,8 @@ tipocarga <- reactive({
                         summarize(across(where(is.numeric),somasna),across(where(is.character),first))|>
                         group_by(",grpo,")")
     }
-    if (nchar(fltro)>0 & nchar(fltrov)>0){
-      prepara <- paste0(prepara,"|> filter(",filtro,filtrov,")")
+    if (length(fltro)>0 & length(fltrov)>0){
+      prepara <- paste0(prepara,"|> filter(",fltro,fltrov,")")
     }
     vex <- c(length(input$varA)>0,
              length(input$varB)>0 ,
@@ -590,7 +590,7 @@ tipocarga <- reactive({
     vfonte[
       grepl(
         x = vfonte,
-        pattern = input$subsetChooseListText,
+        pattern = filtroas,
         ignore.case = TRUE
       )
     ]
