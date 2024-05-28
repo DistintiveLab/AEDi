@@ -590,7 +590,7 @@ tipocarga <- reactive({
     vfonte[
       grepl(
         x = vfonte,
-        pattern = filtroas,
+        pattern = filtro,
         ignore.case = TRUE
       )
     ]
