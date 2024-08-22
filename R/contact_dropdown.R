@@ -8,7 +8,6 @@
 #' @param email Email
 #'
 #' @return contact menu item
-#' @export
 #' @importFrom shiny tagList tags a icon
 contact_item <- function(name = "First Name, Last Name",
                          role = "Role",
@@ -29,7 +28,6 @@ contact_item <- function(name = "First Name, Last Name",
 #' @param ... contact items to put into dropdown
 #'
 #' @return menu
-#' @export
 #' @importFrom shiny tags div
 contact_menu <- function(...){
 

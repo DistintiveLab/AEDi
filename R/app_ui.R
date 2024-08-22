@@ -1,7 +1,6 @@
 #' App UI
 #'
 #' @return tagList for app's UI
-#' @export
 #' @importFrom shiny tagList
 #' @importFrom shinydashboardPlus dashboardPage
 #' @importFrom shinymath mathInput latex2r
