@@ -13,8 +13,9 @@ knitr::opts_chunk$set(
 )
 ```
 
-# 
-# Rodrigo Borges AEDi - Backend amigável para inclusão de indicadores (baseado em oweda) <img src='man/figures/logo.png' align="right" height="13.5" />
+
+# Rodrigo Borges 
+# AEDi - Análise Exploratória de Dados e indicadores - Backend amigável para inclusão de indicadores (baseado em oweda) <img src='man/figures/logo.png' align="right" height="13.5" />
 
 <!-- badges: start -->
 [![Lifecycle: Experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental)

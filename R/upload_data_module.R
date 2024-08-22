@@ -10,7 +10,7 @@
 #' upload_data_ui("data")
 #' }
 #' @importFrom DT DTOutput
-#' @importFrom shiny NS fluidRow column icon uiOutput
+#' @importFrom shiny NS fluidRow column icon uiOutput selectInput
 #' @importFrom shinydashboard box
 #' @importFrom shinyFiles shinyFilesButton shinyDirButton shinySaveButton
 #' @importFrom shinyjs disabled
@@ -30,7 +30,7 @@ upload_data_ui <- function(id) {
       flucol(
         shiny::div(
           style = "inline; float:left",
-          selectInput(
+          shiny::selectInput(
             inputId = ns("sourcetype"),
             label = "Tipo de Fonte",
             choices = c(
@@ -45,7 +45,7 @@ upload_data_ui <- function(id) {
               "url de pasta ou combinada" = 9),
             selected=4),
           textInput(ns("nomefonte"),"Nome curto para fonte","nova_fonte",width="100px","Indique um nome para a fonte"),
-          uiOutput(ns("cargatipo")),
+          shinybusy::add_busy_spinner(uiOutput(ns("cargatipo"))),
           shinyFiles::shinySaveButton(
             id = ns("save_file"),
             label = "Salvar para Arquivo",
