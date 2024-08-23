@@ -19,13 +19,13 @@ test_that(
     skip_on_travis()
     skip_on_appveyor()
     x <- processx::process$new(
-      "R", 
+      "R",
       c(
-        "-e", 
-        "setwd('../../'); pkgload::load_all();run_app()"
+        "-e",
+        "setwd('/home/wlvdbaj/pRojetos/AEDi'); pkgload::load_all();run_app()"
       )
     )
-    Sys.sleep(5)
+    Sys.sleep(2)
     expect_true(x$is_alive())
     x$kill()
   }

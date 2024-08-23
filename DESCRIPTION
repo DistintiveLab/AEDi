@@ -14,6 +14,7 @@ Imports:
     base,
     desc,
     dplyr,
+    DBI,
     DT,
     fs,
     htmltools,
@@ -21,13 +22,19 @@ Imports:
     lifecycle,
     magrittr,
     purrr,
+    readr,
     rio,
+    RSQLite,
     shiny,
+    shinybusy,
     shinydashboard,
     shinydashboardPlus,
     shinyFiles,
     shinyjs,
+    shinymath,
     shinyWidgets,
+    sortable,
+    summarytools,
     tibble
 Suggests: 
     attachment,
@@ -39,7 +46,24 @@ Suggests:
 RdMacros: 
     lifecycle
 Encoding: UTF-8
-Language: es
+Language: pt-BR
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
+Collate: 
+    'AEDi-package.R'
+    'data_summary.R'
+    'dbprepare.R'
+    'header_buttons_module.R'
+    'run_app.R'
+    'server_app.R'
+    'ui_app.R'
+    'ui_body.R'
+    'ui_header.R'
+    'ui_zcontact_dropdown.R'
+    'ui_helpers.R'
+    'ui_rightbar.R'
+    'ui_sidebar.R'
+    'upload_data_module.R'
+    'utils-pipe.R'
+    'utils.R'
