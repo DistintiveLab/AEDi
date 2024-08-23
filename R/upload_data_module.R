@@ -10,22 +10,25 @@
 #' upload_data_ui("data")
 #' }
 #' @importFrom DT DTOutput
-#' @importFrom shiny NS fluidRow column icon uiOutput selectInput
+#' @importFrom readr write_csv
+#' @importFrom shiny NS fluidRow column icon uiOutput selectInput textInput
+#' @importFrom shinybusy add_busy_spinner
 #' @importFrom shinydashboard box
 #' @importFrom shinyFiles shinyFilesButton shinyDirButton shinySaveButton
 #' @importFrom shinyjs disabled
 #' @importFrom sortable bucket_list rank_list add_rank_list
+#' @importFrom utils read.csv read.csv2 download.file str
 upload_data_ui <- function(id) {
 
   ns <- shiny::NS(id)
 
   shinydashboard::tabBox(
     id = ns("data_upload"),
-    title = icon_text("cloud-upload", "Carregue e Explore Dados"), #"procure", "Vista prévia:"),
+    title = icon_text("cloud-upload", "Carregue e Explore Dados"), #"procure", "Vista pr\u00e9via:"),
     width = 12,
 
     shiny::tabPanel(
-      title = icon_text("file", "Inserção de Fonte"),
+      title = icon_text("file", "Inser\u00e7\u00c3o de Fonte"),
       width = 12,
       flucol(
         shiny::div(
@@ -44,8 +47,8 @@ upload_data_ui <- function(id) {
               "arquivo do servidor" = 8,
               "url de pasta ou combinada" = 9),
             selected=4),
-          textInput(ns("nomefonte"),"Nome curto para fonte","nova_fonte",width="100px","Indique um nome para a fonte"),
-          shinybusy::add_busy_spinner(uiOutput(ns("cargatipo"))),
+          shiny::textInput(ns("nomefonte"),"Nome curto para fonte","nova_fonte",width="100px","Indique um nome para a fonte"),
+          shinybusy::add_busy_spinner(uiOutput(ns("cargatipo")),spin="double-bounce"),
           shinyFiles::shinySaveButton(
             id = ns("save_file"),
             label = "Salvar para Arquivo",
@@ -91,26 +94,26 @@ upload_data_ui <- function(id) {
     ),
 
     shiny::tabPanel(
-      title = icon_text("list", "Variáveis e Indicadores"),
+      title = icon_text("list", "Vari\u00e0veis e Indicadores"),
       fluidRow(
-        column(5,textInput(
+        column(5,shiny::textInput(
         inputId = ns("filtraVars"),
-        label = "Insira texto para filtrar variáveis de interesse",
+        label = "Insira texto para filtrar vari\u00e0veis de interesse",
         value = "ano"
       )
       ),
       column(1),
       column(5,
-          textInput(
+          shiny::textInput(
             inputId= ns("nome_indicador"),
             label = "Insira nome para o indicador",
             value="nome_indicador"
           ))
       ),
       flucol(
-        shinymath::mathInput(ns("equacao"),"Insira equação"),
-        actionButton(ns("previaindicador"),"Rodar!"),
-        verbatimTextOutput(ns("text_r"), placeholder = TRUE),
+        shinymath::mathInput(ns("equacao"),"Insira equa\u00e7\u00c3o"),
+        shiny::actionButton(ns("previaindicador"),"Rodar!"),
+        shiny::verbatimTextOutput(ns("text_r"), placeholder = TRUE),
         "Trabalho em Andamento"
 
       ),
@@ -158,7 +161,7 @@ upload_data <- function(input, output, session) {
     r <- reactiveVal(if(dir.exists("manipula/metadados")){
     sort(unique(unlist(
       lapply(list.files("manipula/metadados",pattern="*.csv",full.names =T),
-             \(x){read.csv(x)[[1]]}))))
+             \(x){base::read.csv(x)[[1]]}))))
   })
 
 
@@ -166,7 +169,7 @@ upload_data <- function(input, output, session) {
       filtro <- input$filtraVars
       vfonte <- sort(unique(unlist(
         lapply(list.files("manipula/metadados",pattern="*.csv",full.names =T),
-               \(x){read.csv(x)[[1]]}))))
+               \(x){base::read.csv(x)[[1]]}))))
 
       r(vfonte)
     if (nchar(filtro) > 0) {
@@ -188,7 +191,7 @@ upload_data <- function(input, output, session) {
       column(
         width = 5,
         sortable::bucket_list(
-          header = "seleciones as variáveis",
+          header = "seleciones as vari\u00e0veis",
           group_name = ns("varsdestino"),
           orientation = "horizontal",
           class = "tamanho_max",
@@ -269,14 +272,14 @@ upload_data <- function(input, output, session) {
           column(
             width = 12,
 
-            tags$p("Variável A"),
-            verbatimTextOutput(ns("results_1")),
+            tags$p("Vari\u00e0vel A"),
+            shiny::verbatimTextOutput(ns("results_1")),
 
-            tags$p("Variável B"),
-            verbatimTextOutput(ns("results_2")),
+            tags$p("Vari\u00e0vel B"),
+            shiny::verbatimTextOutput(ns("results_2")),
 
-            tags$p("Variável C"),
-            verbatimTextOutput(ns("results_3"))
+            tags$p("Vari\u00e0vel C"),
+            shiny::verbatimTextOutput(ns("results_3"))
           )
         )
       )
@@ -351,7 +354,7 @@ tipocarga <- reactive({
     shinyWidgets::panel(
       shinyFiles::shinyFilesButton(
         id = ns("upload_file"),
-        label = "Faça upload",
+        label = "Fa\u00e7a upload",
         title = "Selecione Arquivo(s) para Upload:",
         multiple = TRUE,
         # buttonType = "primary",
@@ -372,7 +375,7 @@ tipocarga <- reactive({
   ##Math insira equação
   math = eventReactive(input$previaindicador, input$equacao)
 
-  output$text_r <-  renderText({
+  output$text_r <-  shiny::renderText({
     nfonte <- input$nomefonte
     nind <- input$nome_indicador
     baseq <- shinymath::latex2r(math())
@@ -493,7 +496,7 @@ tipocarga <- reactive({
         last_modified = as.Date.character(file.mtime(path)),
         size = paste0(prettyNum(size, big.mark = ".",decimal.mark = ",", digits = 2, format = "d"), " Bytes"),
         custom_name = fs::path_ext_remove(name),
-        custom_desc = "Breve Descrição..."
+        custom_desc = "Breve Descri\u00e7\u00c3o..."
       )
   })
 
@@ -533,16 +536,16 @@ tipocarga <- reactive({
       class = "stripe cell-border",
       rownames = FALSE,
       colnames = c(
-        "Índice",
+        "\u00cdndice",
         "Arquivo",
         "Local",
         "Tipo",
         "# Linhas",
         "# Colunas",
-        "Última modificação",
+        "\u00daltima modifica\u00e7\u00c3o",
         "Tamanho",
         "Nome personalizado",
-        "Descrição personalizada"
+        "Descri\u00e7\u00c3o personalizada"
       ),
       caption = paste0("Resumo de arquivos de dados carregados:"),
       style = "bootstrap",
@@ -568,19 +571,19 @@ tipocarga <- reactive({
     vars_fonte <- paste0("manipula/metadados/",input$nomefonte,extensao)
     print(paste("atualiza metadados de ",narq))
     if (extensao == ".csv") {
-      if (ncol(read.csv(narq,nrows=10))==1) {
-        if (ncol(read.csv2(narq,nrows=10))==1) {
-          if (ncol(read.csv(narq,nrows=10,skip = 1))==1) {
-            vfonte <- names(read.csv2(narq,nrows = 10,skip=1))[-1]
+      if (ncol(base::read.csv(narq,nrows=10))==1) {
+        if (ncol(base::read.csv2(narq,nrows=10))==1) {
+          if (ncol(base::read.csv(narq,nrows=10,skip = 1))==1) {
+            vfonte <- names(base::read.csv2(narq,nrows = 10,skip=1))[-1]
           } else {
-            vfonte <- names(read.csv(narq,nrows = 10,skip=1))[-1]
+            vfonte <- names(base::read.csv(narq,nrows = 10,skip=1))[-1]
           }
 
         } else {
-          vfonte <- names(read.csv2(narq,nrows = 10))[-1]
+          vfonte <- names(base::read.csv2(narq,nrows = 10))[-1]
         }
       } else {
-        vfonte <- names(read.csv(narq,nrows = 10))[-1]
+        vfonte <- names(base::read.csv(narq,nrows = 10))[-1]
       }
       write(vfonte,vars_fonte)
     }
@@ -639,7 +642,7 @@ tipocarga <- reactive({
       ),
       class = "stripe cell-border",
       rownames = tibble::has_rownames(hold),
-      caption = paste0("Vista Prévia do Conjunto de Dados Carregado:"),
+      caption = paste0("Vista Pr\u00e9via do Conjunto de Dados Carregado:"),
       style = "bootstrap",
       extensions = "Buttons"
     )

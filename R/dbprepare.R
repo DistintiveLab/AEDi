@@ -1,8 +1,12 @@
-# Credenciais de banco de dados devem ser inseridos
-# no arquivo .Renviron , certificando-se de não adicionar ao repositório
-# no GitHub, por segurança
-library(RSQLite)
-library(dplyr)
+#' Prepare app_db
+#'
+#' Writes sqlite database on current dir
+#'
+#' @name prepare_db
+#' @param tdbname Name of the database that will be created
+#'  @importFrom RSQLite SQLite
+#'  @importFrom DBI dbExecute dbGetQuery dbSendQuery
+
 #Clean environment
 rm(list=ls())
 prepare_db <- \(tdbname="dashboard_db.sqlite") {
@@ -74,7 +78,7 @@ data_class <- tibble::tribble(
 
 data_freq <- tibble::tribble(
   ~data_freq_id,~freq_name,~freq_ndays,
-  1,"diária",1,
+  1,"di\u00e0ria",1,
   2,"semanal",7,
   3,"quinzenal",15,
   4,"mensal",30,
@@ -115,7 +119,7 @@ visdata <- tibble::tribble(
 vis_type <- tibble::tribble(
   ~vis_type_id,~vistype_name,
   1,"tabela",
-  2,"gráfico",
+  2,"gr\u00e0fico",
   3,"mapa"
 )|>dplyr::mutate(dplyr::across(contains("id"),as.integer),dplyr::across(contains("name"),as.character))
 
@@ -214,10 +218,10 @@ altera_adiciona_chave <- \(tbname,n_pk=1,tdbname = "dashboard_db.sqlite")  {
   dbSendQuery(con,paste0("ALTER TABLE `",tbname,"` RENAME TO `",tbname,"_old`"))
   ##4) USE CREATE TABLE
   if (n_pk == 1) {
-    print(paste("adiciona única chave primária para tabela ",tbname))
+    print(paste("adiciona \\u00fanica chave prim\u00e0ria para tabela ",tbname))
     createquery <-gsub(paste0("(",id_tab[1],"`) ([^,]*),"),"\\1 \\2 PRIMARY KEY,", createquery)
   } else {
-    print(paste("adiciona",n_pk,"chaves primárias  para tabela ",tbname))
+    print(paste("adiciona",n_pk,"chaves prim\u00e0rias  para tabela ",tbname))
     createquery <- gsub("\\)$",paste0(", PRIMARY KEY (",paste0("`",id_tab[1:n_pk],collapse="`, "),"`))"),createquery)
   }
   adiciona_foreign <- \(fk,ft){
