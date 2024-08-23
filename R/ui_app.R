@@ -1,11 +1,12 @@
 #' App UI
 #'
+#' @name app_ui
 #' @return tagList for app's UI
 #' @importFrom shiny tagList
 #' @importFrom shinydashboardPlus dashboardPage
 #' @importFrom shinymath mathInput latex2r
-
-app_ui <- function() {
+#' @export
+app_ui <- function(){
 
   shiny::tagList(
 
@@ -18,11 +19,11 @@ app_ui <- function() {
       sidebar = sidebar_ui(),
       body = body_ui(),
       controlbar = right_sidebar_ui(),
-      # footer = footer_ui(),
-      # title = "OW EDA",
-      skin = "black" #,
-      # enable_preloader = TRUE,
-      # loading_duration = 2
+      #footer = footer_ui(),
+      #title = "AEDi",
+      skin = "black" ,
+#       enable_preloader = TRUE,
+#       loading_duration = 2
     )
   )
 
@@ -31,8 +32,10 @@ app_ui <- function() {
 
 #' Add External Resources for AEDi
 #'
+#' function similar to golem?
+#'
+#' @name add_external_resources
 #' @return invisible
-#' @export
 #' @importFrom shinyjs useShinyjs
 #' @importFrom shinyWidgets useSweetAlert useShinydashboardPlus
 #' @importFrom shiny addResourcePath tags
@@ -45,7 +48,7 @@ add_external_resources <- function(){
   shiny::tags$head(
     shinyjs::useShinyjs(),
     shinyWidgets::useSweetAlert(),
-    shinyWidgets::useShinydashboardPlus(),
+    #shinyWidgets::useShinydashboardPlus(),
     # shinyCleave::includeCleave(country = "us"),
     shiny::tags$link(rel = "stylesheet", type = "text/css", href = "www/styles.css"),
     shiny::tags$script(src = "www/custom.js")

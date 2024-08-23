@@ -2,13 +2,15 @@
 #'
 #' Creates an item to be placed in a contact dropdownmenu.
 #'
+#' @name contact_item
 #' @param name Name
 #' @param role Role
 #' @param phone Phone
 #' @param email Email
-#'
 #' @return contact menu item
 #' @importFrom shiny tagList tags a icon
+#' @examples
+#' contact_item("Rodrigo Borges","Data Scientist","5595959595","appsatdistintive.com")
 contact_item <- function(name = "First Name, Last Name",
                          role = "Role",
                          phone = "###-###-####",
@@ -23,11 +25,14 @@ contact_item <- function(name = "First Name, Last Name",
 
 }
 
+#' Contact Menu
+#'
 #' Creates a dropdown menu specific for contacts
 #'
+#' @name contact_menu
 #' @param ... contact items to put into dropdown
-#'
 #' @return menu
+#'
 #' @importFrom shiny tags div
 contact_menu <- function(...){
 

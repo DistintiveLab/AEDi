@@ -14,7 +14,7 @@ sidebar_ui <- function() {
       shiny::h5(
         "LabCidadES/ProdestES",
         shiny::br(),
-        "Análise Exploratória de Dados e indicadores",
+        "An\u00e0lise Explorat\u00f3ria de Dados e indicadores",
         shiny::br(),
         "Aplicativo Shiny",
         shiny::br(),
@@ -42,12 +42,12 @@ sidebar_ui <- function() {
         selected = TRUE
       ),
        shinydashboard::menuItem(
-         "Diagnóstico de Dados",
+         "Diagn\u00f3stico de Dados",
          tabName = "diagnostics",
          icon = shiny::icon("cogs")
        ),
        shinydashboard::menuItem(
-         "Dicionário de Dados",
+         "Dicion\u00e0rio de Dados",
          tabName = "data_dictionary",
          icon = shiny::icon("list")
        ),
@@ -57,17 +57,17 @@ sidebar_ui <- function() {
          icon = shiny::icon("lightbulb"),
          startExpanded = FALSE,
          shinydashboard::menuSubItem(
-           "Distribuições",
+           "Distribui\u00e3\u00f5es",
            tabName = "distributions",
            icon = shiny::icon("area-chart"),
          ),
          shinydashboard::menuSubItem(
-           "Análise Univariada",
+           "An\u00e0lise Univariada",
            tabName = "univariate",
            icon = shiny::icon("line-chart")
          ),
          shinydashboard::menuSubItem(
-           "Análise Bi-Variada",
+           "An\u00e0lise Bi-Variada",
            tabName = "bivariate",
            icon = shiny::icon("bar-chart")
          )
@@ -78,7 +78,7 @@ sidebar_ui <- function() {
          icon = shiny::icon("calculator"),
          startExpanded = FALSE,
          shinydashboard::menuSubItem(
-           "Relações preditoras",
+           "Rela\u00e7\u00f5es preditoras",
            tabName = "predictors",
            icon = shiny::icon("balance-scale"),
          ),
@@ -96,7 +96,7 @@ sidebar_ui <- function() {
        src = "www/MMC-Wide.png",
        width = 200
      ),
-     href = "http://www.oliverwyman.com/index.html"
+     href = "http://www.distintive.com.br"
    )
  )
 )
