@@ -11,7 +11,7 @@
 rm(list=ls())
 prepare_db <- \(tdbname="dashboard_db.sqlite") {
 
-con <- RSQLite::dbConnect(SQLite(), dbname=tdbname)
+con <- RSQLite::dbConnect(RSQLite::SQLite(), dbname=tdbname)
 # if concurrent use is to be expected
 DBI::dbExecute(con, "PRAGMA busy_timeout=10000")
 DBI::dbExecute(con, "PRAGMA journal_mode=WAL")
