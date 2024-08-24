@@ -22,9 +22,16 @@ test_that(
       "R",
       c(
         "-e",
-        "setwd('/home/wlvdbaj/pRojetos/AEDi'); pkgload::load_all();run_app()"
-      )
+        "sink(file = 'sink.txt', split = TRUE);setwd('../../'); pkgload::load_all();run_app()"
+
+      ), stdout="|",stderr="|"
     )
+
+#    Sys.sleep(1)
+    print(x$poll_io(-1))
+    print(x$read_output_lines())
+    Sys.sleep(5)
+    print(x$read_error_lines())
     Sys.sleep(2)
     expect_true(x$is_alive())
     x$kill()

@@ -26,6 +26,3 @@ contact menu item
 \description{
 Creates an item to be placed in a contact dropdownmenu.
 }
-\examples{
-contact_item("Rodrigo Borges","Data Scientist","5595959595","appsatdistintive.com")
-}
