@@ -3,3 +3,7 @@
 ^devhist\.R$
 ^admin$
 ^\.github/workflows$
+^LICENSE\.md
+^data-raw
+^docs
+^README.Rmd

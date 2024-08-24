@@ -28,7 +28,7 @@ upload_data_ui <- function(id) {
     width = 12,
 
     shiny::tabPanel(
-      title = icon_text("file", "Inser\u00e7\u00c3o de Fonte"),
+      title = icon_text("file", "Inser\u00e7\u00e3o de Fonte"),
       width = 12,
       flucol(
         shiny::div(
@@ -94,11 +94,11 @@ upload_data_ui <- function(id) {
     ),
 
     shiny::tabPanel(
-      title = icon_text("list", "Vari\u00e0veis e Indicadores"),
+      title = icon_text("list", "Vari\u00e1veis e Indicadores"),
       fluidRow(
         column(5,shiny::textInput(
         inputId = ns("filtraVars"),
-        label = "Insira texto para filtrar vari\u00e0veis de interesse",
+        label = "Insira texto para filtrar vari\u00e1veis de interesse",
         value = "ano"
       )
       ),
@@ -111,7 +111,7 @@ upload_data_ui <- function(id) {
           ))
       ),
       flucol(
-        shinymath::mathInput(ns("equacao"),"Insira equa\u00e7\u00c3o"),
+        shinymath::mathInput(ns("equacao"),"Insira equa\u00e7\u00e3o"),
         shiny::actionButton(ns("previaindicador"),"Rodar!"),
         shiny::verbatimTextOutput(ns("text_r"), placeholder = TRUE),
         "Trabalho em Andamento"
@@ -161,7 +161,7 @@ upload_data <- function(input, output, session) {
     r <- reactiveVal(if(dir.exists("manipula/metadados")){
     sort(unique(unlist(
       lapply(list.files("manipula/metadados",pattern="*.csv",full.names =T),
-             \(x){base::read.csv(x)[[1]]}))))
+             \(x){utils::read.csv(x)[[1]]}))))
   })
 
 
@@ -169,7 +169,7 @@ upload_data <- function(input, output, session) {
       filtro <- input$filtraVars
       vfonte <- sort(unique(unlist(
         lapply(list.files("manipula/metadados",pattern="*.csv",full.names =T),
-               \(x){base::read.csv(x)[[1]]}))))
+               \(x){utils::read.csv(x)[[1]]}))))
 
       r(vfonte)
     if (nchar(filtro) > 0) {
@@ -191,7 +191,7 @@ upload_data <- function(input, output, session) {
       column(
         width = 5,
         sortable::bucket_list(
-          header = "seleciones as vari\u00e0veis",
+          header = "seleciones as vari\u00e1veis",
           group_name = ns("varsdestino"),
           orientation = "horizontal",
           class = "tamanho_max",
@@ -272,13 +272,13 @@ upload_data <- function(input, output, session) {
           column(
             width = 12,
 
-            tags$p("Vari\u00e0vel A"),
+            tags$p("Vari\u00e1vel A"),
             shiny::verbatimTextOutput(ns("results_1")),
 
-            tags$p("Vari\u00e0vel B"),
+            tags$p("Vari\u00e1vel B"),
             shiny::verbatimTextOutput(ns("results_2")),
 
-            tags$p("Vari\u00e0vel C"),
+            tags$p("Vari\u00e1vel C"),
             shiny::verbatimTextOutput(ns("results_3"))
           )
         )
@@ -496,7 +496,7 @@ tipocarga <- reactive({
         last_modified = as.Date.character(file.mtime(path)),
         size = paste0(prettyNum(size, big.mark = ".",decimal.mark = ",", digits = 2, format = "d"), " Bytes"),
         custom_name = fs::path_ext_remove(name),
-        custom_desc = "Breve Descri\u00e7\u00c3o..."
+        custom_desc = "Breve Descri\u00e7\u00e3o..."
       )
   })
 
@@ -542,10 +542,10 @@ tipocarga <- reactive({
         "Tipo",
         "# Linhas",
         "# Colunas",
-        "\u00daltima modifica\u00e7\u00c3o",
+        "\u00daltima modifica\u00e7\u00e3o",
         "Tamanho",
         "Nome personalizado",
-        "Descri\u00e7\u00c3o personalizada"
+        "Descri\u00e7\u00e3o personalizada"
       ),
       caption = paste0("Resumo de arquivos de dados carregados:"),
       style = "bootstrap",
@@ -571,19 +571,19 @@ tipocarga <- reactive({
     vars_fonte <- paste0("manipula/metadados/",input$nomefonte,extensao)
     print(paste("atualiza metadados de ",narq))
     if (extensao == ".csv") {
-      if (ncol(base::read.csv(narq,nrows=10))==1) {
-        if (ncol(base::read.csv2(narq,nrows=10))==1) {
-          if (ncol(base::read.csv(narq,nrows=10,skip = 1))==1) {
-            vfonte <- names(base::read.csv2(narq,nrows = 10,skip=1))[-1]
+      if (ncol(utils::read.csv(narq,nrows=10))==1) {
+        if (ncol(utils::read.csv2(narq,nrows=10))==1) {
+          if (ncol(utils::read.csv(narq,nrows=10,skip = 1))==1) {
+            vfonte <- names(utils::read.csv2(narq,nrows = 10,skip=1))[-1]
           } else {
-            vfonte <- names(base::read.csv(narq,nrows = 10,skip=1))[-1]
+            vfonte <- names(utils::read.csv(narq,nrows = 10,skip=1))[-1]
           }
 
         } else {
-          vfonte <- names(base::read.csv2(narq,nrows = 10))[-1]
+          vfonte <- names(utils::read.csv2(narq,nrows = 10))[-1]
         }
       } else {
-        vfonte <- names(base::read.csv(narq,nrows = 10))[-1]
+        vfonte <- names(utils::read.csv(narq,nrows = 10))[-1]
       }
       write(vfonte,vars_fonte)
     }

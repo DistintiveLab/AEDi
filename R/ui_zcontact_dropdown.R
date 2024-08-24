@@ -9,8 +9,6 @@
 #' @param email Email
 #' @return contact menu item
 #' @importFrom shiny tagList tags a icon
-#' @examples
-#' contact_item("Rodrigo Borges","Data Scientist","5595959595","appsatdistintive.com")
 contact_item <- function(name = "First Name, Last Name",
                          role = "Role",
                          phone = "###-###-####",
