@@ -11,16 +11,13 @@ License: MIT + file LICENSE
 URL: https://github.com/rodrigoesborges/AEDi
 BugReports: https://github.com/rodrigoesborges/AEDi/issues
 Imports: 
-    base,
     desc,
     dplyr,
     DBI,
     DT,
     fs,
     htmltools,
-    htmlwidgets,
     lifecycle,
-    magrittr,
     purrr,
     readr,
     rio,

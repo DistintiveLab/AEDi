@@ -12,6 +12,7 @@
 #' @importFrom DT DTOutput
 #' @importFrom readr write_csv
 #' @importFrom shiny NS fluidRow column icon uiOutput selectInput textInput
+#' reactiveVal is.reactive renderPrint eventReactive
 #' @importFrom shinybusy add_busy_spinner
 #' @importFrom shinydashboard box
 #' @importFrom shinyFiles shinyFilesButton shinyDirButton shinySaveButton
@@ -57,7 +58,7 @@ upload_data_ui <- function(id) {
             icon = shiny::icon(
               "save"
             )
-          )%>% shinyjs::disabled()
+          )|> shinyjs::disabled()
         ),
 
         # shiny::br(),
@@ -158,7 +159,7 @@ upload_data <- function(input, output, session) {
   # namespace
   ns <- session$ns
 
-    r <- reactiveVal(if(dir.exists("manipula/metadados")){
+    r <- shiny::reactiveVal(if(dir.exists("manipula/metadados")){
     sort(unique(unlist(
       lapply(list.files("manipula/metadados",pattern="*.csv",full.names =T),
              \(x){utils::read.csv(x)[[1]]}))))
@@ -296,7 +297,7 @@ upload_data <- function(input, output, session) {
 
   output$results_1 <- #reactive({
 #    print(reactiveValuesToList(input))
-    renderPrint({
+    shiny::renderPrint({
       input$varA
 
 #      debugei() # This matches the input_id of the first rank list
@@ -306,11 +307,11 @@ upload_data <- function(input, output, session) {
 
 
   output$results_2 <-
-    renderPrint(
+    shiny::renderPrint(
       input$varB # This matches the input_id of the second rank list
     )
   output$results_3 <-
-    renderPrint(
+    shiny::renderPrint(
       input$varC # Matches the group_name of the bucket list
       # print(reactiveValuesToList(input))
     )
@@ -373,7 +374,7 @@ tipocarga <- reactive({
   })
 
   ##Math insira equação
-  math = eventReactive(input$previaindicador, input$equacao)
+  math = shiny::eventReactive(input$previaindicador, input$equacao)
 
   output$text_r <-  shiny::renderText({
     nfonte <- input$nomefonte
@@ -456,14 +457,14 @@ tipocarga <- reactive({
   selected_files_data <- shiny::reactive({
     shiny::req(selected_files())
 
-    paths <- selected_files() %>% dplyr::pull(datapath)
+    paths <- selected_files() |> dplyr::pull(datapath)
     print(paths)
 
     purrr::map(
       paths,
       rio::import, # TODO: customize import for excel tabs, etc.
       setclass = "tibble"
-    ) %>%
+    ) |>
       purrr::set_names(fs::path_ext_remove(basename(paths)))
   })
 
@@ -485,7 +486,7 @@ tipocarga <- reactive({
 
     shiny::req(selected_files(), selected_files_data_dims())
 
-    selected_files() %>%
+    selected_files() |>
       dplyr::transmute(
         index = dplyr::row_number(),
         file = name,
@@ -562,8 +563,8 @@ tipocarga <- reactive({
   metadata_writer <- observe( {
     shiny::req(selected_files_data(), input$data_picker,
                input$upload_file,input$nomefonte,input$filtraVars)
-    if (is.reactive(selected_files_data) || is.reactive(input$data_picker) || is.reactive(input$upload_file) ||
-        is.reactive(input$filtraVars)) {
+    if (shiny::is.reactive(selected_files_data) || shiny::is.reactive(input$data_picker) || shiny::is.reactive(input$upload_file) ||
+        shiny::is.reactive(input$filtraVars)) {
       extensao <- gsub(".*(\\.[^.]+)$","\\1",input$upload_file)
       nomea <- paste0(input$nomefonte,extensao)
     narq <- paste0('coleta/dados/',input$nomefonte,"/",nomea)
