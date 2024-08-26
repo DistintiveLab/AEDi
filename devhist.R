@@ -45,8 +45,8 @@ usethis::use_git()
 usethis::use_github(private = TRUE)
 
 # Edit DESCRIPTION --------------------------------------------------------
-desc::desc_set(Title = "Rodrigo Borges AEDI",
-               Description = "AED interativa")
+desc::desc_set(Title = "AEDi",
+               Description = "Análise Exploratória de Dados e gerenciamento de indicadores interativo")
 
 # add authors
 desc::desc_add_author(given = "Rodrigo",
@@ -70,7 +70,7 @@ devtools::install()
 
 # Documentation -----------------------------------------------------------
 usethis::use_readme_rmd()
-usethis::use_logo("../../../../../Pictures/OWAC/ow_logo_new.png")
+usethis::use_logo("inst/app/www/aedi_logo_new.png")
 usethis::use_lifecycle_badge("Experimental")
 usethis::use_badge(
   "Project Status: WIP",
