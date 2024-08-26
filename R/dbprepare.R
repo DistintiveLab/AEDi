@@ -53,7 +53,7 @@ mdata_group <- tibble::tribble(
                 dplyr::across(dplyr::matches("dataunit|source|url|name"),as.character))
 
 mdata <- tibble::tribble(
-  ~mdata_id,~data_name,~data_desc
+  ~mdata_id,~orig_name,~data_name,~data_desc
 )|>
   dplyr::mutate(dplyr::across(dplyr::matches("_id$"),as.integer),
          dplyr::across(dplyr::matches("dataunit|source|url|name|desc"),as.character))
