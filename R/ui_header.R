@@ -9,9 +9,8 @@ header_ui <- function() {
 
   # contacts
   contacts <- c(
-    contact_item("Rodrigo Franklin", "Coordenador", "XXX-XXX-XXXX", "labcidades@ufes.br"),
-    contact_item("Lauriete Caneva","Coordenadora", "XXX-XXX-XXXX","email"),
-    contact_item("Rodrigo Borges", "Dev./Cientista de Dados", "XXX-XXX-XXX", "rodrigo@borges.net.br")
+    contact_item("Rodrigo Borges", "Dev./Cientista de Dados", "XXX-XXX-XXX", "rodrigo@borges.net.br"),
+    contact_item("Distintive", "Inteligencia para políticas publicas", "61-XXXX-XXXX", "apps@distintive.com.br")
   )
 
   shinydashboardPlus::dashboardHeader(
