@@ -163,7 +163,7 @@ npks <- data.frame("table"=ls(pattern="^[^ct]"),
                    "n_pk" = 1)
 
 
-npks[npks$table== "data_values",]$n_pk <- 2
+npks[npks$table== "data_values",]$n_pk <- 3
 npks[npks$table== "visdata",]$n_pk <- 2
 npks[npks$table== "mdata_group",]$n_pk <- 2
 npks$nids  <-  sapply(npks$table,\(x){sum(grepl("_id$",names(get(x))))})
