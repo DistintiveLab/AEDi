@@ -16,7 +16,7 @@ header_ui <- function() {
 
   shinydashboardPlus::dashboardHeader(
     title = shiny::tags$img(
-      src = "www/OW-Wide.png",
+      src = "www/aedi-Wide.png",
       width = 120
     ),
     #enable_controlbar = TRUE,
