@@ -93,7 +93,7 @@ sidebar_ui <- function() {
    style = 'padding: 10px; position:fixed; bottom:0px;',
    shiny::tags$a(
      shiny::tags$img(
-       src = "www/MMC-Wide.png",
+       src = "www/aedi-Wide.png",
        width = 200
      ),
      href = "http://www.distintive.com.br"
