@@ -39,17 +39,18 @@ upload_data_ui <- function(id) {
             label = "Tipo de Fonte",
             choices = c(
               "url fixo"=1,
-              "arquivo local"=2,
+              "arquivo local(upload)"=2,
               "dados.gov.br"=3,
               "ckan"=4,
-              "ibge"=5,
-              "ipeadata"=6,
-              "bcb"=7,
-              "arquivo do servidor" = 8,
-              "url de pasta ou combinada" = 9),
-            selected=4),
+              "ibge_sidra"=5,
+              "ibge_ftp"=6,
+              "ipeadata"=7,
+              "bcb"=8,
+              "arquivo do servidor" = 9,
+              "url de pasta ou combinada" = 10),
+            selected=2),
           shiny::textInput(ns("nomefonte"),"Nome curto para fonte","nova_fonte",width="100px","Indique um nome para a fonte"),
-          shinybusy::add_busy_spinner(uiOutput(ns("cargatipo")),spin="double-bounce"),
+          shiny::uiOutput(ns("cargatipo")),
           shinyFiles::shinySaveButton(
             id = ns("save_file"),
             label = "Salvar para Arquivo",
@@ -351,8 +352,10 @@ tipocarga <- reactive({
   } else  if (input$sourcetype == "1") {
 
   shiny::textInput( ns("upload_file"),label="URL",placeholder="https://...",width="200px")
-  } else if (input$sourcetype == "8") {
-    shinyWidgets::panel(
+  } else if (input$sourcetype == "3") {
+
+  }  else if (input$sourcetype == "9") {
+   shinyWidgets::panel(
       shinyFiles::shinyFilesButton(
         id = ns("upload_file"),
         label = "Fa\u00e7a upload",
