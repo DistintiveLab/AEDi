@@ -102,14 +102,15 @@ data_type <- tibble::tribble(
 datasource_type <- tibble::tribble(
   ~datasource_type_id,~datasource_name,
   1,"url fixo",
-  2,"arquivo local",
-  3,"dados.gov.br",
-  4,"ckan",
-  5,"ibge",
-  6,"ipeadata",
-  7,"bcb",
-  8,"arquivo do servidor",
-  9,"url de pasta ou combinada"
+  2, "arquivo local(upload)",
+  3, "dados.gov.br",
+  4, "ckan",
+  5, "ibge_sidra",
+  6, "ibge_ftp",
+  7, "ipeadata",
+  8, "bcb",
+  9, "arquivo do servidor",
+  10, "url de pasta ou combinada"
 )|>dplyr::mutate(dplyr::across(dplyr::contains("_id"),as.integer),dplyr::across(dplyr::contains("name"),as.character))
 
 
@@ -135,7 +136,8 @@ vis_type <- tibble::tribble(
 vis_focus <- tibble::tribble(
   ~vis_focus_id,~focus_name,
   1,"espacial",
-  2,"temporal"
+  2,"temporal",
+  3, "complexo"
 )|>dplyr::mutate(dplyr::across(dplyr::contains("id"),as.integer),dplyr::across(dplyr::contains("name"),as.character))
 
 
