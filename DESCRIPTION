@@ -64,3 +64,5 @@ Collate:
     'upload_data_module.R'
     'utils-pipe.R'
     'utils.R'
+Depends: 
+    R (>= 2.10)
