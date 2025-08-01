@@ -8,6 +8,6 @@
 #' @export
 app_server <- function(input, output, session) {
   # List the first level callModules here
-  shiny::callModule(upload_data, "data")
+  upload_data_server("data")
   shiny::callModule(header_buttons, "header")
 }
