@@ -1,6 +1,6 @@
 Package: AEDi
 Title: Pacote de inclusão de fontes de dados, indicadores, e filtros de variáveis
-Version: 0.0.2
+Version: 0.0.5
 Authors@R: 
     c(person(given = "Rodrigo",
              family = "Borges",
@@ -49,11 +49,13 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Collate: 
     'AEDi-package.R'
+    'app_config.R'
     'data_summary.R'
     'dbprepare.R'
     'header_buttons_module.R'
     'run_app.R'
     'server_app.R'
+    'sidra_prepare.R'
     'ui_app.R'
     'ui_body.R'
     'ui_header.R'
@@ -62,6 +64,7 @@ Collate:
     'ui_rightbar.R'
     'ui_sidebar.R'
     'upload_data_module.R'
+    'upload_sidraibge.R'
     'utils-pipe.R'
     'utils.R'
 Depends: 
