@@ -4,10 +4,22 @@
 \alias{prepare_db}
 \title{Prepare app_db}
 \arguments{
-\item{tdbname}{Name of the database that will be created
+\item{tdbname}{Name of the database that will be created, defaults to aedidb}
+
+\item{type}{type of db backend - defaults to sqlite, alternative pgsql}
+
+\item{userdb}{Name of the user with connection permissions}
+
+\item{passwddb}{userdb password for connecting to tdbname}
+
+\item{hostdb}{host resolvable domain or address}
+
+\item{postgis}{is postgis extension enabled on pgsql database? defaults to TRUE
 @importFrom RSQLite SQLite
 @importFrom DBI dbExecute dbGetQuery dbSendQuery}
 }
 \description{
-Writes sqlite database on current dir
+Writes sqlite database on current dir or pgsql tables to aedi_db
+if 'pgsql' , user , password and database should be set up
+separately on the corresponding PostgreSQL Server
 }
