@@ -1,3 +1,14 @@
 .Rproj.user
 .Rhistory
 .RData
+*.RData
+*.Rda
+*.Rda.RData
+
+# Credenciais e segredos - nunca commitar
+.Renviron
+.env
+
+# Bancos de dados locais
+*.sqlite
+*.sqlite3
