@@ -11,16 +11,19 @@ License: MIT + file LICENSE
 URL: https://github.com/rodrigoesborges/AEDi
 BugReports: https://github.com/rodrigoesborges/AEDi/issues
 Imports: 
+    callr,
     desc,
     dplyr,
     DBI,
     DT,
     fs,
+    futile.logger,
     htmltools,
     lifecycle,
     purrr,
     readr,
     rio,
+    RPostgres,
     RSQLite,
     shiny,
     shinybusy,
