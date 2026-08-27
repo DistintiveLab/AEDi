@@ -9,5 +9,6 @@
 app_server <- function(input, output, session) {
   # List the first level callModules here
   upload_data_server("data")
+  mod_atualizacao_server("atualizacao")
   shiny::callModule(header_buttons, "header")
 }

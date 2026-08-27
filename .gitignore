@@ -12,3 +12,16 @@
 # Bancos de dados locais
 *.sqlite
 *.sqlite3
+
+# Caches de dados brutos (volumosos, regeneráveis)
+coleta/cache/
+manipula/cache/
+documenta/cache/
+visualiza/cache/
+
+# Logs gerados pelos scripts de coleta
+*.R.log
+*.log
+
+# Artefatos temporários de consolidação
+_consolidacao/

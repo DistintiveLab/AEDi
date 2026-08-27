@@ -17,6 +17,11 @@ body_ui <- function() {
         upload_data_ui("data"),
         # upload_files_ui("data")
 
+      ),
+
+      shinydashboard::tabItem(
+        tabName = "atualizacao",
+        mod_atualizacao_ui("atualizacao")
       )
     )
   )
