@@ -58,7 +58,7 @@ desc::desc_add_author(given = "Lab Cidades Ufes",
                       role = "fnd")
 
 # license
-usethis::use_mit_license(name = "Oliver Wyman Actuarial Consulting, Inc.")
+usethis::use_mit_license(name = "Distintive")
 
 desc::desc_normalize()
 
@@ -109,7 +109,7 @@ golem::use_recommended_tests()
 
 golem::detach_all_attached()
 golem::document_and_reload()
-
+golem::add_module("upload_sidraibge")
 # initialize R functions
 usethis::use_r("utils")
 usethis::use_r("run_app")
@@ -123,7 +123,10 @@ usethis::use_r("ui_body")
 usethis::use_r("ui_rightbar")
 usethis::use_r("contact_dropdown")
 usethis::use_r("header_buttons_module")
+usethis::use_r("mod_upload_sidraibge")
 usethis::use_r("upload_data_module")
+usethis::use_r("app_config")
+usethis::use_r("sidra_prepare")
 usethis::use_r("tables")
 
 attachment::att_to_description(
@@ -163,3 +166,4 @@ ghactions::use_ghactions_badge()
 
 pkgdown::build_site()
 pkgdown::preview_site()
+

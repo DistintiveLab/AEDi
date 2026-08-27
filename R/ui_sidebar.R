@@ -41,6 +41,11 @@ sidebar_ui <- function() {
         icon = shiny::icon("cloud-upload"),
         selected = TRUE
       ),
+      shinydashboard::menuItem(
+        "Atualiza\u00e7\u00e3o de Indicadores",
+        tabName = "atualizacao",
+        icon = shiny::icon("sync-alt")
+      ),
        shinydashboard::menuItem(
          "Diagn\u00f3stico de Dados",
          tabName = "diagnostics",
