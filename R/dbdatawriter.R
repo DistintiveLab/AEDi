@@ -25,7 +25,7 @@
 #' @importFrom DBI dbConnect dbGetQuery dbAppendTable
 #' @importFrom data.table rbindlist
 
-db_datawrite <- \(metadf,datadf,construct,grp=FALSE,engine="postgresql",sanitize=TRUE,forceunique=T) {
+db_datawrite <- \(metadf,datadf,construct,grp=FALSE,engine="postgresql",sanitize=TRUE,forceunique=T,replace=FALSE) {
   if(engine!="postgresql"){
     return("Em construção, não disponível outra engine ainda")
   }
@@ -48,11 +48,35 @@ db_datawrite <- \(metadf,datadf,construct,grp=FALSE,engine="postgresql",sanitize
                     "SELECT * from mdata;")
 
 
-  if(metadf[[1]]$orig_name %in% oldmdata$orig_name |
-     metadf[[1]]$data_name %in% oldmdata$data_name) {
-    msg <- "Detectado indicador com mesmo nome na base. O módulo é apenas para adição de novos dados, cheque os nomes caso efetivamente seja novo dado"
+  existe <- metadf[[1]]$orig_name %in% oldmdata$orig_name |
+     metadf[[1]]$data_name %in% oldmdata$data_name
+
+  if(existe & !replace) {
+    msg <- "Detectado indicador com mesmo nome na base. O módulo é apenas para adição de novos dados, cheque os nomes caso efetivamente seja novo dado (ou use replace=TRUE para recarregar a série completa do indicador)"
     print(msg)
     return(msg)
+  }
+
+  # modelo A (versões de carga): recálculo completo por indicador.
+  # Remove, em transação, o mdata existente e REINSERE com o MESMO mdata_id
+  # (estável para consumidores), série completa recalculada — pontos antigos
+  # revisados pela fonte passam a entrar.
+  existing_id <- NA_integer_
+  if(existe & replace) {
+    existing_id <- oldmdata$mdata_id[oldmdata$orig_name == metadf[[1]]$orig_name][1]
+    DBI::dbBegin(condw)
+    DBI::dbExecute(condw, "DELETE FROM data_values WHERE mdata_id = $1",
+                   params = list(existing_id))
+    DBI::dbExecute(condw, "DELETE FROM mdata_timetable WHERE mdata_id = $1",
+                   params = list(existing_id))
+    DBI::dbExecute(condw, "DELETE FROM mdata_exts WHERE mdata_id = $1",
+                   params = list(existing_id))
+    DBI::dbExecute(condw, "DELETE FROM mdata WHERE mdata_id = $1",
+                   params = list(existing_id))
+    # SEM commit aqui: a transação aberta cobre deletes + reinserção +
+    # refresh, com rollback automático se qualquer passo falhar
+    # (o indicador volta ao estado anterior, íntegro).
+    on.exit({ if (DBI::dbIsValid(condw)) { try(DBI::dbRollback(condw), silent = TRUE) } }, add = TRUE)
   }
 
 
@@ -103,7 +127,9 @@ if(!lubridate::is.Date(datadf$periodo)) {
 
 ###  prepare data for writing
 
-  newmdataid <- 1+as.numeric(max(oldmdata$mdata_id))
+  # replace=TRUE reusa o id antigo; carga nova pega max+1
+  newmdataid <- if (!is.na(existing_id)) existing_id else
+    1+as.numeric(max(oldmdata$mdata_id))
 
   addmid <- \(x){cbind(mdata_id=newmdataid,x)}
 
@@ -153,6 +179,7 @@ if(!lubridate::is.Date(datadf$periodo)) {
 
    DBI::dbExecute(condw,"refresh materialized view named_datavalues;")
    DBI::dbExecute(condw,"refresh materialized view geonamed_datavalues;")
+   if (!is.na(existing_id)) DBI::dbCommit(condw)
    DBI::dbDisconnect(condw)
    return("All done!")
 }
