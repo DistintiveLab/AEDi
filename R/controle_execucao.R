@@ -20,7 +20,7 @@ controle_con <- function() {
   )
 }
 
-#' Cria (se ausentes) as tabelas de controle no aedidb
+#' Cria (se ausentes) as tabelas de controle e versoes de carga no aedidb
 #' @export
 controle_preparar <- function() {
   con <- controle_con(); on.exit(DBI::dbDisconnect(con))
@@ -48,7 +48,84 @@ controle_preparar <- function() {
       mensagem      TEXT,
       linhas        BIGINT
     )")
+  DBI::dbExecute(con, "
+    CREATE TABLE IF NOT EXISTS versoes_carga (
+      versao          INTEGER PRIMARY KEY,
+      iniciado_em     TIMESTAMPTZ,
+      finalizado_em   TIMESTAMPTZ,
+      codigo_versao   TEXT,
+      dump_arquivo    TEXT,
+      n_scripts       INTEGER,
+      n_ok            INTEGER,
+      n_erro          INTEGER,
+      observacao      TEXT
+    )")
   invisible(TRUE)
+}
+
+#' Registra o inicio de um ciclo de carga (modelo A: snapshot por ciclo)
+#'
+#' Executa pg_dump do aedidb para <dir>/aedidb_v<N>_<AAAAMMDD>.dump e cria a
+#' linha da versao. Retorna o numero da versao.
+#'
+#' @param dir_dump diretorio dos dumps (default ~/backups_aedidb)
+#' @param codigo_versao identificador do codigo (default: commit git do AEDi)
+#' @export
+versao_carga_inicio <- function(dir_dump = "~/backups_aedidb",
+                                codigo_versao = git_commit_aedi()) {
+  controle_preparar()
+  con <- controle_con(); on.exit(DBI::dbDisconnect(con))
+  versao <- 1 + DBI::dbGetQuery(con,
+    "SELECT coalesce(max(versao),0) AS v FROM versoes_carga")$v
+
+  dir_dump <- path.expand(dir_dump)
+  dir.create(dir_dump, recursive = TRUE, showWarnings = FALSE)
+  arquivo <- file.path(dir_dump, sprintf("aedidb_v%d_%s.dump", versao,
+                                         format(Sys.Date(), "%Y%m%d")))
+
+  # pg_dump com as mesmas credenciais do DW (filho herda o ambiente)
+  .pw_antigo <- Sys.getenv("PGPASSWORD")
+  Sys.setenv(PGPASSWORD = Sys.getenv("password", "aEd1#man@gR"))
+  on.exit(Sys.setenv(PGPASSWORD = .pw_antigo), add = TRUE)
+  args <- c("-Fc", "-d", Sys.getenv("dbname", "aedidb"))
+  host <- Sys.getenv("host", "127.0.0.1")
+  if (nzchar(host)) args <- c(args, "-h", host)
+  args <- c(args, "-U", Sys.getenv("user", "aedi"), "-f", arquivo)
+  status <- suppressWarnings(
+    system2("pg_dump", args, stdout = FALSE, stderr = FALSE))
+  if (!identical(status, 0L) || !file.exists(arquivo))
+    stop("pg_dump falhou (status ", status, ") para ", arquivo)
+
+  DBI::dbExecute(con,
+    "INSERT INTO versoes_carga (versao, iniciado_em, codigo_versao, dump_arquivo)
+     VALUES ($1, now(), $2, $3)",
+    params = list(versao, codigo_versao, arquivo))
+  message("versao ", versao, ": snapshot em ", arquivo,
+          " (", format(structure(file.size(arquivo), class = "object_size"),
+                       units = "auto"), ")")
+  invisible(versao)
+}
+
+#' Fecha o ciclo de carga registrando o resumo da execucao
+#' @export
+versao_carga_fim <- function(versao, n_scripts, n_ok, n_erro, observacao = "") {
+  con <- controle_con(); on.exit(DBI::dbDisconnect(con))
+  DBI::dbExecute(con,
+    "UPDATE versoes_carga SET finalizado_em = now(), n_scripts = $2,
+        n_ok = $3, n_erro = $4, observacao = $5 WHERE versao = $1",
+    params = list(versao, n_scripts, n_ok, n_erro, observacao))
+  invisible(TRUE)
+}
+
+# commit git do repo AEDi (ou NA fora de repo/git)
+git_commit_aedi <- function() {
+  tryCatch({
+    out <- suppressWarnings(system2("git",
+      c("-C", system.file(package = "AEDi") |> dirname() |> dirname(),
+        "rev-parse", "--short", "HEAD"),
+      stdout = TRUE, stderr = FALSE))
+    if (length(out)) out[1] else NA_character_
+  }, error = function(e) NA_character_)
 }
 
 #' Le o controle de um script (ou de todos)
@@ -79,6 +156,7 @@ controle_inicio <- function(nome_script, etapa = "coleta", por = Sys.info()[["us
 #' @export
 controle_fim <- function(nome_script, hist_id, sucesso, etapa = "coleta",
                          linhas = NA_integer_, mensagem = "",
+                         hash_estado = NA_character_,
                          por = Sys.info()[["user"]]) {
   con <- controle_con(); on.exit(DBI::dbDisconnect(con))
   DBI::dbExecute(con,
@@ -88,8 +166,9 @@ controle_fim <- function(nome_script, hist_id, sucesso, etapa = "coleta",
   DBI::dbExecute(con,
     "INSERT INTO controle_execucao (nome_script, etapa, ultima_atualizacao,
                                     ultima_verificacao, primeira_carga, status,
-                                    linhas_ultima_carga, detalhe, atualizado_por)
-     VALUES ($1, $2, now(), now(), now(), $3, $4, $5, $6)
+                                    linhas_ultima_carga, detalhe, hash_estado,
+                                    atualizado_por)
+     VALUES ($1, $2, now(), now(), now(), $3, $4, $5, $6, $7)
      ON CONFLICT (nome_script) DO UPDATE SET
        etapa = EXCLUDED.etapa,
        ultima_atualizacao = now(),
@@ -97,10 +176,22 @@ controle_fim <- function(nome_script, hist_id, sucesso, etapa = "coleta",
        status = EXCLUDED.status,
        linhas_ultima_carga = EXCLUDED.linhas_ultima_carga,
        detalhe = EXCLUDED.detalhe,
+       hash_estado = EXCLUDED.hash_estado,
        atualizado_por = EXCLUDED.atualizado_por",
     params = list(nome_script, etapa,
-                  ifelse(sucesso, "ok", "erro"), linhas, mensagem, por))
+                  ifelse(sucesso, "ok", "erro"), linhas, mensagem,
+                  hash_estado, por))
   invisible(TRUE)
+}
+
+#' Fingerprint do conteudo processado por um script de coleta: md5 do CSV
+#' em cache quando existe (convencao coleta/cache/<script>/<script>.csv)
+#' @keywords internal
+hash_coleta_csv <- function(nome_script, raiz) {
+  f <- file.path(raiz, "coleta", "cache", nome_script,
+                 paste0(nome_script, ".csv"))
+  if (!file.exists(f)) return(NA_character_)
+  digest::digest(f, algo = "md5", file = TRUE)
 }
 
 #' C3: verifica, por orig_name do mdata, se o indicador ja esta atualizado no DW

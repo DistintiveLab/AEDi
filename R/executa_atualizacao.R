@@ -62,22 +62,35 @@ executar_script_coleta <- function(arquivo, raiz = .aedi_raiz()) {
     list(ok = FALSE, msg = conditionMessage(e), nlin = NA_integer_)
   })
   AEDi:::controle_fim(nome, hist_id, res$ok, mensagem = res$msg,
-                      linhas = res$nlin)
+                      linhas = res$nlin,
+                      hash_estado = hash_coleta_csv(nome, .aedi_raiz()))
   invisible(res$ok)
 }
 
 #' Roda todos (ou os indicados) scripts de coleta
 #'
+#' Modelo A (versões de carga): antes do lote, executa pg_dump do aedidb
+#' (aedidb_v<N>_<AAAAMMDD>.dump, ver versao_carga_inicio) e registra a
+#' versão com o commit git do repo. Depois do lote, fecha a versão com o
+#' resumo (n ok/erro).
+#'
 #' @param apenas vetor de nomes (sem .R) para restringir; default todos
+#' @param dir_dump diretório dos snapshots (default ~/backups_aedidb)
+#' @param snapshot lógico (default TRUE); FALSE pula o pg_dump
 #' @export
-atualizar_indicadores <- function(apenas = NULL) {
+atualizar_indicadores <- function(apenas = NULL, dir_dump = "~/backups_aedidb",
+                                   snapshot = TRUE) {
   flog.info(log_messages$inicio)
   AEDi:::controle_preparar()
+  versao <- if (snapshot) AEDi:::versao_carga_inicio(dir_dump = dir_dump) else NA_integer_
   arqs <- listar_scripts_coleta()
   if (!is.null(apenas)) arqs <- arqs[sub("\\.R$", "", arqs, ignore.case = TRUE) %in% apenas]
   if (!length(arqs)) { flog.warn(log_messages$nenhum, file.path(.aedi_raiz(), "coleta")); return(invisible(FALSE)) }
   resultados <- setNames(logical(length(arqs)), sub("\\.R$", "", arqs, ignore.case = TRUE))
   for (a in arqs) resultados[[sub("\\.R$", "", a, ignore.case = TRUE)]] <- executar_script_coleta(a)
+  if (!is.na(versao))
+    AEDi:::versao_carga_fim(versao, length(resultados), sum(resultados),
+                            sum(!resultados))
   flog.info(log_messages$fim)
   invisible(resultados)
 }
