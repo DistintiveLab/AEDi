@@ -58,63 +58,173 @@ controle_preparar <- function() {
       n_scripts       INTEGER,
       n_ok            INTEGER,
       n_erro          INTEGER,
-      observacao      TEXT
+      observacao      TEXT,
+      fingerprint     TEXT
     )")
+  DBI::dbExecute(con, "
+    ALTER TABLE versoes_carga ADD COLUMN IF NOT EXISTS fingerprint TEXT")
   invisible(TRUE)
 }
 
 #' Registra o inicio de um ciclo de carga (modelo A: snapshot por ciclo)
 #'
 #' Executa pg_dump do aedidb para <dir>/aedidb_v<N>_<AAAAMMDD>.dump e cria a
-#' linha da versao. Retorna o numero da versao.
+#' linha da versao. Ciclos SEM alteracao de dado nao geram dump (a versao
+#' referencia o dump anterior). Dumps espelhados em `espelho` (ex.: montagem
+#' sshfs extrainters) quando informado.
+#'
+#' Retencao (aplicada ao final do ciclo, ver `versao_carga_fim()`):
+#' semanais completos + ultimos 3 dias uteis de dumps.
 #'
 #' @param dir_dump diretorio dos dumps (default ~/backups_aedidb)
+#' @param espelho diretorio espelho opcional (default: extrainters se montado)
 #' @param codigo_versao identificador do codigo (default: commit git do AEDi)
 #' @export
 versao_carga_inicio <- function(dir_dump = "~/backups_aedidb",
+                                espelho = espelho_padrao(),
                                 codigo_versao = git_commit_aedi()) {
   controle_preparar()
   con <- controle_con(); on.exit(DBI::dbDisconnect(con))
   versao <- 1 + DBI::dbGetQuery(con,
     "SELECT coalesce(max(versao),0) AS v FROM versoes_carga")$v
 
+  # refinamento: pula dump se o conteudo do banco nao mudou desde a ultima
+  # versao COM dump (fingerprint barato: volumetria + soma + ultima escrita)
+  ultima <- DBI::dbGetQuery(con, "
+    SELECT dump_arquivo, fingerprint FROM versoes_carga
+     WHERE dump_arquivo IS NOT NULL ORDER BY versao DESC LIMIT 1")
+  fp <- fingerprint_aedidb()
+  mudou <- !(nrow(ultima) == 1 && !is.na(ultima$fingerprint) &&
+             identical(ultima$fingerprint, fp))
+
   dir_dump <- path.expand(dir_dump)
   dir.create(dir_dump, recursive = TRUE, showWarnings = FALSE)
-  arquivo <- file.path(dir_dump, sprintf("aedidb_v%d_%s.dump", versao,
-                                         format(Sys.Date(), "%Y%m%d")))
+  arquivo <- if (mudou)
+    file.path(dir_dump, sprintf("aedidb_v%d_%s.dump", versao,
+                                format(Sys.Date(), "%Y%m%d"))) else NA_character_
 
-  # pg_dump com as mesmas credenciais do DW (filho herda o ambiente)
-  .pw_antigo <- Sys.getenv("PGPASSWORD")
-  Sys.setenv(PGPASSWORD = Sys.getenv("password", "aEd1#man@gR"))
-  on.exit(Sys.setenv(PGPASSWORD = .pw_antigo), add = TRUE)
-  args <- c("-Fc", "-d", Sys.getenv("dbname", "aedidb"))
-  host <- Sys.getenv("host", "127.0.0.1")
-  if (nzchar(host)) args <- c(args, "-h", host)
-  args <- c(args, "-U", Sys.getenv("user", "aedi"), "-f", arquivo)
-  status <- suppressWarnings(
-    system2("pg_dump", args, stdout = FALSE, stderr = FALSE))
-  if (!identical(status, 0L) || !file.exists(arquivo))
-    stop("pg_dump falhou (status ", status, ") para ", arquivo)
+  if (mudou) {
+    # pg_dump com as mesmas credenciais do DW (filho herda o ambiente)
+    .pw_antigo <- Sys.getenv("PGPASSWORD")
+    Sys.setenv(PGPASSWORD = Sys.getenv("password", "aEd1#man@gR"))
+    on.exit(Sys.setenv(PGPASSWORD = .pw_antigo), add = TRUE)
+    args <- c("-Fc", "-d", Sys.getenv("dbname", "aedidb"))
+    host <- Sys.getenv("host", "127.0.0.1")
+    if (nzchar(host)) args <- c(args, "-h", host)
+    args <- c(args, "-U", Sys.getenv("user", "aedi"), "-f", arquivo)
+    status <- suppressWarnings(
+      system2("pg_dump", args, stdout = FALSE, stderr = FALSE))
+    if (!identical(status, 0L) || !file.exists(arquivo))
+      stop("pg_dump falhou (status ", status, ") para ", arquivo)
+    message("versao ", versao, ": snapshot em ", arquivo,
+            " (", format(structure(file.size(arquivo), class = "object_size"),
+                         units = "auto"), ")")
+  } else {
+    arquivo <- ultima$dump_arquivo
+    message("versao ", versao, ": fingerprint inalterado - sem dump, reaproveita ",
+            arquivo)
+  }
 
   DBI::dbExecute(con,
-    "INSERT INTO versoes_carga (versao, iniciado_em, codigo_versao, dump_arquivo)
-     VALUES ($1, now(), $2, $3)",
-    params = list(versao, codigo_versao, arquivo))
-  message("versao ", versao, ": snapshot em ", arquivo,
-          " (", format(structure(file.size(arquivo), class = "object_size"),
-                       units = "auto"), ")")
+    "INSERT INTO versoes_carga (versao, iniciado_em, codigo_versao, dump_arquivo,
+                                fingerprint)
+     VALUES ($1, now(), $2, $3, $4)",
+    params = list(versao, codigo_versao, arquivo, fp))
   invisible(versao)
 }
 
-#' Fecha o ciclo de carga registrando o resumo da execucao
+#' Fingerprint barato do conteudo do aedidb: volumetria + soma + ultimas
+#' escritas. Muda com qualquer INSERT/UPDATE/replace de indicador.
+#' @keywords internal
+fingerprint_aedidb <- function() {
+  con <- controle_con(); on.exit(DBI::dbDisconnect(con))
+  d <- DBI::dbGetQuery(con, "
+    SELECT (SELECT count(*) FROM data_values) n,
+           (SELECT coalesce(sum(value), 0) FROM data_values) s,
+           (SELECT count(*) FROM mdata) m,
+           (SELECT coalesce(max(last_update)::text, '') || ':' ||
+                   coalesce(sum(last_refdate - DATE '1970-01-01'), 0) FROM mdata_timetable) t")
+  digest::digest(paste(unlist(d), collapse = "|"), algo = "md5")
+}
+
+#' Fecha o ciclo de carga registrando o resumo e aplicando retencao/espelho
 #' @export
-versao_carga_fim <- function(versao, n_scripts, n_ok, n_erro, observacao = "") {
+versao_carga_fim <- function(versao, n_scripts, n_ok, n_erro, observacao = "",
+                             dir_dump = "~/backups_aedidb",
+                             espelho = espelho_padrao()) {
   con <- controle_con(); on.exit(DBI::dbDisconnect(con))
   DBI::dbExecute(con,
     "UPDATE versoes_carga SET finalizado_em = now(), n_scripts = $2,
         n_ok = $3, n_erro = $4, observacao = $5 WHERE versao = $1",
     params = list(versao, n_scripts, n_ok, n_erro, observacao))
+  aplicar_retencao_dumps(dir_dump)
+  espelhar_dumps(dir_dump, espelho)
   invisible(TRUE)
+}
+
+#' Retencao: semanais completos + ultimos 3 dias
+#'
+#' Mantem: o dump mais recente de cada semana (ISO) e os dumps dos ultimos
+#' 3 dias; remove o resto. Referenciado por `versoes_carga.dump_arquivo`.
+#' @keywords internal
+aplicar_retencao_dumps <- function(dir_dump = "~/backups_aedidb") {
+  arqs <- list.files(path.expand(dir_dump), pattern = "^aedidb_v.+\\.dump$",
+                     full.names = TRUE)
+  if (length(arqs) < 2) return(invisible(character(0)))
+  info <- data.frame(
+    arquivo = arqs,
+    data = as.Date(sub(".*_([0-9]{8})\\.dump$", "\\1", basename(arqs)),
+                   format = "%Y%m%d"),
+    stringsAsFactors = FALSE)
+  info$semana <- format(info$data, "%G-W%V")   # semana ISO
+  manter <- logical(nrow(info))
+  for (s in unique(info$semana)) {
+    ix <- which(info$semana == s)
+    manter[ix[which.max(info$data[ix])]] <- TRUE
+  }
+  recentes <- info$data >= (max(info$data) - 3)
+  manter <- manter | recentes
+  remover <- info$arquivo[!manter]
+  if (length(remover)) {
+    removidos <- remover[file.exists(remover)]
+    # protege dumps ainda referenciados por versoes_carga recentes (ultimas 4)
+    con <- controle_con()
+    refs <- DBI::dbGetQuery(con, "SELECT dump_arquivo FROM versoes_carga
+                                ORDER BY versao DESC LIMIT 4")$dump_arquivo
+    DBI::dbDisconnect(con)
+    removidos <- setdiff(removidos, refs)
+    if (length(removidos)) {
+      file.remove(removidos)
+      message("retencao: ", length(removidos), " dump(s) removido(s)")
+    }
+  }
+  invisible(info$arquivo[manter])
+}
+
+#' Espelha os dumps mantidos em diretorio secundario (extrainters quando montado)
+#' @keywords internal
+espelhar_dumps <- function(dir_dump = "~/backups_aedidb", espelho) {
+  if (is.null(espelho) || !nzchar(espelho[1]) || !dir.exists(espelho[1]))
+    return(invisible(FALSE))
+  destino <- file.path(espelho[1], "backups_aedidb")
+  dir.create(destino, recursive = TRUE, showWarnings = FALSE)
+  manter <- aplicar_retencao_dumps(dir_dump)
+  if (!length(manter)) return(invisible(FALSE))
+  copiados <- 0
+  for (f in manter) {
+    d <- file.path(destino, basename(f))
+    if (!file.exists(d) || file.size(d) != file.size(f)) {
+      if (file.copy(f, d, overwrite = TRUE)) copiados <- copiados + 1
+    }
+  }
+  if (copiados) message("espelho: ", copiados, " dump(s) copiado(s) p/ ", destino)
+  invisible(copiados)
+}
+
+# espelho padrao: montagem sshfs extrainters, se presente
+espelho_padrao <- function() {
+  cand <- "/home/borges/extrainters"
+  if (dir.exists(cand)) cand else NA_character_
 }
 
 # commit git do repo AEDi (ou NA fora de repo/git)
