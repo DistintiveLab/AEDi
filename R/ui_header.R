@@ -14,10 +14,7 @@ header_ui <- function() {
   )
 
   shinydashboardPlus::dashboardHeader(
-    title = shiny::tags$img(
-      src = "www/aedi-Wide.png",
-      width = 120
-    ),
+    title = logo_header_tag(),
     #enable_controlbar = TRUE,
     controlbarIcon = "dashboard",
     # left_menu = header_left_menu_ui(),
