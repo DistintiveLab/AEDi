@@ -96,13 +96,7 @@ sidebar_ui <- function() {
     ) ,
  shiny::tags$div(
    style = 'padding: 10px; position:fixed; bottom:0px;',
-   shiny::tags$a(
-     shiny::tags$img(
-       src = "www/aedi-Wide.png",
-       width = 200
-     ),
-     href = "http://www.distintive.com.br"
-   )
+   logo_rodape_tag()
  )
 )
 
