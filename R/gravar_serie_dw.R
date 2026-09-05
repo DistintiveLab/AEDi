@@ -17,14 +17,18 @@ anos_rais <- function(con) {
     value = TRUE))))
 }
 
-#' Grava (recalculando por completo) a serie de um indicador existente no DW
+#' Grava a serie de um indicador existente no DW
 #'
 #' @param orig_name nome do indicador em mdata (precisa existir; indicadores
 #'   novos seguem pelo modulo/builder)
 #' @param serie data.frame com `local`, `periodo`, `valor`
+#' @param modo `"replace"` recalcula a serie completa (default, modelo A);
+#'   `"append"` acrescenta/atualiza APENAS os refdates presentes em `serie`,
+#'   preservando o historico (novo ponto de fonte que publica atrasado)
 #' @return invisivel(TRUE) se gravou; FALSE se mdata ausente (com message)
 #' @keywords internal
-gravar_serie_dw <- function(orig_name, serie) {
+gravar_serie_dw <- function(orig_name, serie, modo = c("replace", "append")) {
+  modo <- match.arg(modo)
   stopifnot(all(c("local", "periodo", "valor") %in% names(serie)))
   con_aedi <- DBI::dbConnect(
     RPostgres::Postgres(),
@@ -65,6 +69,38 @@ gravar_serie_dw <- function(orig_name, serie) {
                        valor = serie$valor)
   # defesa contra fan-out de joins: 1 ponto por (local, periodo)
   datadf <- datadf[!duplicated(datadf[, c("local", "periodo")]), ]
+
+  if (modo == "append") {
+    # remove apenas os refdates trazidos pela serie e reinsere (upsert por
+    # refdate), preservando o historico anterior
+    periodos <- sort(unique(datadf$periodo))
+    DBI::dbBegin(con_aedi)
+    tryCatch({
+      in_dates <- paste(sprintf("DATE '%s'", format(periodos)), collapse = ", ")
+      DBI::dbExecute(con_aedi, sprintf(
+        "DELETE FROM data_values WHERE mdata_id = %d AND refdate IN (%s)",
+        md$mdata_id, in_dates))
+      DBI::dbAppendTable(con_aedi, "data_values",
+        data.frame(mdata_id = md$mdata_id,
+                   local_id = datadf$local,
+                   refdate = datadf$periodo,
+                   value = datadf$valor))
+      DBI::dbExecute(con_aedi,
+        "UPDATE mdata_timetable SET last_refdate = GREATEST(last_refdate, $2),
+            last_update = current_date WHERE mdata_id = $1",
+        params = list(md$mdata_id, max(periodos)))
+      DBI::dbExecute(con_aedi, "refresh materialized view named_datavalues;")
+      DBI::dbExecute(con_aedi, "refresh materialized view geonamed_datavalues;")
+      DBI::dbCommit(con_aedi)
+    }, error = function(e) {
+      try(DBI::dbRollback(con_aedi), silent = TRUE)
+      stop("gravar_serie_dw(append) falhou: ", conditionMessage(e))
+    })
+    DBI::dbDisconnect(con_aedi)
+    message("DW atualizado (append): ", orig_name, " refdates ",
+            paste(format(periodos), collapse = ", "), " (", nrow(datadf), " pontos)")
+    return(invisible(TRUE))
+  }
 
   AEDi:::db_datawrite(metadf, datadf, construct = NULL,
                       sanitize = FALSE, replace = TRUE)
