@@ -36,6 +36,12 @@ serie_dw <- vinculos_rem_s38 |>
   dplyr::transmute(local = local, periodo = as.Date(paste0(ano, "-12-31")),
                    valor = qtd_vinculos_agr)
 
+# mesma query ja traz a massa salarial s38: grava tambem o mdata 83
+AEDi:::gravar_serie_dw("rais_vlr_rem_dez_s38",
+  data.frame(local = vinculos_rem_s38$local,
+             periodo = as.Date(paste0(vinculos_rem_s38$ano, "-12-31")),
+             valor = vinculos_rem_s38$massa_salarial))
+
 con_aedi <- DBI::dbConnect(RPostgres::Postgres(),
                            user = Sys.getenv("user", "aedi"),
                            password = Sys.getenv("password", "aEd1#man@gR"),
