@@ -1,12 +1,23 @@
-# infra2 (17): % de acessos de banda larga fixa em alta velocidade (>34Mbps)
-# por municipio. Fonte: serie ja calculada em coleta/cache/infra2_aedi/
-# infra2_aedi.csv (metodologia alternativa do upsert.R, base ANATEL
-# 2013-2024; mesma serie que foi upsertada no painelpndr dev).
-# Recalculo completo (replace). Padrao A5b.
+# infra2 (17) 2025: % acessos banda larga fixa em alta velocidade (>34Mbps).
+# Replica a metodologia do basecalc (ANATEL, todos os tipos de pessoa) sobre
+# o CSV Acessos_Banda_Larga_Fixa_2025.csv ja em cache. Append do refdate
+# 2025-12-31. Padrao A5b.
 
-e42 <- data.table::fread("coleta/cache/infra2_aedi/infra2_aedi.csv")
+suppressMessages(library(data.table))
+d <- fread("coleta/cache/infra2_aedi/Acessos_Banda_Larga_Fixa_2025.csv",
+           encoding = "UTF-8")
+codcol <- grep("IBGE", names(d), value = TRUE)[1]
+faicol <- grep("Faixa", names(d), value = TRUE)[1]
+
+dd <- d[, .(acessos = sum(Acessos),
+            alta = sum(Acessos[get(faicol) == "> 34Mbps"])),
+        by = .(codigo_ibge_municipio = as.numeric(get(codcol)))]
+dd[, valor := 100 * alta / acessos]
+dd <- dd[!is.na(codigo_ibge_municipio)]
+stopifnot(nrow(dd) > 5000)
 
 AEDi:::gravar_serie_dw("infra2",
-  data.frame(local = e42$geoloc_id,      # 7 digitos direto no geoloc
-             periodo = as.Date(e42$refdate),
-             valor = e42$infra2_aedi))
+  data.frame(local = dd$codigo_ibge_municipio,
+             periodo = as.Date("2025-12-31"),
+             valor = dd$valor),
+  modo = "append")
