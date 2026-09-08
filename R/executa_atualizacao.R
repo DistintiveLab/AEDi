@@ -84,7 +84,15 @@ atualizar_indicadores <- function(apenas = NULL, dir_dump = "~/backups_aedidb",
   AEDi:::controle_preparar()
   versao <- if (snapshot) AEDi:::versao_carga_inicio(dir_dump = dir_dump) else NA_integer_
   arqs <- listar_scripts_coleta()
-  if (!is.null(apenas)) arqs <- arqs[sub("\\.R$", "", arqs, ignore.case = TRUE) %in% apenas]
+  if (!is.null(apenas)) {
+    # preserva a ORDEM do argumento apenas (dependencias: quem consome uma
+    # serie deve rodar depois de quem a produz), em vez da alfabetica
+    nomes <- sub("\\.R$", "", arqs, ignore.case = TRUE)
+    ordem <- match(nomes, apenas)
+    arqs <- arqs[!is.na(ordem)]
+    ordem <- ordem[!is.na(ordem)]
+    arqs <- arqs[order(ordem)]
+  }
   if (!length(arqs)) { flog.warn(log_messages$nenhum, file.path(.aedi_raiz(), "coleta")); return(invisible(FALSE)) }
   resultados <- setNames(logical(length(arqs)), sub("\\.R$", "", arqs, ignore.case = TRUE))
   for (a in arqs) resultados[[sub("\\.R$", "", a, ignore.case = TRUE)]] <- executar_script_coleta(a)
