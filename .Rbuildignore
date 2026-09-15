@@ -9,3 +9,9 @@
 ^README.Rmd
 ^dashboard_db.sqlite
 ^data-raw$
+^coleta$
+^manipula$
+^documenta$
+^visualiza$
+^modprov$
+^AGENTSbckp\.md$
