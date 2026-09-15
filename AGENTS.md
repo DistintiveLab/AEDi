@@ -214,30 +214,24 @@ ER/EER diagrams live in `inst/app/www/` (`v2024-12-EER.png`, `*ERpsql*.png`).
 
 ## Gotchas
 
-### Undeclared runtime dependencies
+### Load-time side effects (install/load requirements)
 
-`NAMESPACE` declares imports and several `R/` files `library()` packages that are
-**not listed in `DESCRIPTION`**. These must be installed for the app to run (and
-`R CMD check` will flag them). Known culprits:
+All packages used via `::` or `library()` are declared in `DESCRIPTION` `Imports`
+(as of 2026-09). When adding code that uses a new package, add it to
+`Imports`/`Suggests` via `usethis::use_package()`.
 
-`RPostgreSQL`, `RPostgres`, `datasus`, `educabR`, `latex2r`, `futile.logger`,
-`tidyr`, `sf`, `lubridate`, `stringr`, `rvest`, `xml2`, `httr`, `jsonlite`,
-`janitor`.
+Some `R/` files run **top-level code on package load**, which means installing
+or `library(AEDi)` requires more than just installed packages:
 
-When adding code that uses a new package, add it to `Imports`/`Suggests` via
-`usethis::use_package()`.
-
-### `upload_raispsql.R` connects at source time
-
-The module-level `#module 'global'` block in `upload_raispsql.R` runs `DBI::dbConnect`
-and queries the RAIS PostgreSQL DB **when the file is sourced** (i.e. on package load
-if the module is invoked). If the RAIS DB or its env vars (`mte_rais`, `dbrais`,
-`pwdrais`, `hostraispsql`) are unavailable, selecting source type 12 will error.
-
-### `prepare_db()` clears the session
-
-`R/dbprepare.R` begins with `rm(list = ls())`. Never `source()` it into an
-interactive session with unsaved work — call `prepare_db()` as a function instead.
+- `upload_raispsql.R` — connects to the RAIS PostgreSQL DB and runs queries
+  (`conrais`, `avinforais`, ...). Without the RAIS DB or its env vars (`mte_rais`,
+  `dbrais`, `pwdrais`, `hostraispsql`) **package load fails**. (Also: never add
+  `rm(list = ls())` at a file's top level — it wiped objects of every earlier
+  `Collate` entry during build and broke `R CMD INSTALL`.)
+- `create_extend_geogroup_view.R` — tries to connect to the dev PostGIS DB at
+  load, but tolerates failure (`con <- tryCatch(..., error = ...)` → warning).
+- `upload_datasus.R` / `upload_inep.R` — read `datasus::metatabnet` and
+  `educabR::metainep`/`metaideb` at load (just needs those packages installed).
 
 ### `eval(parse(text = ...))` is pervasive
 
