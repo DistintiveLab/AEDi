@@ -8,8 +8,8 @@
 #serie: data.frame com colunas `local` (IBGE 6 ou 7 digitos, ou local_id
 #          do DW), `periodo` (Date) e `valor` (numeric).
 
-# Anos disponiveis no mte_rais (tabelas rais_vinculo_YYYY)
-#' @keywords internal
+#' Anos disponiveis no mte_rais (tabelas rais_vinculo_YYYY)
+#' @export
 anos_rais <- function(con) {
   sort(as.numeric(gsub("\\D", "", grep("^rais_vinculo_[0-9]+$",
     DBI::dbGetQuery(con, "SELECT table_name FROM information_schema.tables
@@ -17,16 +17,12 @@ anos_rais <- function(con) {
     value = TRUE))))
 }
 
-#' Grava a serie de um indicador existente no DW
+#' Grava (recalculando por completo ou acrescentando) a serie de um indicador
 #'
-#' @param orig_name nome do indicador em mdata (precisa existir; indicadores
-#'   novos seguem pelo modulo/builder)
+#' @param orig_name nome do indicador em mdata
 #' @param serie data.frame com `local`, `periodo`, `valor`
-#' @param modo `"replace"` recalcula a serie completa (default, modelo A);
-#'   `"append"` acrescenta/atualiza APENAS os refdates presentes em `serie`,
-#'   preservando o historico (novo ponto de fonte que publica atrasado)
-#' @return invisivel(TRUE) se gravou; FALSE se mdata ausente (com message)
-#' @keywords internal
+#' @param modo `"replace"` (default) ou `"append"`
+#' @export
 gravar_serie_dw <- function(orig_name, serie, modo = c("replace", "append")) {
   modo <- match.arg(modo)
   stopifnot(all(c("local", "periodo", "valor") %in% names(serie)))
