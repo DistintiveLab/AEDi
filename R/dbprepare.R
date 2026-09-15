@@ -14,8 +14,6 @@
 #'  @importFrom RSQLite SQLite
 #'  @importFrom DBI dbExecute dbGetQuery dbSendQuery
 
-#Clean environment
-rm(list=ls())
 prepare_db <- \(tdbname="aedidb",type="sqlite",userdb="aedi",passwddb="aEd1#man@gR",hostdb='127.0.0.1',postgis=TRUE,geo=TRUE) {
   ##base data
   {
