@@ -10,9 +10,11 @@ db_datawrite(
   metadf,
   datadf,
   construct,
-  grp = F,
+  grp = FALSE,
   engine = "postgresql",
-  sanitize = T
+  sanitize = TRUE,
+  forceunique = T,
+  replace = FALSE
 )
 }
 \arguments{
