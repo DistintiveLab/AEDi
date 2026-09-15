@@ -12,19 +12,32 @@ URL: https://github.com/rodrigoesborges/AEDi
 BugReports: https://github.com/rodrigoesborges/AEDi/issues
 Imports: 
     callr,
-    desc,
-    dplyr,
+    config,
+    data.table,
+    datasus,
     DBI,
+    desc,
+    digest,
+    dplyr,
     DT,
+    educabR,
     fs,
     futile.logger,
+    httr,
     htmltools,
+    janitor,
+    jsonlite,
+    latex2r,
     lifecycle,
+    lubridate,
     purrr,
     readr,
     rio,
     RPostgres,
+    RPostgreSQL,
     RSQLite,
+    rvest,
+    sf,
     shiny,
     shinybusy,
     shinydashboard,
@@ -33,9 +46,13 @@ Imports:
     shinyjs,
     shinymath,
     shinyWidgets,
+    sidra,
     sortable,
+    stringr,
     summarytools,
-    tibble
+    tibble,
+    tidyr,
+    xml2
 Suggests: 
     attachment,
     golem,
@@ -53,9 +70,18 @@ RoxygenNote: 7.3.2
 Collate: 
     'AEDi-package.R'
     'app_config.R'
+    'branding.R'
+    'controle_execucao.R'
+    'create_extend_geogroup_view.R'
     'data_summary.R'
+    'dbdatawriter.R'
     'dbprepare.R'
+    'executa_atualizacao.R'
+    'gravar_serie_dw.R'
     'header_buttons_module.R'
+    'mod_atualizacao.R'
+    'raismetadatalayoute.R'
+    'raismetadatalayoutv.R'
     'run_app.R'
     'server_app.R'
     'sidra_prepare.R'
@@ -67,6 +93,9 @@ Collate:
     'ui_rightbar.R'
     'ui_sidebar.R'
     'upload_data_module.R'
+    'upload_datasus.R'
+    'upload_inep.R'
+    'upload_raispsql.R'
     'upload_sidraibge.R'
     'utils-pipe.R'
     'utils.R'
