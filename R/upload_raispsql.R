@@ -12,14 +12,44 @@
 
 
 #module 'global'
-{
-  load("data/raismetalayoute.rda")
-  load("data/raismetalayoutv.rda")
+userais <- NULL
+dbrais <- NULL
+hostraispsql <- NULL
+pwdrais <- NULL
+conrais <- NULL
+avinforais <- data.frame(column_name=character(0))
+aeinforais <- data.frame(column_name=character(0))
+anos_disp <- numeric(0)
+lraisv <- NULL
+lraise <- NULL
+lowdash <- NULL
+retesp <- NULL
+choicesraisv <- data.frame(column_name=character(0))
+choicesraise <- data.frame(column_name=character(0))
+raispsqlv <- character(0)
+labsv <- character(0)
+raispsqle <- character(0)
+labse <- character(0)
+infoagrv <- NULL
+infoagrdropdown <- character(0)
+infoagre <- NULL
+infoagredropdown <- character(0)
+
+.init_raispsql <- function() {
+ns <- asNamespace("AEDi")
+data(raismetalayoutv, raismetalayoute, package="AEDi", envir=ns)
+eval(quote({
 userais=Sys.getenv("mte_rais")
 dbrais=Sys.getenv("dbrais")
 hostrais=Sys.getenv("hostraispsql")
 pwdrais=Sys.getenv("pwdrais")
 
+conrais <- NULL
+avinforais <- data.frame(column_name=character(0))
+aeinforais <- data.frame(column_name=character(0))
+anos_disp <- numeric(0)
+
+tryCatch({
 conrais <-
   DBI::dbConnect(RPostgreSQL::PostgreSQL(),
                  db=dbrais,user=userais,password=pwdrais,host=hostrais)
@@ -35,6 +65,10 @@ aeinforais <-
 anos_disp <-
   as.numeric(rev(sort(unique(gsub(".*_([0-9]+)$","\\1",DBI::dbGetQuery(conrais,"SELECT table_name FROM information_schema.columns
                   WHERE table_schema = 'public'")$table_name)))))
+}, error = function(e) {
+  warning("upload_raispsql: banco RAIS indisponivel (", conditionMessage(e),
+          ") - conrais=NULL; liste as variaveis mte_rais/dbrais/pwdrais/hostraispsql no .Renviron com o banco acessivel")
+})
 
 
 lraisv <- raismetalayoutv
@@ -148,6 +182,7 @@ infoagredropdown <- infoagre$dbcolname
 names(infoagredropdown) <- infoagre$label
 
 
+}), envir = ns)
 }
 
 
