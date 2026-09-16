@@ -220,14 +220,19 @@ All packages used via `::` or `library()` are declared in `DESCRIPTION` `Imports
 (as of 2026-09). When adding code that uses a new package, add it to
 `Imports`/`Suggests` via `usethis::use_package()`.
 
-Some `R/` files run **top-level code on package load**, which means installing
-or `library(AEDi)` requires more than just installed packages:
+Some `R/` files run code with side effects at build/load time:
 
-- `upload_raispsql.R` — connects to the RAIS PostgreSQL DB and runs queries
-  (`conrais`, `avinforais`, ...). Without the RAIS DB or its env vars (`mte_rais`,
-  `dbrais`, `pwdrais`, `hostraispsql`) **package load fails**. (Also: never add
-  `rm(list = ls())` at a file's top level — it wiped objects of every earlier
-  `Collate` entry during build and broke `R CMD INSTALL`.)
+- `upload_raispsql.R` — initializes its module globals via `.init_raispsql()`,
+  called from `.onLoad` (`.onLoad` runs after the namespace is writable but
+  before lazy-data registration, so the block loads `raismetalayoutv/e` with
+  `data(..., envir = asNamespace("AEDi"))`). Placeholders are defined at file
+  top level (required: bindings created fresh in `.onLoad` are lost to the
+  lazy-load shadow) and overwritten by the init block. It connects to the RAIS
+  PostgreSQL DB (`conrais`, `avinforais`, ...); without the RAIS DB or its env
+  vars (`mte_rais`, `dbrais`, `pwdrais`, `hostraispsql`) load only emits a
+  **warning** (`conrais=NULL`, empty choices for source type 12). (Also: never
+  add `rm(list = ls())` at a file's top level — it wiped objects of every
+  earlier `Collate` entry during build and broke `R CMD INSTALL`.)
 - `create_extend_geogroup_view.R` — tries to connect to the dev PostGIS DB at
   load, but tolerates failure (`con <- tryCatch(..., error = ...)` → warning).
 - `upload_datasus.R` / `upload_inep.R` — read `datasus::metatabnet` and
