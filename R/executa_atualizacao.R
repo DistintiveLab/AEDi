@@ -41,6 +41,113 @@ listar_scripts_coleta <- function(raiz = .aedi_raiz()) {
   arqs[ok]
 }
 
+# Pacotes cujas funcoes costumam ser chamadas SEM namespace nos scripts
+# de coleta antigos (ex.: dbGetQuery em citec1_aedi). Deteccao por
+# export, nessa ordem (DBI antes dos drivers que reexportam)
+.pacotes_candidatos <- c("DBI", "RPostgres", "RPostgreSQL", "dplyr",
+                         "data.table", "readr", "readxl", "tidyr",
+                         "lubridate", "stringr", "purrr", "sf", "digest",
+                         "educabR", "sidra", "httr", "jsonlite")
+
+#' Nomes de funcao chamados sem namespace no script (so o parse)
+#' @keywords internal
+.heads_bare <- function(exprs) {
+  out <- character()
+  walk <- function(e) {
+    if (!is.call(e)) return(invisible())
+    if (is.symbol(e[[1]])) out <<- c(out, deparse(e[[1]]))
+    for (a in as.list(e)[-1])
+      if (is.function(a)) walk(body(a)) else if (is.call(a)) walk(a)
+    invisible()
+  }
+  for (e in exprs) walk(e)
+  unique(out)
+}
+
+#' Scripts antigos pressupoem a sessao interativa com library(DBI) etc.;
+#' no lote agendado nada esta anexado. Anexa via library() apenas os
+#' pacotes cujas funcoes o script chama sem namespace e que ainda nao
+#' resolvem no ambiente de execucao. Retorna o que ficou sem resolucao
+#' (funcoes proprias do script sao esperadas aqui).
+#' @keywords internal
+.anexar_pacotes_script <- function(exprs, env) {
+  resolve <- \(h) exists(h, envir = env, inherits = TRUE)
+  faltam <- unique(.heads_bare(exprs))
+  faltam <- faltam[!vapply(faltam, resolve, logical(1))]
+  for (p in .pacotes_candidatos) {
+    if (!length(faltam)) break
+    ex <- tryCatch(getNamespaceExports(p), error = function(e) character())
+    if (any(faltam %in% ex))
+      tryCatch(suppressPackageStartupMessages(library(p, character.only = TRUE)),
+               error = function(e) NULL)
+    faltam <- faltam[!vapply(faltam, resolve, logical(1))]
+  }
+  faltam
+}
+
+#' Prove, best-effort, no ambiente do script os objetos de sessao que os
+#' scripts de coleta costumam esperar (padrao A5b): con/mdr no DW, rais
+#' quando as env vars do banco RAIS estao definidas e locgeoloc do
+#' cadastro de locais. Scripts que criam os proprios objetos
+#' (if (!exists(...))) reutilizam os fornecidos aqui. Retorna as
+#' conexoes abertas aqui, para desconectar ao final do script.
+#' @keywords internal
+.prover_objetos_sessao <- function(env) {
+  abertas <- list()
+  if (!exists("con", envir = env, inherits = FALSE)) {
+    con <- tryCatch(AEDi:::controle_con(), error = function(e) {
+      warning(sprintf("conexao com o DW indisponivel para o script: %s",
+                      conditionMessage(e)))
+      NULL
+    })
+    if (!is.null(con)) {
+      assign("con", con, envir = env)
+      abertas <- c(abertas, list(con))
+    }
+  }
+  if (!exists("mdr", envir = env, inherits = FALSE) &&
+      exists("con", envir = env, inherits = FALSE))
+    assign("mdr", env$con, envir = env)
+  if (!exists("rais", envir = env, inherits = FALSE) &&
+      all(nzchar(Sys.getenv(c("mte_rais", "pwdrais", "hostraispsql"))))) {
+    rais <- tryCatch(DBI::dbConnect(RPostgres::Postgres(),
+                                    dbname = Sys.getenv("mte_rais"),
+                                    user = "mte_rais",
+                                    password = Sys.getenv("pwdrais"),
+                                    host = Sys.getenv("hostraispsql")),
+                     error = function(e) {
+                       warning(sprintf("conexao com o RAIS indisponivel para o script: %s",
+                                       conditionMessage(e)))
+                       NULL
+                     })
+    if (!is.null(rais)) {
+      assign("rais", rais, envir = env)
+      abertas <- c(abertas, list(rais))
+    }
+  }
+  if (!exists("locgeoloc", envir = env, inherits = FALSE) &&
+      exists("con", envir = env, inherits = FALSE)) {
+    lgl <- tryCatch(DBI::dbGetQuery(env$con,
+                                    "select local_id, local_name, geoloc_id from local"),
+                    error = function(e) NULL)
+    if (!is.null(lgl)) assign("locgeoloc", lgl, envir = env)
+  }
+  abertas
+}
+
+#' Source do script de coleta com a "sessao" que ele pressupoe: pacotes
+#' das funcoes chamadas sem namespace (detectados do parse) e objetos
+#' con/mdr/rais/locgeoloc (best-effort). Conexoes abertas aqui sao
+#' fechadas ao final do script.
+#' @keywords internal
+.source_script_coleta <- function(arquivo, raiz, env) {
+  .anexar_pacotes_script(parse(file.path(raiz, "coleta", arquivo)), env)
+  cons <- .prover_objetos_sessao(env)
+  on.exit(suppressWarnings(try(lapply(cons, DBI::dbDisconnect), silent = TRUE)),
+          add = TRUE)
+  sys.source(file.path(raiz, "coleta", arquivo), envir = env, toplevel.env = env)
+}
+
 #' Executa um unico script de coleta com controle de execucao.
 #' Com verificar_novidade = TRUE, consulta antes da coleta (C5, ver
 #' R/verifica_fonte.R) o mais recente disponivel na fonte e, sem
@@ -69,8 +176,7 @@ executar_script_coleta <- function(arquivo, raiz = .aedi_raiz(),
   t0 <- Sys.time()
   res <- tryCatch({
     env <- new.env(parent = globalenv())
-    sys.source(file.path(raiz, "coleta", arquivo), envir = env,
-               toplevel.env = env)
+    .source_script_coleta(arquivo, raiz, env)
     nlin <- tryCatch({
       v <- verificar_necessidade_atualizacao(orig_names = NULL)
       NA_integer_
