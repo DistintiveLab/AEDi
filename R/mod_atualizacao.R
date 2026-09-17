@@ -140,7 +140,7 @@ mod_atualizacao_server <- function(id, raiz = NULL) {
         style = "margin-top:8px;",
         sprintf("Executando '%s' desde %s (PID %s)... ",
                 rv$nome, format(rv$inicio, "%H:%M:%S"), rv$processo$get_pid()),
-        shinybusy::spin_dots()
+        shiny::icon("spinner", "fa-spin")
       )
     })
 
