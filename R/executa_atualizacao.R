@@ -49,6 +49,22 @@ listar_scripts_coleta <- function(raiz = .aedi_raiz()) {
                          "lubridate", "stringr", "purrr", "sf", "digest",
                          "educabR", "sidra", "httr", "jsonlite")
 
+#' Carrega o .Renviron da raiz do projeto no processo atual
+#'
+#' O painel dispara a atualizacao em subprocesso (callr::r_bg), que le
+#' apenas o ~/.Renviron do usuario; o .Renviron da raiz so e lido quando
+#' o R inicia com cwd na raiz. Sem isso, credenciais como as do banco
+#' RAIS ficam ausentes no subprocesso mesmo existindo no arquivo.
+#' @keywords internal
+.carregar_renviron <- function(raiz) {
+  f <- file.path(raiz, ".Renviron")
+  if (!file.exists(f)) return(invisible(FALSE))
+  tryCatch(readRenviron(f),
+           error = function(e) warning(sprintf(
+             ".Renviron da raiz inacessivel: %s", conditionMessage(e))))
+  invisible(TRUE)
+}
+
 #' Nomes de funcao chamados sem namespace no script (so o parse)
 #' @keywords internal
 .heads_bare <- function(exprs) {
@@ -87,17 +103,25 @@ listar_scripts_coleta <- function(raiz = .aedi_raiz()) {
 
 #' Prove, best-effort, no ambiente do script os objetos de sessao que os
 #' scripts de coleta costumam esperar (padrao A5b): con/mdr no DW, rais
-#' quando as env vars do banco RAIS estao definidas e locgeoloc do
+#' quando as env vars do banco RAIS estao definidas (dbname em dbrais ou,
+#' na convencao dos scripts de coleta, em mte_rais) e locgeoloc do
 #' cadastro de locais. Scripts que criam os proprios objetos
-#' (if (!exists(...))) reutilizam os fornecidos aqui. Retorna as
-#' conexoes abertas aqui, para desconectar ao final do script.
+#' (if (!exists(...))) reutilizam os fornecidos aqui. Retorna
+#' list(abertas, pendentes): conexoes abertas aqui (para desconectar ao
+#' final) e objetos NAO fornecidos com o motivo, para anexar ao erro do
+#' script em vez de um generico "object not found".
 #' @keywords internal
 .prover_objetos_sessao <- function(env) {
   abertas <- list()
+  pendentes <- character()
+  falta <- function(obj, motivo) {
+    pendentes <<- c(pendentes, setNames(motivo, obj))
+    warning(sprintf("objeto de sessao '%s' nao fornecido: %s", obj, motivo))
+    invisible()
+  }
   if (!exists("con", envir = env, inherits = FALSE)) {
     con <- tryCatch(AEDi:::controle_con(), error = function(e) {
-      warning(sprintf("conexao com o DW indisponivel para o script: %s",
-                      conditionMessage(e)))
+      falta("con", paste("conexao com o DW indisponivel -", conditionMessage(e)))
       NULL
     })
     if (!is.null(con)) {
@@ -105,34 +129,42 @@ listar_scripts_coleta <- function(raiz = .aedi_raiz()) {
       abertas <- c(abertas, list(con))
     }
   }
-  if (!exists("mdr", envir = env, inherits = FALSE) &&
-      exists("con", envir = env, inherits = FALSE))
-    assign("mdr", env$con, envir = env)
-  if (!exists("rais", envir = env, inherits = FALSE) &&
-      all(nzchar(Sys.getenv(c("mte_rais", "pwdrais", "hostraispsql"))))) {
-    rais <- tryCatch(DBI::dbConnect(RPostgres::Postgres(),
-                                    dbname = Sys.getenv("mte_rais"),
-                                    user = "mte_rais",
-                                    password = Sys.getenv("pwdrais"),
-                                    host = Sys.getenv("hostraispsql")),
-                     error = function(e) {
-                       warning(sprintf("conexao com o RAIS indisponivel para o script: %s",
-                                       conditionMessage(e)))
-                       NULL
-                     })
-    if (!is.null(rais)) {
-      assign("rais", rais, envir = env)
-      abertas <- c(abertas, list(rais))
+  if (exists("con", envir = env, inherits = FALSE)) {
+    if (!exists("mdr", envir = env, inherits = FALSE))
+      assign("mdr", env$con, envir = env)
+    if (!exists("locgeoloc", envir = env, inherits = FALSE)) {
+      lgl <- tryCatch(DBI::dbGetQuery(env$con,
+                                      "select local_id, local_name, geoloc_id from local"),
+                      error = function(e) NULL)
+      if (!is.null(lgl)) assign("locgeoloc", lgl, envir = env)
+      else falta("locgeoloc", "cadastro de locais indisponivel (DW inacessivel)")
+    }
+  } else if (!exists("mdr", envir = env, inherits = FALSE))
+    falta("mdr", "sem conexao com o DW")
+  vars_rais <- c("mte_rais", "pwdrais", "hostraispsql")
+  if (!exists("rais", envir = env, inherits = FALSE)) {
+    if (!all(nzchar(Sys.getenv(vars_rais)))) {
+      falta("rais", sprintf("vars %s ausentes no ambiente (confira o .Renviron)",
+                             paste(vars_rais, collapse = "/")))
+    } else {
+      db_rais <- Sys.getenv("dbrais", Sys.getenv("mte_rais"))
+      rais <- tryCatch(DBI::dbConnect(RPostgres::Postgres(),
+                                      dbname = db_rais,
+                                      user = Sys.getenv("mte_rais"),
+                                      password = Sys.getenv("pwdrais"),
+                                      host = Sys.getenv("hostraispsql")),
+                       error = function(e) {
+                         falta("rais", paste("conexao com o banco RAIS indisponivel -",
+                                             conditionMessage(e)))
+                         NULL
+                       })
+      if (!is.null(rais)) {
+        assign("rais", rais, envir = env)
+        abertas <- c(abertas, list(rais))
+      }
     }
   }
-  if (!exists("locgeoloc", envir = env, inherits = FALSE) &&
-      exists("con", envir = env, inherits = FALSE)) {
-    lgl <- tryCatch(DBI::dbGetQuery(env$con,
-                                    "select local_id, local_name, geoloc_id from local"),
-                    error = function(e) NULL)
-    if (!is.null(lgl)) assign("locgeoloc", lgl, envir = env)
-  }
-  abertas
+  list(abertas = abertas, pendentes = pendentes)
 }
 
 #' Source do script de coleta com a "sessao" que ele pressupoe: pacotes
@@ -142,10 +174,21 @@ listar_scripts_coleta <- function(raiz = .aedi_raiz()) {
 #' @keywords internal
 .source_script_coleta <- function(arquivo, raiz, env) {
   .anexar_pacotes_script(parse(file.path(raiz, "coleta", arquivo)), env)
-  cons <- .prover_objetos_sessao(env)
-  on.exit(suppressWarnings(try(lapply(cons, DBI::dbDisconnect), silent = TRUE)),
+  sess <- .prover_objetos_sessao(env)
+  on.exit(suppressWarnings(try(lapply(sess$abertas, DBI::dbDisconnect), silent = TRUE)),
           add = TRUE)
-  sys.source(file.path(raiz, "coleta", arquivo), envir = env, toplevel.env = env)
+  tryCatch(
+    sys.source(file.path(raiz, "coleta", arquivo), envir = env, toplevel.env = env),
+    error = function(e) {
+      if (length(sess$pendentes))
+        stop(sprintf(
+          "%s [objetos de sessao que o lote nao conseguiu fornecer: %s]",
+          conditionMessage(e),
+          paste(sprintf("%s (%s)", names(sess$pendentes), sess$pendentes),
+                collapse = "; ")),
+          call. = FALSE, domain = NA)
+      stop(e)
+    })
 }
 
 #' Executa um unico script de coleta com controle de execucao.
@@ -154,6 +197,7 @@ listar_scripts_coleta <- function(raiz = .aedi_raiz()) {
 #' novidades, registra execucao ok e pula o script.
 executar_script_coleta <- function(arquivo, raiz = .aedi_raiz(),
                                    verificar_novidade = TRUE) {
+  .carregar_renviron(raiz)
   nome <- sub("\\.R$", "", arquivo, ignore.case = TRUE)
   flog.info(log_messages$script_inicio, nome)
   if (verificar_novidade) {
@@ -209,6 +253,7 @@ executar_script_coleta <- function(arquivo, raiz = .aedi_raiz(),
 #' @export
 atualizar_indicadores <- function(apenas = NULL, dir_dump = "~/backups_aedidb",
                                    snapshot = TRUE, verificar_novidade = TRUE) {
+  .carregar_renviron(.aedi_raiz())
   flog.info(log_messages$inicio)
   AEDi:::controle_preparar()
   versao <- if (snapshot) AEDi:::versao_carga_inicio(dir_dump = dir_dump) else NA_integer_
