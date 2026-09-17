@@ -2,10 +2,16 @@
 % Please edit documentation in R/executa_atualizacao.R
 \name{executar_script_coleta}
 \alias{executar_script_coleta}
-\title{Executa um unico script de coleta com controle de execucao}
+\title{Executa um unico script de coleta com controle de execucao.
+Com verificar_novidade = TRUE, consulta antes da coleta (C5, ver
+R/verifica_fonte.R) o mais recente disponivel na fonte e, sem
+novidades, registra execucao ok e pula o script.}
 \usage{
-executar_script_coleta(arquivo, raiz = .aedi_raiz())
+executar_script_coleta(arquivo, raiz = .aedi_raiz(), verificar_novidade = TRUE)
 }
 \description{
-Executa um unico script de coleta com controle de execucao
+Executa um unico script de coleta com controle de execucao.
+Com verificar_novidade = TRUE, consulta antes da coleta (C5, ver
+R/verifica_fonte.R) o mais recente disponivel na fonte e, sem
+novidades, registra execucao ok e pula o script.
 }
