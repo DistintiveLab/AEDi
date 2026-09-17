@@ -16,7 +16,7 @@
 # participacao setorial local e a nacional), confere a UF regenerada
 # contra a ja gravada, faz backup do estado atual e REGRAVA a serie
 # completa — muni+UF JUNTOS, para o append nao apagar as UFs de novo.
-# Ao final atualiza as matviews objetivo4_*.
+# Ao final CRIA (se faltar) e atualiza as matviews objetivo4_*.
 #
 # Rodar a partir da raiz do AEDi:
 #   local:  Rscript coleta/objetivo4_3_municipio_dw.R
@@ -144,15 +144,33 @@ cat("\nGravando", nrow(serie), "pontos (muni+UF) em",
     Sys.getenv("dbname", "aedidb"), "@", Sys.getenv("host", "127.0.0.1"), "...\n")
 gravar_serie_dw("objetivo4_3", serie, modo = "append")
 
-# matviews municipais objetivo4_* (base da camada objetivo4_3 do GeoINTEGRA)
+# matviews municipais objetivo4_* (base da camada objetivo4_3 do GeoINTEGRA):
+# cria as que faltarem para os anos da serie e da refresh em todas. As
+# definicoes DIFEREM entre os DWs (remoto: recortes_geograficos com colunas
+# objetivo4_1/4_2/4_3/comp_objetivo4; local: estilo antigo objetivo1_1-3
+# ancorado no mdata 52) — por isso a criacao copia a definicao de uma matview
+# existente trocando TODOS os literais de ano (padrao "(AAAA)::", cobre
+# ::numeric e ::double precision).
 con <- dbConnect(RPostgres::Postgres(),
   user = Sys.getenv("user", "aedi"), password = Sys.getenv("password", "aEd1#man@gR"),
   host = Sys.getenv("host", "127.0.0.1"), dbname = Sys.getenv("dbname", "aedidb"))
 mvs <- dbGetQuery(con, "SELECT matviewname FROM pg_matviews
                   WHERE matviewname ~ '^objetivo4_' ORDER BY 1")$matviewname
-for (mv in mvs) {
-  dbExecute(con, sprintf("REFRESH MATERIALIZED VIEW %s", mv))
-  cat("refresh:", mv, "\n")
+if (length(mvs)) {
+  anos_mv <- as.integer(sub("objetivo4_", "", mvs))
+  modelo <- dbGetQuery(con, sprintf(
+    "SELECT definition FROM pg_matviews WHERE matviewname = '%s'", mvs[1]))$definition
+  novos <- setdiff(anos, anos_mv)
+  for (ano in novos) {
+    d <- gsub("\\(20[0-9]{2}\\)::", sprintf("(%d)::", ano), modelo)
+    dbExecute(con, sprintf("DROP MATERIALIZED VIEW IF EXISTS objetivo4_%d", ano))
+    dbExecute(con, sprintf("CREATE MATERIALIZED VIEW objetivo4_%d AS %s", ano, d))
+    cat("criada: objetivo4_", ano, "\n", sep = "")
+  }
+  for (mv in sprintf("objetivo4_%d", sort(c(anos_mv, novos)))) {
+    dbExecute(con, sprintf("REFRESH MATERIALIZED VIEW %s", mv))
+    cat("refresh:", mv, "\n")
+  }
 }
 
 res <- dbGetQuery(con, "SELECT extract(year from refdate)::int ano,
