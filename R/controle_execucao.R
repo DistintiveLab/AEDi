@@ -332,3 +332,21 @@ verificar_necessidade_atualizacao <- function(orig_names = NULL,
     is.na(atual$max_refdate) | (atual$max_refdate < refdate_esperada)
   atual[order(!atual$necessita_atualizacao, atual$orig_name), ]
 }
+
+#' C4: resumo por indicador (orig_name) da ultima versao dos metadados em BD
+#' (mdata_timetable.last_update) e do max(refdate) gravado no DW. Base para
+#' "matizar" scripts nunca executados no painel de atualizacao.
+#'
+#' @param con conexao aberta opcional
+#' @keywords internal
+resumo_indicadores_dw <- function(con = NULL) {
+  if (is.null(con)) { con <- controle_con(); on.exit(DBI::dbDisconnect(con)) }
+  DBI::dbGetQuery(con, "
+    SELECT m.orig_name,
+           max(t.last_update) AS meta_update,
+           max(d.refdate) AS max_refdate
+      FROM mdata m
+      LEFT JOIN mdata_timetable t ON t.mdata_id = m.mdata_id
+      LEFT JOIN data_values d ON d.mdata_id = m.mdata_id
+     GROUP BY m.orig_name")
+}
