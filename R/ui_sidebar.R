@@ -12,7 +12,7 @@ sidebar_ui <- function() {
     shiny::tags$div(
       shiny::hr(),
       shiny::h5(
-        "Distintive",
+        Sys.getenv("aedi_organizacao", "Distintive"),
         shiny::br(),
         "An\u00e0lise Explorat\u00f3ria de Dados e indicadores",
         shiny::br(),

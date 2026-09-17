@@ -7,19 +7,13 @@
 #' @importFrom shinydashboardPlus dashboardHeader
 header_ui <- function() {
 
-  # contacts
-  contacts <- c(
-    contact_item("Rodrigo Borges", "Dev./Cientista de Dados", "XXX-XXX-XXX", "rodrigo@borges.net.br"),
-    contact_item("Distintive", "Inteligencia para políticas publicas", "61-XXXX-XXXX", "apps@distintive.com.br")
-  )
-
   shinydashboardPlus::dashboardHeader(
     title = logo_header_tag(),
     #enable_controlbar = TRUE,
     controlbarIcon = "dashboard",
     # left_menu = header_left_menu_ui(),
     # fixed = TRUE,
-    .list = header_buttons_ui("header", contacts = contacts)
+    .list = header_buttons_ui("header", contacts = contatos_header())
 
   )
 }
