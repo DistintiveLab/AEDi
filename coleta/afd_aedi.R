@@ -1,5 +1,11 @@
 #afd_aedi
 
+# autocontencao (padrao A5b): conexao de sessao
+if (!exists("con") || !inherits(con, "DBIConnection")) con <- DBI::dbConnect(RPostgres::Postgres(),
+  user=Sys.getenv("user","aedi"), password=Sys.getenv("password","aEd1#man@gR"),
+  host=Sys.getenv("host","127.0.0.1"), dbname=Sys.getenv("dbname","aedidb"))
+if (!exists("mdr") || !inherits(mdr, "DBIConnection")) mdr <- con
+
 pega_aedi <- \(ano) {
   educabR::le_afd(ano)|>
     dplyr::filter(indicador_afd=='grupo_1')|>
@@ -9,9 +15,10 @@ pega_aedi <- \(ano) {
 }
 
 afd_aedi <- data.table::rbindlist(
-  lapply(2013:2024,pegaedi)
+  lapply(2013:2024, pega_aedi)
 )
 
+dir.create('coleta/cache/afd', recursive = TRUE, showWarnings = FALSE)
 saveRDS(afd_aedi,'coleta/cache/afd/afd_aedi_2013_2024.rds')
 
 

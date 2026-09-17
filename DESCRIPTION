@@ -105,6 +105,7 @@ Collate:
     'upload_raispsql.R'
     'upload_sidraibge.R'
     'utils-pipe.R'
+    'verifica_fonte.R'
     'utils.R'
 Depends: 
     R (>= 2.10)

@@ -7,7 +7,8 @@
 atualizar_indicadores(
   apenas = NULL,
   dir_dump = "~/backups_aedidb",
-  snapshot = TRUE
+  snapshot = TRUE,
+  verificar_novidade = TRUE
 )
 }
 \arguments{
@@ -16,6 +17,9 @@ atualizar_indicadores(
 \item{dir_dump}{diretório dos snapshots (default ~/backups_aedidb)}
 
 \item{snapshot}{lógico (default TRUE); FALSE pula o pg_dump}
+
+\item{verificar_novidade}{lógico (default TRUE); FALSE desativa a
+pré-verificação C5 e força a coleta mesmo sem novidades na fonte}
 }
 \description{
 Modelo A (versões de carga): antes do lote, executa pg_dump do aedidb
