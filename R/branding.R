@@ -9,6 +9,11 @@
 #                   (ex.: "www/aedi_logo_new.png"). Default: www/aedi-Wide.png
 #   aedi_logo_link  href do logo no rodape. Default: distintive.com.br
 #   aedi_logo_width largura em px do logo do header. Default: 120
+#   aedi_contatos     contatos do dropdown do header do app; entradas
+#                     separadas por ";" e campos "nome|funcao|telefone|email"
+#                     separados por "|". Default: Rodrigo Borges e Distintive
+#   aedi_organizacao  nome da organizacao exibido no rodape da sidebar.
+#                     Default: Distintive
 
 #' Resolve o src do logo conforme aedi_logo (arquivo, URL ou www/)
 #' @keywords internal
@@ -38,4 +43,19 @@ logo_rodape_tag <- function(width = 200) {
     shiny::tags$img(src = resolver_logo_src(), width = width),
     href = Sys.getenv("aedi_logo_link", "http://www.distintive.com.br")
   )
+}
+
+#' Contatos do dropdown do header (usa aedi_contatos)
+#' @keywords internal
+contatos_header <- function() {
+  padrao <- paste0(
+    "Rodrigo Borges|Dev./Cientista de Dados|XXX-XXX-XXX|rodrigo@borges.net.br;",
+    "Distintive|Inteligencia para políticas publicas|61-XXXX-XXXX|apps@distintive.com.br")
+  entradas <- trimws(strsplit(Sys.getenv("aedi_contatos", padrao), ";", fixed=TRUE)[[1]])
+  lapply(entradas[nzchar(entradas)], \(entrada) {
+    campos <- strsplit(entrada, "|", fixed=TRUE)[[1]]
+    length(campos) <- 4
+    campos[is.na(campos)] <- ""
+    do.call(contact_item, as.list(campos))
+  })
 }
