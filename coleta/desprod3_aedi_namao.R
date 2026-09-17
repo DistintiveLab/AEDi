@@ -1,15 +1,11 @@
 #salmedio_semadmpub_municipal
 
-# autocontencao (padrao A5b)
-if (!exists("rais") || !inherits(rais, "DBIConnection")) rais <- DBI::dbConnect(RPostgreSQL::PostgreSQL(),
-  dbname=Sys.getenv("mte_rais"), user="mte_rais",
-  password=Sys.getenv("pwdrais"), host=Sys.getenv("hostraispsql"))
-if (!exists("con") || !inherits(con, "DBIConnection")) con <- DBI::dbConnect(RPostgres::Postgres(),
-  user=Sys.getenv("user","aedi"), password=Sys.getenv("password","aEd1#man@gR"),
-  host=Sys.getenv("host","127.0.0.1"), dbname=Sys.getenv("dbname","aedidb"))
-if (!exists("mdr") || !inherits(mdr, "DBIConnection")) mdr <- con
-if (!exists("locgeoloc") || !is.data.frame(locgeoloc)) locgeoloc <- DBI::dbGetQuery(con,
-  "select local_id, local_name, geoloc_id from local")
+#
+# rais <- DBI::dbConnect(RPostgreSQL::PostgreSQL(),
+#                        dbname=Sys.getenv("mte_rais"),
+#                        user="mte_rais",
+#                        password=Sys.getenv("pwdrais"),
+#                        host=Sys.getenv("hostraispsql"))
 
 
 
@@ -23,7 +19,7 @@ pegasalmed_semadmpub <- \(ano) {
 }
 
 salmedio_semadmpub_municipal <-
-  data.table::rbindlist(lapply(AEDi:::anos_rais(rais), pegasalmed_semadmpub))
+  data.table::rbindlist(lapply(2013:2024,pegasalmed_semadmpub))
 
 salmedio_semadmpub_municipal <-salmedio_semadmpub_municipal|>
   dplyr::mutate(salario_medio_formal_sadmpub = massa_salarial/qtd_vinculos_agr)
@@ -39,13 +35,6 @@ desprod3_aedi <- salmedio_semadmpub_municipal|>
   dplyr::transmute(refdate=as.Date(paste0(ano,'-12-31')),
                    geoloc_id=local,
                    desprod3_aedi)
-
-# serie no DW (recalculo completo, padrao A5b)
-AEDi:::gravar_serie_dw("desprod3",
-  data.frame(local = desprod3_aedi$geoloc_id,
-             periodo = desprod3_aedi$refdate,
-             valor = desprod3_aedi$desprod3_aedi))
-DBI::dbDisconnect(rais)
 
 # readr::write_csv(desprod3_aedi|>
 #   dplyr::rename(local=geoloc_id)|>
