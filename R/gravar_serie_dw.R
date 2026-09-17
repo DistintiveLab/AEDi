@@ -72,7 +72,8 @@ gravar_serie_dw <- function(orig_name, serie, modo = c("replace", "append")) {
     periodos <- sort(unique(datadf$periodo))
     DBI::dbBegin(con_aedi)
     tryCatch({
-      in_dates <- paste(sprintf("DATE '%s'", format(periodos)), collapse = ", ")
+      in_dates <- paste(sprintf("DATE '%s'", as.character(periodos)),
+                        collapse = ", ")
       DBI::dbExecute(con_aedi, sprintf(
         "DELETE FROM data_values WHERE mdata_id = %d AND refdate IN (%s)",
         md$mdata_id, in_dates))

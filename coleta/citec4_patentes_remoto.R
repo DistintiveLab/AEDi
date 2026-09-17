@@ -41,7 +41,12 @@ pop <- DBI::dbGetQuery(con, "SELECT trunc(l.geoloc_id/10) local, d.value pop
  WHERE m.orig_name = 'datasus_popmun' AND d.refdate = DATE '2024-07-01'")
 DBI::dbDisconnect(con)
 
-c4 <- merge(serie24, pop, by = "local") |>
+# 0-fill: universo = popmun 2024; municipios sem depositos entram com 0
+# (padrao do citec4_badepiv10.R; o append sem fill deixou 2024 com 1.128
+# de ~5.560 municipios — corrigido 2026-09-17).
+c4 <- pop |>
+  dplyr::left_join(serie24, by = "local") |>
+  dplyr::mutate(n_dep = ifelse(is.na(n_dep), 0, n_dep)) |>
   dplyr::transmute(local, valor = 1e5 * n_dep / pop)
 
 AEDi:::gravar_serie_dw("citec4",
