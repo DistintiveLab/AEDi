@@ -188,7 +188,7 @@ upload_data_server <- function(id) {
 
 
   pegavals <- \(x) {
-    {
+    tryCatch({
       #con <- RSQLite::dbConnect(RSQLite::SQLite(), dbname=tdbname)
       con <- DBI::dbConnect(RPostgreSQL::PostgreSQL(),
                             dbname=Sys.getenv("dbname"),
@@ -198,7 +198,7 @@ upload_data_server <- function(id) {
 
 
       availableind <- DBI::dbGetQuery(con,paste0(
-        "SELECT orig_name value, data_desc label FROM ",
+        "SELECT orig_name AS \"value\", data_desc AS \"label\" FROM ",
         "mdata"))|>dplyr::arrange(value)
 
 
@@ -216,7 +216,12 @@ upload_data_server <- function(id) {
 
 
       c(availableind$value,availrecortes)
-    }
+    }, error = function(e) {
+      try(DBI::dbDisconnect(con), silent = TRUE)
+      warning("upload_data: banco principal indisponivel (", conditionMessage(e),
+              ") - listas de indicadores/recortes vazias; confira dbname/user/password/host no .Renviron")
+      c(periodo='refdate', local='local_id')
+    })
   }
   ## NEW CODE - CHECK IN DB
     r <- shiny::reactiveVal(
