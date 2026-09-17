@@ -3,6 +3,17 @@
 \name{prepare_db}
 \alias{prepare_db}
 \title{Prepare app_db}
+\usage{
+prepare_db(
+  tdbname = "aedidb",
+  type = "sqlite",
+  userdb = "aedi",
+  passwddb = "aEd1#man@gR",
+  hostdb = "127.0.0.1",
+  postgis = TRUE,
+  geo = TRUE
+)
+}
 \arguments{
 \item{tdbname}{Name of the database that will be created, defaults to aedidb}
 

@@ -21,6 +21,7 @@ log_messages <- list(
   script_ok     = "Script concluido: %s (%s linhas no DW nao verificado)",
   script_erro   = "ERRO no script %s: %s",
   script_ignorado = "Script ignorado (.ignore): %s",
+  script_pulado   = "Script pulado (sem novidades): %s (%s)",
   nenhum        = "Nenhum script de coleta encontrado em %s"
 )
 
@@ -40,10 +41,30 @@ listar_scripts_coleta <- function(raiz = .aedi_raiz()) {
   arqs[ok]
 }
 
-#' Executa um unico script de coleta com controle de execucao
-executar_script_coleta <- function(arquivo, raiz = .aedi_raiz()) {
+#' Executa um unico script de coleta com controle de execucao.
+#' Com verificar_novidade = TRUE, consulta antes da coleta (C5, ver
+#' R/verifica_fonte.R) o mais recente disponivel na fonte e, sem
+#' novidades, registra execucao ok e pula o script.
+executar_script_coleta <- function(arquivo, raiz = .aedi_raiz(),
+                                   verificar_novidade = TRUE) {
   nome <- sub("\\.R$", "", arquivo, ignore.case = TRUE)
   flog.info(log_messages$script_inicio, nome)
+  if (verificar_novidade) {
+    nov <- tryCatch(AEDi:::verificar_novidade_fonte(nome, raiz),
+                    error = function(e) list(
+                      pular = FALSE,
+                      motivo = paste("verificacao indisponivel:",
+                                     conditionMessage(e))))
+    if (isTRUE(nov$pular)) {
+      hist_id <- AEDi:::controle_inicio(nome)
+      AEDi:::controle_fim(nome, hist_id, TRUE, mensagem = nov$motivo,
+                          linhas = NA_integer_,
+                          hash_estado = if (is.null(nov$assinatura))
+                            NA_character_ else nov$assinatura)
+      flog.info(log_messages$script_pulado, nome, nov$motivo)
+      return(invisible(TRUE))
+    }
+  }
   hist_id <- AEDi:::controle_inicio(nome)
   t0 <- Sys.time()
   res <- tryCatch({
@@ -77,9 +98,11 @@ executar_script_coleta <- function(arquivo, raiz = .aedi_raiz()) {
 #' @param apenas vetor de nomes (sem .R) para restringir; default todos
 #' @param dir_dump diretório dos snapshots (default ~/backups_aedidb)
 #' @param snapshot lógico (default TRUE); FALSE pula o pg_dump
+#' @param verificar_novidade lógico (default TRUE); FALSE desativa a
+#'   pré-verificação C5 e força a coleta mesmo sem novidades na fonte
 #' @export
 atualizar_indicadores <- function(apenas = NULL, dir_dump = "~/backups_aedidb",
-                                   snapshot = TRUE) {
+                                   snapshot = TRUE, verificar_novidade = TRUE) {
   flog.info(log_messages$inicio)
   AEDi:::controle_preparar()
   versao <- if (snapshot) AEDi:::versao_carga_inicio(dir_dump = dir_dump) else NA_integer_
@@ -95,7 +118,8 @@ atualizar_indicadores <- function(apenas = NULL, dir_dump = "~/backups_aedidb",
   }
   if (!length(arqs)) { flog.warn(log_messages$nenhum, file.path(.aedi_raiz(), "coleta")); return(invisible(FALSE)) }
   resultados <- setNames(logical(length(arqs)), sub("\\.R$", "", arqs, ignore.case = TRUE))
-  for (a in arqs) resultados[[sub("\\.R$", "", a, ignore.case = TRUE)]] <- executar_script_coleta(a)
+  for (a in arqs) resultados[[sub("\\.R$", "", a, ignore.case = TRUE)]] <-
+    executar_script_coleta(a, verificar_novidade = verificar_novidade)
   if (!is.na(versao))
     AEDi:::versao_carga_fim(versao, length(resultados), sum(resultados),
                             sum(!resultados))
