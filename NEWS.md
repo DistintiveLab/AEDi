@@ -1,3 +1,21 @@
+# AEDi 0.2.0 (2026-09-17)
+
+Correções no lote de atualização para ambientes de produção (VPS), onde o
+painel dispara a coleta em subprocesso.
+
+## Correções e robustez
+
+- Lote de coleta agora carrega o `.Renviron` da raiz do projeto na entrada
+  de `executar_script_coleta()`/`atualizar_indicadores()`: o subprocesso
+  callr do painel lê apenas o `~/.Renviron` do usuário, o que deixava as
+  credenciais do banco RAIS (e outras) invisíveis mesmo com o arquivo
+  correto na raiz.
+- Erro de script de coleta passa a ser anotado com os objetos de sessão
+  que o lote não conseguiu fornecer (con/mdr/rais/locgeoloc) e o motivo de
+  cada um (ex.: variáveis ausentes no ambiente, banco indisponível).
+- Conexão RAIS aceita `dbrais` como dbname com fallback para `mte_rais`,
+  cobrindo as duas convenções de variáveis do repositório.
+
 # AEDi 0.1.0 (2026-09-17)
 
 Primeira versão com o ciclo de atualização automatizado dos indicadores e o
