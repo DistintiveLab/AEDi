@@ -30,16 +30,19 @@ Imports:
     latex2r,
     lifecycle,
     lubridate,
+    plotly,
     purrr,
     readr,
     rio,
     RPostgres,
+    leaflet,
     RPostgreSQL,
     RSQLite,
     rvest,
     sf,
     shiny,
     shinybusy,
+    shinyGovBRstyle,
     shinydashboard,
     shinydashboardPlus,
     shinyFiles,
@@ -80,9 +83,13 @@ Collate:
     'gravar_serie_dw.R'
     'header_buttons_module.R'
     'mod_atualizacao.R'
+    'mod_panel_map.R'
+    'mod_panel_series.R'
+    'painel_dw.R'
     'raismetadatalayoute.R'
     'raismetadatalayoutv.R'
     'run_app.R'
+    'run_panel.R'
     'server_app.R'
     'sidra_prepare.R'
     'ui_app.R'
