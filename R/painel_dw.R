@@ -60,13 +60,13 @@ painel_valores <- function(con, mdata_id) {
 # 5 microrregiao (1990), 6 regiao geografica imediata (2017),
 # 7 municipio e 8 mesorregiao (1990; sem dados no DW).
 painel_niveis_rotulo <- c(
-  "1" = "Regi\u00e3o",
-  "2" = "Unidade da Federa\u00e7\u00e3o",
-  "4" = "Regi\u00e3o geogr\u00e1fica intermedi\u00e1ria",
-  "5" = "Microrregi\u00e3o",
-  "6" = "Regi\u00e3o geogr\u00e1fica imediata",
-  "7" = "Munic\u00edpio",
-  "8" = "Mesorregi\u00e3o")
+  "1" = "Região",
+  "2" = "Unidade da Federação",
+  "4" = "Região geográfica intermediária",
+  "5" = "Microrregião",
+  "6" = "Região geográfica imediata",
+  "7" = "Município",
+  "8" = "Mesorregião")
 
 # Siglas por codigo de UF (para desambiguar nomes de municipios repetidos)
 painel_uf_sigla <- c(

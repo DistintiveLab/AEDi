@@ -111,7 +111,7 @@
   anos <- sort(anos[!is.na(anos)])
   if (!length(anos)) return(NULL)
   list(ultimo = max(anos),
-       detalhe = sprintf("INEP %s at\u00e9 %d", fun, max(anos)),
+       detalhe = sprintf("INEP %s até %d", fun, max(anos)),
        assinatura = sprintf("inep:%s:%d", fun, max(anos)))
 }
 
@@ -148,7 +148,7 @@
   if (!length(ids)) return(NULL)
   ids <- unique(ids[order(as.integer(ids))])
   list(periodos = ids, ultimo = ids[length(ids)],
-       detalhe = sprintf("SIDRA t/%s at\u00e9 %s", tabela, ids[length(ids)]),
+       detalhe = sprintf("SIDRA t/%s até %s", tabela, ids[length(ids)]),
        assinatura = paste0("sidra:", tabela, ":", ids[length(ids)]))
 }
 
@@ -197,7 +197,7 @@ verificar_novidade_fonte <- function(nome_script, raiz = .aedi_raiz(),
   arquivo <- file.path(raiz, "coleta", paste0(nome_script, ".R"))
   if (!file.exists(arquivo))
     return(list(pular = FALSE,
-                motivo = "script n\u00e3o encontrado para verifica\u00e7\u00e3o",
+                motivo = "script não encontrado para verificação",
                 assinatura = NA_character_))
   exprs <- parse(arquivo)
   ch <- .primeira_chamada_coleta(exprs)
@@ -228,7 +228,7 @@ verificar_novidade_fonte <- function(nome_script, raiz = .aedi_raiz(),
     f <- .probe_url(ch$url)
     if (is.null(f))
       return(list(pular = FALSE,
-                  motivo = "fonte por URL inacess\u00edvel para verifica\u00e7\u00e3o",
+                  motivo = "fonte por URL inacessível para verificação",
                   assinatura = NA_character_))
     ctl <- tryCatch(AEDi:::ler_controle(nome_script),
                     error = function(e) NULL)
@@ -237,7 +237,7 @@ verificar_novidade_fonte <- function(nome_script, raiz = .aedi_raiz(),
       identical(ctl$hash_estado[1], f$assinatura)
     return(list(
       pular = inalterado,
-      motivo = sprintf("%s; \u00faltima coleta %s", f$detalhe,
+      motivo = sprintf("%s; última coleta %s", f$detalhe,
                        if (inalterado) "com o mesmo arquivo" else "antiga"),
       assinatura = f$assinatura))
   }
@@ -246,7 +246,7 @@ verificar_novidade_fonte <- function(nome_script, raiz = .aedi_raiz(),
     f <- .probe_sidra(ch$tabela)
     if (is.null(f))
       return(list(pular = FALSE,
-                  motivo = "SIDRA inacess\u00edvel para verifica\u00e7\u00e3o",
+                  motivo = "SIDRA inacessível para verificação",
                   assinatura = NA_character_))
     ultimo_ano <- max(suppressWarnings(as.integer(substr(f$periodos, 1, 4))))
     sem_novidade <- !is.na(ano_est) && ano_est >= ultimo_ano
