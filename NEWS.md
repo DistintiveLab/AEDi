@@ -1,3 +1,36 @@
+# AEDi 0.4.1 (2026-09-17)
+
+Orquestrador multi-projeto: o AEDi vira o backend abstrato de
+atualização/agendamento e o projeto de painel (ex.: pndr_dashboard) passa a
+ser o dono concreto do lote `coleta/`.
+
+## Novidades
+
+- **Coluna `projeto`** nas tabelas `controle_execucao`,
+  `controle_execucao_historico` e `versoes_carga` do aedidb: chave =
+  `basename()` da raiz do lote (ex.: "AEDi", "pndr_dashboard"). A PK de
+  `controle_execucao` passa a ser `(projeto, nome_script)`. Migração
+  idempotente dentro de `controle_preparar()` — registros anteriores
+  pertencem ao projeto "AEDi" (backfill do DEFAULT).
+- `ler_controle()`, `controle_inicio()`, `controle_fim()` e
+  `versao_carga_inicio()` ganham o parâmetro `projeto` (default "AEDi",
+  back-compatível).
+- `atualizar_indicadores()` ganha o parâmetro `raiz` (default: cwd com
+  `coleta/`), propagado para o `.Renviron`, `listar_scripts_coleta()` e a
+  execução de cada script; o projeto do controle deriva da raiz.
+- A aba "Atualização" filtra o controle pelo projeto da raiz em vez de
+  mostrar registros de todos os lotes.
+- Lote próprio do AEDi aposentado: os 46 scripts de `coleta/` do repo
+  ficaram com `.R.ignore`; a fonte executável agora é o `coleta/` do
+  pndr_dashboard (46 cópias sincronizadas, `objetivo4_3_diversificacao`
+  aposentado nos dois repos — reproduzia perda de dados ao regravar só UF).
+
+## Correções
+
+- `hash_coleta_csv()` em `executar_script_coleta()` usava `.aedi_raiz()`
+  em vez da raiz do projeto em execução (hash errado quando a raiz difere
+  do cwd).
+
 # AEDi 0.4.0 (2026-09-17)
 
 Redesign do painel de indicadores, aproveitando a estrutura visual do
