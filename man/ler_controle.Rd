@@ -4,11 +4,14 @@
 \alias{ler_controle}
 \title{Le o controle de um script (ou de todos)}
 \usage{
-ler_controle(nome_script = NULL)
+ler_controle(nome_script = NULL, projeto = NULL)
 }
 \arguments{
 \item{nome_script}{nome do script de coleta (ex.: "objetivo2_1_aedi");
 NULL retorna data.frame com todos}
+
+\item{projeto}{nome do projeto (raiz do lote); NULL = todos os projetos.
+Quando ambos nome_script e projeto sao NULL retorna todos os registros}
 }
 \description{
 Le o controle de um script (ou de todos)

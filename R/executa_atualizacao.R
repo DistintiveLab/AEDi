@@ -33,6 +33,11 @@ log_messages <- list(
 }
 `%||%` <- function(a, b) if (is.null(a) || !nzchar(a[1])) b else a
 
+#' Nome do projeto dono do lote de coleta: basename da raiz
+#' (ex.: "AEDi", "pndr_dashboard") - chave `projeto` do controle de execucao
+#' @keywords internal
+.nome_projeto <- function(raiz) basename(normalizePath(raiz, mustWork = FALSE))
+
 #' Lista os scripts de coleta executaveis (sem .ignore)
 listar_scripts_coleta <- function(raiz = .aedi_raiz()) {
   dir_coleta <- file.path(raiz, "coleta")
@@ -199,6 +204,7 @@ executar_script_coleta <- function(arquivo, raiz = .aedi_raiz(),
                                    verificar_novidade = TRUE) {
   .carregar_renviron(raiz)
   nome <- sub("\\.R$", "", arquivo, ignore.case = TRUE)
+  projeto <- .nome_projeto(raiz)
   flog.info(log_messages$script_inicio, nome)
   if (verificar_novidade) {
     nov <- tryCatch(AEDi:::verificar_novidade_fonte(nome, raiz),
@@ -207,16 +213,17 @@ executar_script_coleta <- function(arquivo, raiz = .aedi_raiz(),
                       motivo = paste("verificacao indisponivel:",
                                      conditionMessage(e))))
     if (isTRUE(nov$pular)) {
-      hist_id <- AEDi:::controle_inicio(nome)
+      hist_id <- AEDi:::controle_inicio(nome, projeto = projeto)
       AEDi:::controle_fim(nome, hist_id, TRUE, mensagem = nov$motivo,
                           linhas = NA_integer_,
+                          projeto = projeto,
                           hash_estado = if (is.null(nov$assinatura))
                             NA_character_ else nov$assinatura)
       flog.info(log_messages$script_pulado, nome, nov$motivo)
       return(invisible(TRUE))
     }
   }
-  hist_id <- AEDi:::controle_inicio(nome)
+  hist_id <- AEDi:::controle_inicio(nome, projeto = projeto)
   t0 <- Sys.time()
   res <- tryCatch({
     env <- new.env(parent = globalenv())
@@ -233,8 +240,8 @@ executar_script_coleta <- function(arquivo, raiz = .aedi_raiz(),
     list(ok = FALSE, msg = conditionMessage(e), nlin = NA_integer_)
   })
   AEDi:::controle_fim(nome, hist_id, res$ok, mensagem = res$msg,
-                      linhas = res$nlin,
-                      hash_estado = hash_coleta_csv(nome, .aedi_raiz()))
+                      linhas = res$nlin, projeto = projeto,
+                      hash_estado = hash_coleta_csv(nome, raiz))
   invisible(res$ok)
 }
 
@@ -250,14 +257,19 @@ executar_script_coleta <- function(arquivo, raiz = .aedi_raiz(),
 #' @param snapshot lógico (default TRUE); FALSE pula o pg_dump
 #' @param verificar_novidade lógico (default TRUE); FALSE desativa a
 #'   pré-verificação C5 e força a coleta mesmo sem novidades na fonte
+#' @param raiz raiz do projeto dono do lote (diretório com coleta/);
+#'   define o `projeto` do controle de execucao. Default: cwd com coleta/
 #' @export
 atualizar_indicadores <- function(apenas = NULL, dir_dump = "~/backups_aedidb",
-                                   snapshot = TRUE, verificar_novidade = TRUE) {
-  .carregar_renviron(.aedi_raiz())
+                                   snapshot = TRUE, verificar_novidade = TRUE,
+                                   raiz = .aedi_raiz()) {
+  projeto <- .nome_projeto(raiz)
+  .carregar_renviron(raiz)
   flog.info(log_messages$inicio)
   AEDi:::controle_preparar()
-  versao <- if (snapshot) AEDi:::versao_carga_inicio(dir_dump = dir_dump) else NA_integer_
-  arqs <- listar_scripts_coleta()
+  versao <- if (snapshot) AEDi:::versao_carga_inicio(dir_dump = dir_dump,
+                                                     projeto = projeto) else NA_integer_
+  arqs <- listar_scripts_coleta(raiz)
   if (!is.null(apenas)) {
     # preserva a ORDEM do argumento apenas (dependencias: quem consome uma
     # serie deve rodar depois de quem a produz), em vez da alfabetica
@@ -267,10 +279,10 @@ atualizar_indicadores <- function(apenas = NULL, dir_dump = "~/backups_aedidb",
     ordem <- ordem[!is.na(ordem)]
     arqs <- arqs[order(ordem)]
   }
-  if (!length(arqs)) { flog.warn(log_messages$nenhum, file.path(.aedi_raiz(), "coleta")); return(invisible(FALSE)) }
+  if (!length(arqs)) { flog.warn(log_messages$nenhum, file.path(raiz, "coleta")); return(invisible(FALSE)) }
   resultados <- setNames(logical(length(arqs)), sub("\\.R$", "", arqs, ignore.case = TRUE))
   for (a in arqs) resultados[[sub("\\.R$", "", a, ignore.case = TRUE)]] <-
-    executar_script_coleta(a, verificar_novidade = verificar_novidade)
+    executar_script_coleta(a, raiz = raiz, verificar_novidade = verificar_novidade)
   if (!is.na(versao))
     AEDi:::versao_carga_fim(versao, length(resultados), sum(resultados),
                             sum(!resultados))

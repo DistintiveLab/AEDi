@@ -2,8 +2,12 @@
 # (fase C2/C3 do roadmap_aedi_agendamento.md, portado do conecta_turismo)
 #
 # Tabelas criadas por controle_preparar():
-#   controle_execucao          - estado atual por (nome_script, etapa)
+#   controle_execucao          - estado atual por (projeto, nome_script, etapa)
 #   controle_execucao_historico - log de cada execucao
+#
+# Multi-projeto (0.4.1): a coluna projeto e o basename(normalizePath(raiz))
+# do lote executado (ex.: "AEDi", "pndr_dashboard"). Registros anteriores a
+# 0.4.1 pertencem ao projeto "AEDi" (backfill do DEFAULT da migracao).
 #
 # Convencoes: mesma conexao do DW do AEDi (env vars user/password/host/dbname,
 # defaults locais). Sem dependencia do duckdb.
@@ -26,7 +30,8 @@ controle_preparar <- function() {
   con <- controle_con(); on.exit(DBI::dbDisconnect(con))
   DBI::dbExecute(con, "
     CREATE TABLE IF NOT EXISTS controle_execucao (
-      nome_script            TEXT PRIMARY KEY,
+      projeto                TEXT NOT NULL DEFAULT 'AEDi',
+      nome_script            TEXT NOT NULL,
       etapa                  TEXT,
       ultima_atualizacao     TIMESTAMPTZ,
       ultima_verificacao     TIMESTAMPTZ,
@@ -36,11 +41,13 @@ controle_preparar <- function() {
       detalhe                TEXT,
       dependencias_json      JSONB,
       atualizado_por         TEXT,
-      hash_estado            TEXT
+      hash_estado            TEXT,
+      CONSTRAINT controle_execucao_pkey_projeto PRIMARY KEY (projeto, nome_script)
     )")
   DBI::dbExecute(con, "
     CREATE TABLE IF NOT EXISTS controle_execucao_historico (
       id            BIGSERIAL PRIMARY KEY,
+      projeto       TEXT NOT NULL DEFAULT 'AEDi',
       nome_script   TEXT,
       inicio        TIMESTAMPTZ,
       fim           TIMESTAMPTZ,
@@ -51,6 +58,7 @@ controle_preparar <- function() {
   DBI::dbExecute(con, "
     CREATE TABLE IF NOT EXISTS versoes_carga (
       versao          INTEGER PRIMARY KEY,
+      projeto         TEXT NOT NULL DEFAULT 'AEDi',
       iniciado_em     TIMESTAMPTZ,
       finalizado_em   TIMESTAMPTZ,
       codigo_versao   TEXT,
@@ -63,6 +71,28 @@ controle_preparar <- function() {
     )")
   DBI::dbExecute(con, "
     ALTER TABLE versoes_carga ADD COLUMN IF NOT EXISTS fingerprint TEXT")
+
+  # migracao multi-projeto (0.4.1): backfill 'AEDi' e PK composta
+  DBI::dbExecute(con, "
+    ALTER TABLE controle_execucao
+      ADD COLUMN IF NOT EXISTS projeto TEXT NOT NULL DEFAULT 'AEDi'")
+  DBI::dbExecute(con, "
+    ALTER TABLE controle_execucao_historico
+      ADD COLUMN IF NOT EXISTS projeto TEXT NOT NULL DEFAULT 'AEDi'")
+  DBI::dbExecute(con, "
+    ALTER TABLE versoes_carga
+      ADD COLUMN IF NOT EXISTS projeto TEXT NOT NULL DEFAULT 'AEDi'")
+  DBI::dbExecute(con, "
+    DO $do$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint
+                      WHERE conname = 'controle_execucao_pkey_projeto') THEN
+        ALTER TABLE controle_execucao
+          DROP CONSTRAINT IF EXISTS controle_execucao_pkey;
+        ALTER TABLE controle_execucao
+          ADD CONSTRAINT controle_execucao_pkey_projeto
+          PRIMARY KEY (projeto, nome_script);
+      END IF;
+    END $do$")
   invisible(TRUE)
 }
 
@@ -79,10 +109,12 @@ controle_preparar <- function() {
 #' @param dir_dump diretorio dos dumps (default ~/backups_aedidb)
 #' @param espelho diretorio espelho opcional (default: extrainters se montado)
 #' @param codigo_versao identificador do codigo (default: commit git do AEDi)
+#' @param projeto nome do projeto (raiz do lote) dono da versao de carga
 #' @export
 versao_carga_inicio <- function(dir_dump = "~/backups_aedidb",
                                 espelho = espelho_padrao(),
-                                codigo_versao = git_commit_aedi()) {
+                                codigo_versao = git_commit_aedi(),
+                                projeto = "AEDi") {
   controle_preparar()
   con <- controle_con(); on.exit(DBI::dbDisconnect(con))
   versao <- 1 + DBI::dbGetQuery(con,
@@ -126,10 +158,10 @@ versao_carga_inicio <- function(dir_dump = "~/backups_aedidb",
   }
 
   DBI::dbExecute(con,
-    "INSERT INTO versoes_carga (versao, iniciado_em, codigo_versao, dump_arquivo,
-                                fingerprint)
-     VALUES ($1, now(), $2, $3, $4)",
-    params = list(versao, codigo_versao, arquivo, fp))
+    "INSERT INTO versoes_carga (versao, projeto, iniciado_em, codigo_versao,
+                                dump_arquivo, fingerprint)
+     VALUES ($1, $2, now(), $3, $4, $5)",
+    params = list(versao, projeto, codigo_versao, arquivo, fp))
   invisible(versao)
 }
 
@@ -241,45 +273,63 @@ git_commit_aedi <- function() {
 #' Le o controle de um script (ou de todos)
 #' @param nome_script nome do script de coleta (ex.: "objetivo2_1_aedi");
 #'   NULL retorna data.frame com todos
+#' @param projeto nome do projeto (raiz do lote); NULL = todos os projetos.
+#'   Quando ambos nome_script e projeto sao NULL retorna todos os registros
 #' @export
-ler_controle <- function(nome_script = NULL) {
+ler_controle <- function(nome_script = NULL, projeto = NULL) {
   con <- controle_con(); on.exit(DBI::dbDisconnect(con))
+  if (is.null(nome_script) && is.null(projeto))
+    return(DBI::dbGetQuery(con, "SELECT * FROM controle_execucao
+                                      ORDER BY projeto, nome_script"))
+  if (is.null(projeto))
+    return(DBI::dbGetQuery(con, "SELECT * FROM controle_execucao
+                                      WHERE nome_script = $1
+                                      ORDER BY projeto",
+                  params = list(nome_script)))
   if (is.null(nome_script))
     return(DBI::dbGetQuery(con, "SELECT * FROM controle_execucao
-                                      ORDER BY nome_script"))
-  DBI::dbGetQuery(con, "SELECT * FROM controle_execucao WHERE nome_script = $1",
-                  params = list(nome_script))
+                                      WHERE projeto = $1
+                                      ORDER BY nome_script",
+                  params = list(projeto)))
+  DBI::dbGetQuery(con, "SELECT * FROM controle_execucao
+                             WHERE projeto = $1 AND nome_script = $2",
+                  params = list(projeto, nome_script))
 }
 
 #' Registra o inicio de uma execucao (retorna id do historico p/ fechar depois)
+#' @param projeto nome do projeto (raiz do lote) dono do script
 #' @export
-controle_inicio <- function(nome_script, etapa = "coleta", por = Sys.info()[["user"]]) {
+controle_inicio <- function(nome_script, etapa = "coleta",
+                            por = Sys.info()[["user"]], projeto = "AEDi") {
   con <- controle_con(); on.exit(DBI::dbDisconnect(con))
   DBI::dbExecute(con,
-    "INSERT INTO controle_execucao_historico (nome_script, inicio)
-     VALUES ($1, now())", params = list(nome_script))
+    "INSERT INTO controle_execucao_historico (projeto, nome_script, inicio)
+     VALUES ($1, $2, now())", params = list(projeto, nome_script))
   DBI::dbGetQuery(con, "SELECT max(id) AS id FROM controle_execucao_historico
-                        WHERE nome_script = $1", params = list(nome_script))$id
+                        WHERE projeto = $1 AND nome_script = $2",
+                  params = list(projeto, nome_script))$id
 }
 
 #' Fecha a execucao e atualiza o estado atual do script
+#' @param projeto nome do projeto (raiz do lote) dono do script
 #' @export
 controle_fim <- function(nome_script, hist_id, sucesso, etapa = "coleta",
                          linhas = NA_integer_, mensagem = "",
                          hash_estado = NA_character_,
-                         por = Sys.info()[["user"]]) {
+                         por = Sys.info()[["user"]], projeto = "AEDi") {
   con <- controle_con(); on.exit(DBI::dbDisconnect(con))
   DBI::dbExecute(con,
     "UPDATE controle_execucao_historico
         SET fim = now(), sucesso = $2, mensagem = $3, linhas = $4
       WHERE id = $1", params = list(hist_id, sucesso, mensagem, linhas))
   DBI::dbExecute(con,
-    "INSERT INTO controle_execucao (nome_script, etapa, ultima_atualizacao,
+    "INSERT INTO controle_execucao (projeto, nome_script, etapa,
+                                    ultima_atualizacao,
                                     ultima_verificacao, primeira_carga, status,
                                     linhas_ultima_carga, detalhe, hash_estado,
                                     atualizado_por)
-     VALUES ($1, $2, now(), now(), now(), $3, $4, $5, $6, $7)
-     ON CONFLICT (nome_script) DO UPDATE SET
+     VALUES ($1, $2, $3, now(), now(), now(), $4, $5, $6, $7, $8)
+     ON CONFLICT (projeto, nome_script) DO UPDATE SET
        etapa = EXCLUDED.etapa,
        ultima_atualizacao = now(),
        ultima_verificacao = now(),
@@ -288,7 +338,7 @@ controle_fim <- function(nome_script, hist_id, sucesso, etapa = "coleta",
        detalhe = EXCLUDED.detalhe,
        hash_estado = EXCLUDED.hash_estado,
        atualizado_por = EXCLUDED.atualizado_por",
-    params = list(nome_script, etapa,
+    params = list(projeto, nome_script, etapa,
                   ifelse(sucesso, "ok", "erro"), linhas, mensagem,
                   hash_estado, por))
   invisible(TRUE)
