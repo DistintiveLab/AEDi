@@ -14,14 +14,19 @@
 #'
 #' @param diretorio caminho do diretorio da app, relativo ao projeto
 #'   (default "painel")
-#' @param titulo titulo do header da app gerada
+#' @param titulo titulo do topbar da app gerada
+#' @param paleta paleta inicial da app gerada: `"govbr"` (padrao, azul
+#'   Gov.br) ou `"pb"` (preto e branco com o roxo da Distintive); o
+#'   visitante pode trocar no botao do topo em qualquer caso
 #' @param sobrescrever substitui um `app.R` existente (default FALSE)
 #'
 #' @return caminho absoluto do diretorio da app (invisivel)
 #' @export
 deploy_panel <- function(diretorio = "painel",
                          titulo = "Painel de Indicadores",
+                         paleta = c("govbr", "pb"),
                          sobrescrever = FALSE) {
+  paleta <- match.arg(paleta)
   dir.create(diretorio, recursive = TRUE, showWarnings = FALSE)
   app_r <- file.path(diretorio, "app.R")
   readme <- file.path(diretorio, "README.md")
@@ -31,14 +36,17 @@ deploy_panel <- function(diretorio = "painel",
   writeLines(c(
     "# Painel de indicadores do DW — app gerada por AEDi::deploy_panel()",
     "# Credenciais do DW (variaveis de ambiente): user, password, host, dbname",
-    sprintf("AEDi::panel_app(titulo = %s)", deparse(titulo)),
+    sprintf("AEDi::panel_app(titulo = %s, paleta = %s)",
+            deparse(titulo), deparse(paleta)),
     ""), app_r)
   writeLines(c(
     "# Painel de indicadores",
     "",
-    "App Shiny autonoma de consulta ao DW de indicadores (mapa municipal e",
-    "series temporais), gerada por `AEDi::deploy_panel()` e montada sobre o",
-    "pacote AEDi.",
+    "App Shiny autonoma de consulta ao DW de indicadores (series por nivel",
+    "territorial e mapa municipal), gerada por `AEDi::deploy_panel()` e",
+    "montada sobre o pacote AEDi. A paleta de cores pode ser Gov.br (azul) ou",
+    "preto e branco com o roxo da Distintive — o botao no topo troca a qualquer",
+    "momento e a escolha fica salva no navegador.",
     "",
     "## Rodar localmente",
     "",
