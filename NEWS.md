@@ -1,3 +1,19 @@
+# AEDi 0.3.0 (2026-09-17)
+
+Deploy básico do painel de indicadores dentro do projeto que chamar.
+
+## Novidades
+
+- **`deploy_panel()`**: materializa uma app Shiny autônoma do painel em um
+  subdiretório do projeto corrente (default `painel/`) — `app.R` de uma
+  linha + `README.md` com instruções de execução, hospedagem (Shiny Server
+  ou `rsconnect::deployApp()`) e credenciais do DW. Diferente de
+  `run_panel()`, que só lança o painel na sessão atual.
+- **`panel_app()`** (exportada): constrói e devolve o objeto `shinyApp` do
+  painel — motor comum de `run_panel()` e da app gerada por
+  `deploy_panel()`, utilizável como última expressão de um `app.R`
+  hospedável.
+
 # AEDi 0.2.0 (2026-09-17)
 
 Correções no lote de atualização para ambientes de produção (VPS), onde o

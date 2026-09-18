@@ -18,6 +18,10 @@ indicador gravado (mdata). Nao abre o AEDi completo — util para
 conferir rapidamente o que foi carregado, inclusive em servidor.
 }
 \details{
+Para materializar uma app deployavel dentro de um projeto, use
+\code{\link[=deploy_panel]{deploy_panel()}}; para obter so o objeto da app (hospedavel),
+use \code{\link[=panel_app]{panel_app()}}.
+
 Conexao via variaveis de ambiente \code{user}/\code{password}/\code{host}/\code{dbname}
 (mesmo padrao de \code{\link[=controle_con]{controle_con()}}), com defaults locais.
 }
