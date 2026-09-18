@@ -1,3 +1,37 @@
+# AEDi 0.4.0 (2026-09-17)
+
+Redesign do painel de indicadores, aproveitando a estrutura visual do
+labourvaluesdatapanel (topbar com marca, abas realçadas, página "Sobre"
+editorial).
+
+## Novidades
+
+- **Aba "Região"** (antes "Séries"): seletor de nível territorial — região,
+  UF, região geográfica intermediária, microrregião, região imediata ou
+  município — carrega as localidades daquele nível com dados no DW e abre a
+  série na localidade de maior cobertura do indicador. Municípios ganham a
+  sigla da UF para desambiguar nomes repetidos.
+- **Duas paletas** trocáveis no botão do topo (escolha salva no navegador):
+  **Gov.br** (padrão, azul `#1351B4`, tipografia Rawline) ou **preto e
+  branco** com toques do roxo da Distintive (`#78529D`, cor dominante do
+  logotipo). A cor da série acompanha a paleta ativa. Novo parâmetro
+  `paleta` em `panel_app()`/`run_panel()`/`deploy_panel()`.
+- **Aba "Sobre"** minimalista: apresentação do painel, cartão pessoal
+  (Rodrigo Emmanuel Santana Borges, rodrigo@borges.net.br) e
+  agradecimento ao apoio material e financeiro da Distintive
+  (distintive.com.br).
+- Topbar com marca e botão de paleta, abas com sublinhado realçado,
+  rodapé, indicador de "carregando", navegação por teclado/foco visível e
+  layout responsivo (menu colapsável no celular).
+- Logo do painel funciona também na app standalone: o fallback aponta para
+  o arquivo embutido no pacote (`painel_logo_src()`), não mais para `www/`
+  do app completo.
+
+## Remoções
+
+- Módulo `mod_panel_series` (substituído por `mod_panel_regiao`, com o
+  seletor de nível territorial).
+
 # AEDi 0.3.0 (2026-09-17)
 
 Deploy básico do painel de indicadores dentro do projeto que chamar.

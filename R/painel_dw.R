@@ -54,3 +54,74 @@ painel_valores <- function(con, mdata_id) {
     "SELECT local_id, refdate, value FROM data_values WHERE mdata_id = %d",
     as.integer(mdata_id)))
 }
+
+# Rotulos dos niveis territoriais do DW, pela largura do geoloc_id (IBGE):
+# 1 grande regiao, 2 UF, 4 regiao geografica intermediaria (2017),
+# 5 microrregiao (1990), 6 regiao geografica imediata (2017),
+# 7 municipio e 8 mesorregiao (1990; sem dados no DW).
+painel_niveis_rotulo <- c(
+  "1" = "Regi\u00e3o",
+  "2" = "Unidade da Federa\u00e7\u00e3o",
+  "4" = "Regi\u00e3o geogr\u00e1fica intermedi\u00e1ria",
+  "5" = "Microrregi\u00e3o",
+  "6" = "Regi\u00e3o geogr\u00e1fica imediata",
+  "7" = "Munic\u00edpio",
+  "8" = "Mesorregi\u00e3o")
+
+# Siglas por codigo de UF (para desambiguar nomes de municipios repetidos)
+painel_uf_sigla <- c(
+  "11" = "RO", "12" = "AC", "13" = "AM", "14" = "RR", "15" = "PA", "16" = "AP",
+  "17" = "TO", "21" = "MA", "22" = "PI", "23" = "CE", "24" = "RN", "25" = "PB",
+  "26" = "PE", "27" = "AL", "28" = "SE", "29" = "BA", "31" = "MG", "32" = "ES",
+  "33" = "RJ", "35" = "SP", "41" = "PR", "42" = "SC", "43" = "RS", "50" = "MS",
+  "51" = "MT", "52" = "GO", "53" = "DF")
+
+#' Niveis territoriais disponiveis no DW: apenas os que possuem dados,
+#' com quantidade de localidades distintas
+#' @keywords internal
+painel_niveis <- function(con) {
+  q <- DBI::dbGetQuery(con, paste(
+    "SELECT length(g.geoloc_id::text) AS nivel_id,",
+    "count(DISTINCT v.local_id) AS n_locais",
+    "FROM data_values v",
+    "JOIN local l USING (local_id)",
+    "JOIN geoloc g USING (geoloc_id)",
+    "GROUP BY 1 ORDER BY 1"))
+  q$rotulo <- unname(painel_niveis_rotulo[as.character(q$nivel_id)])
+  q[!is.na(q$rotulo), ]
+}
+
+#' Localidades de um nivel territorial (pela largura do geoloc_id) que
+#' possuem dados, rotuladas por nome (municipios ganham sigla da UF)
+#' @keywords internal
+painel_locais_nivel <- function(con, nivel_id) {
+  q <- DBI::dbGetQuery(con, sprintf(paste(
+    "SELECT DISTINCT l.local_id, l.local_name,",
+    "substring(g.geoloc_id::text, 1, 2) AS uf",
+    "FROM data_values v",
+    "JOIN local l USING (local_id)",
+    "JOIN geoloc g USING (geoloc_id)",
+    "WHERE length(g.geoloc_id::text) = %d",
+    "ORDER BY l.local_name, l.local_id"),
+    as.integer(nivel_id)))
+  rotulo <- if (as.integer(nivel_id) == 7L) {
+    sigla <- unname(painel_uf_sigla[q$uf])
+    ifelse(is.na(sigla), q$local_name, paste0(q$local_name, " (", sigla, ")"))
+  } else {
+    q$local_name
+  }
+  setNames(as.integer(q$local_id), rotulo)
+}
+
+#' Localidade de um nivel com maior cobertura (pontos) de um indicador —
+#' selecao default do seletor de localidade
+#' @keywords internal
+painel_local_top <- function(con, mdata_id, nivel_id) {
+  q <- DBI::dbGetQuery(con, sprintf(paste(
+    "SELECT v.local_id FROM data_values v",
+    "JOIN local l USING (local_id) JOIN geoloc g USING (geoloc_id)",
+    "WHERE v.mdata_id = %d AND length(g.geoloc_id::text) = %d",
+    "GROUP BY v.local_id ORDER BY count(*) DESC, v.local_id LIMIT 1"),
+    as.integer(mdata_id), as.integer(nivel_id)))
+  if (nrow(q)) as.integer(q$local_id[1]) else NULL
+}

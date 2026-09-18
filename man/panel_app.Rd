@@ -4,17 +4,25 @@
 \alias{panel_app}
 \title{App do painel de indicadores (objeto shinyApp)}
 \usage{
-panel_app(titulo = "Painel de Indicadores")
+panel_app(titulo = "Painel de Indicadores", paleta = c("govbr", "pb"))
 }
 \arguments{
-\item{titulo}{titulo do header (default "Painel de Indicadores")}
+\item{titulo}{titulo do topbar (default "Painel de Indicadores")}
+
+\item{paleta}{paleta inicial: \code{"govbr"} (padrao, azul Gov.br) ou \code{"pb"}
+(preto e branco com toques do roxo da Distintive). O visitante pode
+trocar no botao do topo; a escolha fica salva no navegador}
 }
 \description{
 Constroi o objeto \code{shinyApp} do painel de indicadores do DW (aedidb):
-mapa coropletico municipal e serie temporal por localidade de qualquer
-indicador gravado (mdata). E o motor por tras de \code{\link[=run_panel]{run_panel()}} e da app
-gerada por \code{\link[=deploy_panel]{deploy_panel()}} — como ultima expressao de um \code{app.R}
-hospedavel, basta \code{AEDi::panel_app()}.
+aba "Regi\u00e3o" com s\u00e9rie temporal por n\u00edvel territorial e
+localidade (regi\u00e3o, UF, divis\u00f5es do IBGE ou munic\u00edpio), aba
+"Mapa" coropl\u00e9tico municipal e aba "Sobre" com informa\u00e7\u00f5es do
+autor e apoio da Distintive. Estrutura visual adaptada do
+labourvaluesdatapanel: topbar com marca, abas real\u00e7adas e rodap\u00e9.
+E o motor por tras de \code{\link[=run_panel]{run_panel()}} e da app gerada por \code{\link[=deploy_panel]{deploy_panel()}}
+— como ultima expressao de um \code{app.R} hospedavel, basta
+\code{AEDi::panel_app()}.
 }
 \details{
 Conexao via variaveis de ambiente \code{user}/\code{password}/\code{host}/\code{dbname}
