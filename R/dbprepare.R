@@ -113,7 +113,7 @@ dplyr::across(dplyr::matches("dataunit|source|url|name|desc"),as.character))
 
     data_freq <- tibble::tribble(
       ~data_freq_id,~freq_name,~freq_ndays,
-      1,"di\u00e0ria",1,
+      1,"diària",1,
       2,"semanal",7,
       3,"quinzenal",15,
       4,"mensal",30,
@@ -179,7 +179,7 @@ dplyr::across(dplyr::matches("dataunit|source|url|name|desc"),as.character))
     vis_type <- tibble::tribble(
       ~vis_type_id,~vistype_name,
       1,"tabela",
-      2,"gr\u00e0fico",
+      2,"gràfico",
       3,"mapa"
     )|>dplyr::mutate(dplyr::across(dplyr::contains("id"),as.integer),dplyr::across(dplyr::contains("name"),as.character))
 
@@ -347,10 +347,10 @@ dplyr::across(dplyr::matches("dataunit|source|url|name|desc"),as.character))
     DBI::dbSendQuery(con,paste0("ALTER TABLE `",atbname,"` RENAME TO `",atbname,"_old`"))
     ##4) USE CREATE TABLE
     if (n_pk == 1) {
-      print(paste("adiciona \\u00fanica chave prim\u00e0ria para tabela ",atbname))
+      print(paste("adiciona única chave primária para tabela ",atbname))
       createquery <-gsub(paste0("(",id_tab[1],"`) ([^,]*),"),"\\1 \\2 PRIMARY KEY,", createquery)
     } else {
-      print(paste("adiciona",n_pk,"chaves prim\u00e0rias  para tabela ",atbname))
+      print(paste("adiciona",n_pk,"chaves primàrias  para tabela ",atbname))
       createquery <- gsub("\\)$",paste0(", PRIMARY KEY (",paste0("`",id_tab[1:n_pk],collapse="`, "),"`))"),createquery)
     }
 
