@@ -29,11 +29,11 @@ upload_data_ui <- function(id) {
   tagList(
   shinydashboard::tabBox(
     id = ns("data_upload"),
-    title = icon_text("cloud-upload", "Carregue e Explore Dados"), #"procure", "Vista pr\u00e9via:"),
+    title = icon_text("cloud-upload", "Carregue e Explore Dados"), #"procure", "Vista prévia:"),
     width = 12,
 
     shiny::tabPanel(
-      title = icon_text("file", "Inser\u00e7\u00e3o de Fonte"),
+      title = icon_text("file", "Inserção de Fonte"),
       width = 12,
       flucol(
         shiny::div(
@@ -104,11 +104,11 @@ upload_data_ui <- function(id) {
     ),
 
     shiny::tabPanel(
-      title = icon_text("list", "Vari\u00e1veis e Indicadores"),
+      title = icon_text("list", "Variáveis e Indicadores"),
       fluidRow(
         column(5,shiny::textInput(
         inputId = ns("filtraVars"),
-        label = "Insira texto para filtrar vari\u00e1veis de interesse",
+        label = "Insira texto para filtrar variáveis de interesse",
         value = ""
       )
       ),
@@ -121,7 +121,7 @@ upload_data_ui <- function(id) {
           ))
       ),
       fluidRow(column(5,
-        shinymath::mathInput(ns("equacao"),"Insira equa\u00e7\u00e3o"),
+        shinymath::mathInput(ns("equacao"),"Insira equação"),
         shiny::actionButton(ns("previaindicador"),"Rodar!"),
         shiny::verbatimTextOutput(ns("text_r"), placeholder = TRUE),
         "Trabalho em Andamento"
@@ -256,7 +256,7 @@ upload_data_server <- function(id) {
       column(
         width = 5,
         sortable::bucket_list(
-          header = "seleciones as vari\u00e1veis",
+          header = "seleciones as variáveis",
           group_name = ns("varsdestino"),
           orientation = "horizontal",
           class = "tamanho_max",
@@ -337,13 +337,13 @@ upload_data_server <- function(id) {
           column(
             width = 12,
 
-            tags$p("Vari\u00e1vel A"),
+            tags$p("Variável A"),
             shiny::verbatimTextOutput(ns("results_1")),
 
-            tags$p("Vari\u00e1vel B"),
+            tags$p("Variável B"),
             shiny::verbatimTextOutput(ns("results_2")),
 
-            tags$p("Vari\u00e1vel C"),
+            tags$p("Variável C"),
             shiny::verbatimTextOutput(ns("results_3"))
           )
         )
@@ -427,7 +427,7 @@ tipocarga <- reactive({
    shinyWidgets::panel(
       shinyFiles::shinyFilesButton(
         id = ns("upload_file"),
-        label = "Fa\u00e7a upload",
+        label = "Faça upload",
         title = "Selecione Arquivo(s) para Upload:",
         multiple = TRUE,
         # buttonType = "primary",
@@ -984,7 +984,7 @@ tipocarga <- reactive({
         last_modified = as.Date.character(file.mtime(path)),
         size = paste0(prettyNum(size, big.mark = ".",decimal.mark = ",", digits = 2, format = "d"), " Bytes"),
         custom_name = fs::path_ext_remove(name),
-        custom_desc = "Breve Descri\u00e7\u00e3o..."
+        custom_desc = "Breve Descrição..."
       )
   })
 
@@ -1024,16 +1024,16 @@ tipocarga <- reactive({
       class = "stripe cell-border",
       rownames = FALSE,
       colnames = c(
-        "\u00cdndice",
+        "Índice",
         "Arquivo",
         "Local",
         "Tipo",
         "# Linhas",
         "# Colunas",
-        "\u00daltima modifica\u00e7\u00e3o",
+        "Última modificação",
         "Tamanho",
         "Nome personalizado",
-        "Descri\u00e7\u00e3o personalizada"
+        "Descrição personalizada"
       ),
       caption = paste0("Resumo de arquivos de dados carregados:"),
       style = "bootstrap",
@@ -1132,7 +1132,7 @@ tipocarga <- reactive({
       ),
       class = "stripe cell-border",
       rownames = tibble::has_rownames(hold),
-      caption = paste0("Vista Pr\u00e9via do  <- junto de Dados Carregado:"),
+      caption = paste0("Vista Prévia do  <- junto de Dados Carregado:"),
       style = "bootstrap",
       extensions = "Buttons"
     )

@@ -14,7 +14,7 @@ sidebar_ui <- function() {
       shiny::h5(
         Sys.getenv("aedi_organizacao", "Distintive"),
         shiny::br(),
-        "An\u00e0lise Explorat\u00f3ria de Dados e indicadores",
+        "Anàlise Exploratória de Dados e indicadores",
         shiny::br(),
         "Aplicativo Shiny",
         shiny::br(),
@@ -42,17 +42,17 @@ sidebar_ui <- function() {
         selected = TRUE
       ),
       shinydashboard::menuItem(
-        "Atualiza\u00e7\u00e3o de Indicadores",
+        "Atualização de Indicadores",
         tabName = "atualizacao",
         icon = shiny::icon("sync-alt")
       ),
        shinydashboard::menuItem(
-         "Diagn\u00f3stico de Dados",
+         "Diagnóstico de Dados",
          tabName = "diagnostics",
          icon = shiny::icon("cogs")
        ),
        shinydashboard::menuItem(
-         "Dicion\u00e0rio de Dados",
+         "Dicionàrio de Dados",
          tabName = "data_dictionary",
          icon = shiny::icon("list")
        ),
@@ -62,17 +62,17 @@ sidebar_ui <- function() {
          icon = shiny::icon("lightbulb"),
          startExpanded = FALSE,
          shinydashboard::menuSubItem(
-           "Distribui\u00e3\u00f5es",
+           "Distribuiãões",
            tabName = "distributions",
            icon = shiny::icon("area-chart"),
          ),
          shinydashboard::menuSubItem(
-           "An\u00e0lise Univariada",
+           "Anàlise Univariada",
            tabName = "univariate",
            icon = shiny::icon("line-chart")
          ),
          shinydashboard::menuSubItem(
-           "An\u00e0lise Bi-Variada",
+           "Anàlise Bi-Variada",
            tabName = "bivariate",
            icon = shiny::icon("bar-chart")
          )
@@ -83,7 +83,7 @@ sidebar_ui <- function() {
          icon = shiny::icon("calculator"),
          startExpanded = FALSE,
          shinydashboard::menuSubItem(
-           "Rela\u00e7\u00f5es preditoras",
+           "Relações preditoras",
            tabName = "predictors",
            icon = shiny::icon("balance-scale"),
          ),

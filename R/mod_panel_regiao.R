@@ -12,14 +12,14 @@
 mod_panel_regiao_ui <- function(id) {
   ns <- NS(id)
   tagList(
-    tags$div(class = "painel-toolbar", role = "search", `aria-label` = "Sele\u00e7\u00e3o de indicador e localidade",
+    tags$div(class = "painel-toolbar", role = "search", `aria-label` = "Seleção de indicador e localidade",
       tags$div(class = "form-group",
         tags$label(`for` = ns("indicador"), "Indicador"),
         shiny::selectizeInput(ns("indicador"), NULL, choices = NULL,
                               width = "100%", options = list(
                                 placeholder = "Escolha um indicador"))),
       tags$div(class = "form-group",
-        tags$label(`for` = ns("nivel"), "N\u00edvel territorial"),
+        tags$label(`for` = ns("nivel"), "Nível territorial"),
         shiny::selectInput(ns("nivel"), NULL, choices = NULL,
                            selectize = FALSE, width = "auto")),
       tags$div(class = "form-group",
@@ -31,9 +31,9 @@ mod_panel_regiao_ui <- function(id) {
       tags$h3(shiny::textOutput(ns("titulo")), class = "sr-only"),
       plotly::plotlyOutput(ns("serie"), height = "420px"),
       tags$p(class = "painel-nota",
-        "S\u00e9rie do DW de indicadores do AEDi. Use o seletor de n\u00edvel",
-        "territorial para mudar de recorte (regi\u00e3o, UF, divis\u00f5es",
-        "regionais do IBGE ou munic\u00edpio) e escolher a localidade desejada."))
+        "Série do DW de indicadores do AEDi. Use o seletor de nível",
+        "territorial para mudar de recorte (região, UF, divisões",
+        "regionais do IBGE ou município) e escolher a localidade desejada."))
   )
 }
 
@@ -95,7 +95,7 @@ mod_panel_regiao_server <- function(id,
       if (is.na(nome)) nome <- md$orig_name[md$mdata_id == input$indicador]
       rotulos <- locais()
       local <- names(rotulos)[match(as.integer(input$localidade), rotulos)]
-      paste0(nome, " \u2014 ", local)
+      paste0(nome, " — ", local)
     })
 
     cor <- shiny::reactive({
@@ -107,7 +107,7 @@ mod_panel_regiao_server <- function(id,
     output$serie <- plotly::renderPlotly({
       v <- serie_loc()
       shiny::validate(shiny::need(nrow(v),
-        "Sem dados para esta combina\u00e7\u00e3o de indicador e localidade."))
+        "Sem dados para esta combinação de indicador e localidade."))
       p <- ggplot2::ggplot(v, ggplot2::aes(x = as.Date(refdate), y = value)) +
         ggplot2::geom_line(color = cor(), linewidth = 0.9) +
         ggplot2::geom_point(color = cor(), size = 1.8) +

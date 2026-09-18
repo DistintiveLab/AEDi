@@ -26,11 +26,11 @@ painel_logo_src <- function() {
 #' App do painel de indicadores (objeto shinyApp)
 #'
 #' Constroi o objeto `shinyApp` do painel de indicadores do DW (aedidb):
-#' aba "Regi\u00e3o" com s\u00e9rie temporal por n\u00edvel territorial e
-#' localidade (regi\u00e3o, UF, divis\u00f5es do IBGE ou munic\u00edpio), aba
-#' "Mapa" coropl\u00e9tico municipal e aba "Sobre" com informa\u00e7\u00f5es do
+#' aba "Região" com série temporal por nível territorial e
+#' localidade (região, UF, divisões do IBGE ou município), aba
+#' "Mapa" coroplético municipal e aba "Sobre" com informações do
 #' autor e apoio da Distintive. Estrutura visual adaptada do
-#' labourvaluesdatapanel: topbar com marca, abas real\u00e7adas e rodap\u00e9.
+#' labourvaluesdatapanel: topbar com marca, abas realçadas e rodapé.
 #' E o motor por tras de [run_panel()] e da app gerada por [deploy_panel()]
 #' — como ultima expressao de um `app.R` hospedavel, basta
 #' `AEDi::panel_app()`.
@@ -62,10 +62,10 @@ panel_app <- function(titulo = "Painel de Indicadores",
     tags$div(id = "painel_raiz", `data-paleta` = paleta, class = "hidden"),
     tags$header(class = "painel-topbar",
       tags$a(class = "painel-brand", href = "#",
-             `aria-label` = paste(titulo, "— in\u00edcio"),
+             `aria-label` = paste(titulo, "— início"),
              tags$img(src = logo, alt = "Logotipo AEDi"),
              tags$span(tags$span(class = "painel-brand-name", titulo),
-                       tags$small("AEDi \u2014 DW de indicadores"))),
+                       tags$small("AEDi — DW de indicadores"))),
       tags$div(class = "painel-topbar-acoes",
         tags$button(id = "painel_paleta_btn", type = "button",
                     class = "painel-paleta-btn", `aria-pressed` = "true",
@@ -77,17 +77,17 @@ panel_app <- function(titulo = "Painel de Indicadores",
       windowTitle = titulo,
       collapsible = TRUE,
       lang = "pt-BR",
-      shiny::tabPanel("Regi\u00e3o", value = "regiao",
+      shiny::tabPanel("Região", value = "regiao",
                       mod_panel_regiao_ui("panel_regiao_1")),
       shiny::tabPanel("Mapa", value = "mapa",
                       mod_panel_map_ui("panel_map_1")),
       shiny::tabPanel("Sobre", value = "sobre",
                       panel_sobre_ui())),
     tags$div(class = "painel-busy", role = "status", `aria-live` = "polite",
-             "Carregando\u2026"),
+             "Carregando…"),
     tags$footer(class = "painel-rodape",
       tags$span("Dados: DW de indicadores do AEDi (aedidb)."),
-      tags$span("Desenvolvido por Rodrigo E. S. Borges \u00b7 ",
+      tags$span("Desenvolvido por Rodrigo E. S. Borges · ",
         tags$a(href = "https://www.distintive.com.br", target = "_blank",
                rel = "noopener", "Distintive")))
   )
