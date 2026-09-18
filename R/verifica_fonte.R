@@ -230,7 +230,8 @@ verificar_novidade_fonte <- function(nome_script, raiz = .aedi_raiz(),
       return(list(pular = FALSE,
                   motivo = "fonte por URL inacessível para verificação",
                   assinatura = NA_character_))
-    ctl <- tryCatch(AEDi:::ler_controle(nome_script),
+    ctl <- tryCatch(AEDi:::ler_controle(nome_script,
+                                        projeto = AEDi:::.nome_projeto(raiz)),
                     error = function(e) NULL)
     inalterado <- !is.null(ctl) && nrow(ctl) == 1 &&
       identical(ctl$status[1], "ok") &&

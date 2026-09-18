@@ -8,7 +8,8 @@ atualizar_indicadores(
   apenas = NULL,
   dir_dump = "~/backups_aedidb",
   snapshot = TRUE,
-  verificar_novidade = TRUE
+  verificar_novidade = TRUE,
+  raiz = .aedi_raiz()
 )
 }
 \arguments{
@@ -20,6 +21,9 @@ atualizar_indicadores(
 
 \item{verificar_novidade}{lógico (default TRUE); FALSE desativa a
 pré-verificação C5 e força a coleta mesmo sem novidades na fonte}
+
+\item{raiz}{raiz do projeto dono do lote (diretório com coleta/);
+define o \code{projeto} do controle de execucao. Default: cwd com coleta/}
 }
 \description{
 Modelo A (versões de carga): antes do lote, executa pg_dump do aedidb

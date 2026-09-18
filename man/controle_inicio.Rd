@@ -4,7 +4,15 @@
 \alias{controle_inicio}
 \title{Registra o inicio de uma execucao (retorna id do historico p/ fechar depois)}
 \usage{
-controle_inicio(nome_script, etapa = "coleta", por = Sys.info()[["user"]])
+controle_inicio(
+  nome_script,
+  etapa = "coleta",
+  por = Sys.info()[["user"]],
+  projeto = "AEDi"
+)
+}
+\arguments{
+\item{projeto}{nome do projeto (raiz do lote) dono do script}
 }
 \description{
 Registra o inicio de uma execucao (retorna id do historico p/ fechar depois)
