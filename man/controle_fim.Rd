@@ -12,8 +12,12 @@ controle_fim(
   linhas = NA_integer_,
   mensagem = "",
   hash_estado = NA_character_,
-  por = Sys.info()[["user"]]
+  por = Sys.info()[["user"]],
+  projeto = "AEDi"
 )
+}
+\arguments{
+\item{projeto}{nome do projeto (raiz do lote) dono do script}
 }
 \description{
 Fecha a execucao e atualiza o estado atual do script

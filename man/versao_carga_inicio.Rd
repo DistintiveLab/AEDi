@@ -7,7 +7,8 @@
 versao_carga_inicio(
   dir_dump = "~/backups_aedidb",
   espelho = espelho_padrao(),
-  codigo_versao = git_commit_aedi()
+  codigo_versao = git_commit_aedi(),
+  projeto = "AEDi"
 )
 }
 \arguments{
@@ -16,6 +17,8 @@ versao_carga_inicio(
 \item{espelho}{diretorio espelho opcional (default: extrainters se montado)}
 
 \item{codigo_versao}{identificador do codigo (default: commit git do AEDi)}
+
+\item{projeto}{nome do projeto (raiz do lote) dono da versao de carga}
 }
 \description{
 Executa pg_dump do aedidb para \if{html}{\out{<dir>}}/aedidb_v\if{html}{\out{<N>}}_\if{html}{\out{<AAAAMMDD>}}.dump e cria a

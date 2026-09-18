@@ -66,7 +66,8 @@ mod_atualizacao_server <- function(id, raiz = NULL) {
     }
 
     status_df <- function() {
-      ctl <- tryCatch(AEDi:::ler_controle(), error = function(e) NULL)
+      ctl <- tryCatch(AEDi:::ler_controle(projeto = AEDi:::.nome_projeto(raiz)),
+                      error = function(e) NULL)
       dw <- tryCatch(AEDi:::resumo_indicadores_dw(), error = function(e) NULL)
       scripts <- AEDi:::listar_scripts_coleta(raiz)
       if (is.null(ctl)) ctl <- data.frame(
