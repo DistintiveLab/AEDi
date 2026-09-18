@@ -77,8 +77,12 @@ listar_scripts_coleta <- function(raiz = .aedi_raiz()) {
   walk <- function(e) {
     if (!is.call(e)) return(invisible())
     if (is.symbol(e[[1]])) out <<- c(out, deparse(e[[1]]))
+    # argumentos vazios (ex.: df[i, ]) geram o objeto "missing", que erroa de
+    # forma nao capturavel ao ser forcado no laco; cada ramo fica protegido
     for (a in as.list(e)[-1])
-      if (is.function(a)) walk(body(a)) else if (is.call(a)) walk(a)
+      tryCatch(
+        if (is.function(a)) walk(body(a)) else if (is.call(a)) walk(a),
+        error = function(err) NULL)
     invisible()
   }
   for (e in exprs) walk(e)
@@ -182,6 +186,11 @@ listar_scripts_coleta <- function(raiz = .aedi_raiz()) {
   sess <- .prover_objetos_sessao(env)
   on.exit(suppressWarnings(try(lapply(sess$abertas, DBI::dbDisconnect), silent = TRUE)),
           add = TRUE)
+  # scripts leem/escrevem com caminhos relativos a raiz (ex. coleta/cache/…):
+  # garante cwd = raiz durante a execucao mesmo com o lote disparado de
+  # outro diretorio (atualizar_indicadores(raiz=))
+  cwd_antigo <- setwd(raiz)
+  on.exit(setwd(cwd_antigo), add = TRUE)
   tryCatch(
     sys.source(file.path(raiz, "coleta", arquivo), envir = env, toplevel.env = env),
     error = function(e) {
@@ -194,6 +203,31 @@ listar_scripts_coleta <- function(raiz = .aedi_raiz()) {
           call. = FALSE, domain = NA)
       stop(e)
     })
+}
+
+#' Cria preventivamente os diretorios de cache que o script referencia
+#' (convencao coleta/cache/<nome>/…): write_csv nao cria diretorio-pai, e o
+#' lote roda sobre projetos cujo cache pode ainda nao existir (ex.: clone
+#' novo na VPS). A deteccao e por regex sobre o texto bruto (readLines), que
+#' tolera scripts com construtos que quebram varredura da arvore de parse
+#' (ex.: subscript vazio df[i, ]) e ate scripts que nao parseiam. Falha de
+#' criacao vira erro claro do script (permissao).
+#' @keywords internal
+.preparar_cache_script <- function(arquivo, raiz) {
+  linhas <- readLines(file.path(raiz, "coleta", arquivo), warn = FALSE)
+  cams <- unlist(regmatches(linhas,
+    gregexpr("coleta/cache/[^\"'[:space:]]+", linhas)), use.names = FALSE)
+  for (cam in unique(cams)) {
+    alvo <- if (grepl("^[/\\\\]", cam)) dirname(cam) else
+      dirname(file.path(raiz, cam))
+    if (dir.exists(alvo)) next
+    dir.create(alvo, recursive = TRUE, showWarnings = FALSE)
+    if (!dir.exists(alvo))
+      stop(sprintf(
+        "nao foi possivel criar o diretorio de cache '%s' (verifique permissoes de escrita em %s)",
+        alvo, raiz), call. = FALSE)
+  }
+  invisible(TRUE)
 }
 
 #' Executa um unico script de coleta com controle de execucao.
@@ -226,6 +260,7 @@ executar_script_coleta <- function(arquivo, raiz = .aedi_raiz(),
   hist_id <- AEDi:::controle_inicio(nome, projeto = projeto)
   t0 <- Sys.time()
   res <- tryCatch({
+    .preparar_cache_script(arquivo, raiz)
     env <- new.env(parent = globalenv())
     .source_script_coleta(arquivo, raiz, env)
     nlin <- tryCatch({

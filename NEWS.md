@@ -1,3 +1,27 @@
+# AEDi 0.4.2 (2026-09-17)
+
+Correções de robustez do lote em clones novos (ex.: VPS) e em scripts com
+construtos que quebravam a varredura de pacotes.
+
+## Correções
+
+- **Criação preventiva dos diretórios de cache**: `write_csv()` (readr)
+  não cria diretório-pai, então em clones sem os caches históricos (caso
+  da VPS `/dw`) todo script que grava em `coleta/<nome>/...` falhava com
+  "Cannot open file for writing". O lote agora cria, antes de executar o
+  script, os diretórios `coleta/cache/...` citados no texto do script
+  (detecção por regex sobre `readLines()`, que tolera scripts com
+  subscript vazio `df[i, ]` e até scripts que não parseiam). Falha de
+  criação (permissão) vira erro claro com o caminho.
+- **cwd = raiz durante o script**: scripts leem/escrevem com caminhos
+  relativos à raiz; agora vale mesmo com o lote disparado de outro
+  diretório via `atualizar_indicadores(raiz = ...)`.
+- **`.heads_bare()` blindado**: o objeto "missing" gerado por subscritos
+  vazios (`df[i, ]`) derrubava a detecção de pacotes ("argument 'a' is
+  missing") em ~11 scripts ativos (ex.: `datasus_popmun_update`,
+  `infra1_sinisa`, `rais_vinculos_s38`); cada ramo da varredura agora é
+  protegido individualmente.
+
 # AEDi 0.4.1 (2026-09-17)
 
 Orquestrador multi-projeto: o AEDi vira o backend abstrato de
