@@ -1,0 +1,257 @@
+/* Painel de indicadores do DW AEDi — estrutura inspirada no labourvaluesdatapanel.
+   Duas paletas: govbr (padrao, azul gov.br #1351B4) e pb (preto e branco com
+   toques do roxo da Distintive #78529D), trocadas por classe em <body>. */
+
+:root {
+  --painel-font: Rawline, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --p-tinta: #1351B4;          /* titulos, marca, abas ativas */
+  --p-destaque: #1351B4;       /* acoes primarias, foco */
+  --p-destaque-hover: #0C3F91;
+  --p-realce: #FFCD07;         /* sublinha/realce gov.br */
+  --p-texto: #333333;
+  --p-mudo: #656565;
+  --p-papel: #FFFFFF;
+  --p-superficie: #F2F5FA;     /* hero, cards de fundo */
+  --p-linha: #D9E0EC;
+  --p-topbar-h: 56px;
+  --p-nav-h: 104px;            /* topbar + navbar (atualizada por JS) */
+}
+body.painel-pb {
+  --p-tinta: #1B1B1B;
+  --p-destaque: #78529D;
+  --p-destaque-hover: #5E3F82;
+  --p-realce: #C9B9DE;         /* roxo claro da marca */
+  --p-texto: #242424;
+  --p-mudo: #6B6B6B;
+  --p-superficie: #F7F5FA;
+  --p-linha: #E4E1EA;
+}
+
+* { box-sizing: border-box; }
+html { height: 100%; overflow: hidden; }
+body {
+  height: 100dvh; overflow: hidden; display: flex; flex-direction: column;
+  margin: 0; background: var(--p-papel); color: var(--p-texto);
+  font-family: var(--painel-font); font-size: 15px; line-height: 1.55;
+}
+body > .container-fluid {
+  width: 100%; flex: 1 1 auto; min-height: 0;
+  overflow-x: hidden; overflow-y: auto; position: relative;
+}
+.painel-topbar, .navbar, button, .btn, label, [role='tab'], .nav-tabs,
+.selectize-input, .selectize-dropdown, img { -webkit-user-select: none; user-select: none; }
+input:not([type='checkbox']):not([type='radio']), textarea { -webkit-user-select: text; user-select: text; }
+::selection { background: var(--p-realce); color: var(--p-tinta); }
+a { color: var(--p-destaque); }
+a:hover { color: var(--p-destaque-hover); }
+h1, h2, h3, h4 { color: var(--p-tinta); font-family: inherit; font-weight: 700; line-height: 1.2; margin-top: 0; }
+h1 { font-size: clamp(26px, 3vw, 40px); letter-spacing: -.03em; }
+h2 { font-size: 24px; margin: 26px 0 16px; }
+h3 { font-size: 19px; }
+:focus-visible { outline: 3px solid var(--p-destaque) !important; outline-offset: 2px; }
+
+/* ---- Topbar (marca + acoes) ---- */
+.painel-topbar {
+  flex: 0 0 var(--p-topbar-h); height: var(--p-topbar-h); display: flex;
+  align-items: center; gap: 18px; padding: 0 18px 0 10px;
+  background: var(--p-papel); border-bottom: 1px solid var(--p-linha); z-index: 1060;
+}
+.painel-brand {
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+  color: var(--p-tinta); text-decoration: none;
+}
+.painel-brand:hover, .painel-brand:focus { color: var(--p-tinta); text-decoration: none; }
+.painel-brand img { width: 38px; height: 38px; object-fit: contain; display: block; }
+.painel-brand-name { display: block; font-size: 21px; font-weight: 700; letter-spacing: -.03em; line-height: 1.05; }
+.painel-brand small { display: block; margin-top: 3px; font-size: 10px; font-weight: 500; color: var(--p-mudo); }
+.painel-topbar-acoes { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.painel-paleta-btn {
+  min-height: 34px; height: 34px; padding: 5px 12px; font-size: 13px; font-weight: 600;
+  border: 1px solid var(--p-linha); border-radius: 6px; background: var(--p-papel);
+  color: var(--p-tinta); cursor: pointer;
+}
+.painel-paleta-btn:hover { background: var(--p-superficie); }
+.painel-paleta-btn::before { content: "\25CF\00A0"; color: var(--p-destaque); }
+
+/* ---- Navbar (abas) ---- */
+.navbar {
+  position: relative; flex: 0 0 48px; height: 48px; min-height: 48px; z-index: 1050;
+  margin: 0; border: 0; border-top: 3px solid var(--p-tinta);
+  border-radius: 0; background: var(--p-papel); box-shadow: none;
+}
+.navbar > .container-fluid { position: relative; height: 45px; padding: 0; display: flex; align-items: center; justify-content: center; }
+.navbar > .container-fluid::before, .navbar > .container-fluid::after { display: none; }
+.navbar-header { display: none; }
+.navbar-collapse { padding: 0; border: 0; box-shadow: none; }
+.navbar-nav { float: none; display: flex; gap: clamp(18px, 3vw, 40px); margin: 0; padding: 0 12px; }
+.navbar-nav > li { float: none; margin: 0; }
+.navbar-default .navbar-nav > li > a {
+  position: relative; display: inline-block; padding: 12px 0; color: var(--p-tinta);
+  background: none; font-family: var(--painel-font); font-size: 18px; font-weight: 600;
+  line-height: 21px; text-shadow: none; white-space: nowrap;
+}
+.navbar-default .navbar-nav > li > a::after {
+  content: ''; position: absolute; bottom: 0; left: 50%; right: 50%; height: 4px;
+  background: var(--p-realce); border-radius: 3px 3px 0 0;
+  transition: left .25s ease, right .25s ease;
+}
+.navbar-default .navbar-nav > li > a:hover,
+.navbar-default .navbar-nav > li > a:focus,
+.navbar-default .navbar-nav > .active > a,
+.navbar-default .navbar-nav > .active > a:hover,
+.navbar-default .navbar-nav > .active > a:focus {
+  background: none; color: var(--p-tinta); box-shadow: none;
+}
+.navbar-default .navbar-nav > li > a:hover::after,
+.navbar-default .navbar-nav > li > a:focus-visible::after,
+.navbar-default .navbar-nav > .active > a::after { left: 0; right: 0; }
+
+/* ---- Conteudo, toolbar, cards ---- */
+.painel-pagina { max-width: 1320px; margin: 0 auto; padding: 26px 28px 40px; }
+.painel-toolbar {
+  position: sticky; top: 0; z-index: 1045; display: flex; align-items: center;
+  gap: 18px; flex-wrap: wrap; padding: 12px 28px; margin: 0 -28px 22px;
+  background: var(--p-papel); border-bottom: 1px solid var(--p-linha);
+}
+.painel-toolbar .form-group { display: flex; align-items: center; gap: 10px; margin: 0; }
+.painel-toolbar label { flex-shrink: 0; margin: 0; font-size: 12px; font-weight: 600; color: var(--p-mudo); }
+.painel-toolbar .selectize-control { min-width: 220px; }
+.selectize-input, .form-control {
+  border: 1px solid var(--p-linha); border-radius: 6px; box-shadow: none;
+  min-height: 40px; font-family: var(--painel-font); font-size: 14px;
+}
+.selectize-input.focus, .form-control:focus {
+  box-shadow: 0 0 0 2px #1351B433; border-color: var(--p-destaque);
+}
+.selectize-dropdown { font-size: 14px; line-height: 1.5; max-width: calc(100vw - 32px); }
+.selectize-dropdown .option { padding: 8px 12px; white-space: normal; }
+.selectize-dropdown .selected { background: var(--p-destaque); color: #fff; }
+.selectize-dropdown .active, .selectize-dropdown .active:not(.selected), .selectize-dropdown .selected.active {
+  background: var(--p-realce); color: var(--p-tinta);
+}
+.control-label { font-size: 13px; font-weight: 600; }
+.btn {
+  border-radius: 7px; min-height: 42px; padding: 9px 16px;
+  border: 1px solid var(--p-linha); background: var(--p-papel); color: var(--p-tinta);
+  font-size: 14px; font-weight: 600; text-transform: none;
+}
+.btn:hover { background: var(--p-superficie); }
+.btn-primary, .btn-primary:hover, .btn-primary:focus {
+  background: var(--p-destaque); border-color: var(--p-destaque); color: #fff;
+}
+.painel-card {
+  border: 1px solid var(--p-linha); background: var(--p-papel); border-radius: 10px;
+  padding: 20px 22px; margin-bottom: 22px;
+}
+.painel-card h3 { margin-bottom: 6px; }
+.painel-nota { font-size: 12.5px; color: var(--p-mudo); margin: 10px 2px 0; }
+.shiny-output-error { color: #9d302c; padding: 12px; }
+.js-plotly-plot { contain: strict; }
+
+/* ---- Aba Sobre ---- */
+.painel-sobre-hero {
+  background: var(--p-superficie); border: 1px solid var(--p-linha);
+  border-radius: 14px; padding: clamp(26px, 5vw, 58px); margin-bottom: 34px;
+}
+.painel-kicker {
+  color: var(--p-destaque); font-size: 12px; font-weight: 700;
+  letter-spacing: .16em; text-transform: uppercase; margin: 0 0 12px;
+}
+.painel-sobre-hero h1 { margin: 0 0 14px; }
+.painel-lead { color: var(--p-mudo); font-size: 18px; line-height: 1.6; max-width: 780px; }
+.painel-acoes { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 26px; }
+.painel-sobre-secao { border-top: 1px solid var(--p-linha); padding: 34px 0; }
+.painel-sobre-secao:first-of-type { border-top: 0; padding-top: 0; }
+.painel-pessoa {
+  display: grid; grid-template-columns: minmax(0, 340px); gap: 22px;
+  align-items: start; max-width: 780px;
+}
+.painel-pessoa-card {
+  background: var(--p-papel); border: 1px solid var(--p-linha);
+  border-top: 5px solid var(--p-destaque); border-radius: 10px; padding: 22px;
+}
+.painel-pessoa-card h3 { margin-bottom: 4px; }
+.painel-pessoa-papel { color: var(--p-mudo); font-size: 14px; margin-bottom: 12px; }
+.painel-apoio {
+  display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 40px;
+  align-items: center; max-width: 900px; padding: 30px;
+  background: var(--p-superficie); border: 1px solid var(--p-linha); border-radius: 12px;
+}
+.painel-apoio-logo {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--p-papel); border-radius: 8px; padding: 20px;
+}
+.painel-apoio-logo img { width: 100%; height: auto; }
+.painel-apoio-texto p { font-size: 16px; }
+
+/* ---- Rodape e utilitarios ---- */
+.painel-rodape {
+  flex: 0 0 auto; display: flex; justify-content: space-between; gap: 16px;
+  flex-wrap: wrap; padding: 14px 28px; font-size: 11.5px; color: var(--p-mudo);
+  border-top: 1px solid var(--p-linha); background: var(--p-papel);
+}
+.painel-rodape a { color: var(--p-mudo); font-weight: 600; }
+.painel-busy {
+  display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  padding: 9px 16px; background: var(--p-destaque); color: #fff; border-radius: 22px;
+  z-index: 1060; font-size: 13px; pointer-events: none;
+}
+.shiny-busy .painel-busy { display: block; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;
+}
+
+/* ---- Mapa ---- */
+.leaflet-container { font-family: inherit; }
+.leaflet-control-attribution { font-size: 9px; }
+.leaflet-control-zoom a { min-width: 36px; min-height: 36px; line-height: 36px; }
+
+@media (max-width: 767px) {
+  .painel-topbar { gap: 12px; padding: 0 12px 0 8px; }
+  .painel-brand small { display: none; }
+  .painel-brand-name { font-size: 17px; }
+  .navbar > .container-fluid { padding: 0; }
+  .navbar-header {
+    display: flex; align-items: center; justify-content: center; width: 100%;
+    margin: 0 !important; float: none; height: 45px;
+  }
+  .navbar-default .navbar-brand {
+    float: none; height: auto; padding: 0; margin: 0 !important;
+    display: flex; align-items: center; color: var(--p-tinta);
+    font-family: var(--painel-font); font-size: 19px; font-weight: 700; line-height: 1;
+  }
+  .navbar-toggle {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    float: none; margin: 0; padding: 8px; min-width: 38px; min-height: 38px;
+    border: 0; border-radius: 0;
+  }
+  .navbar-default .navbar-toggle:hover, .navbar-default .navbar-toggle:focus { background: none; }
+  .navbar-default .navbar-toggle .icon-bar { background: var(--p-tinta); width: 20px; }
+  .navbar-collapse {
+    position: fixed; top: var(--p-nav-h); left: 0; right: 0; margin: 0 !important;
+    padding: 12px 0 0; background: var(--p-papel); overflow-y: auto !important;
+    max-height: none !important; border-top: 1px solid var(--p-linha);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .12);
+  }
+  .navbar-nav { display: block; gap: 0; margin: 0; padding: 0; }
+  .navbar-default .navbar-nav > li > a { display: block; width: 100%; padding: 16px 26px; font-size: 21px; line-height: 1.2; white-space: normal; }
+  .navbar-default .navbar-nav > li > a::after { display: none; }
+  .navbar-default .navbar-nav > .active > a,
+  .navbar-default .navbar-nav > .active > a:hover,
+  .navbar-default .navbar-nav > .active > a:focus {
+    background: var(--p-destaque); color: #fff;
+  }
+  .painel-toolbar { gap: 8px; padding: 10px 16px; margin: 0 -16px 18px; }
+  .painel-toolbar .form-group { width: 100%; }
+  .painel-pagina { padding: 18px 16px 32px; }
+  .painel-apoio { grid-template-columns: 1fr; gap: 20px; padding: 20px; }
+  .painel-apoio-logo { max-width: 240px; }
+  .painel-rodape { padding: 12px 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important; transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

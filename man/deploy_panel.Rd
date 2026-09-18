@@ -7,6 +7,7 @@
 deploy_panel(
   diretorio = "painel",
   titulo = "Painel de Indicadores",
+  paleta = c("govbr", "pb"),
   sobrescrever = FALSE
 )
 }
@@ -14,7 +15,11 @@ deploy_panel(
 \item{diretorio}{caminho do diretorio da app, relativo ao projeto
 (default "painel")}
 
-\item{titulo}{titulo do header da app gerada}
+\item{titulo}{titulo do topbar da app gerada}
+
+\item{paleta}{paleta inicial da app gerada: \code{"govbr"} (padrao, azul
+Gov.br) ou \code{"pb"} (preto e branco com o roxo da Distintive); o
+visitante pode trocar no botao do topo em qualquer caso}
 
 \item{sobrescrever}{substitui um \code{app.R} existente (default FALSE)}
 }

@@ -1,6 +1,6 @@
 Package: AEDi
 Title: Pacote de inclusão de fontes de dados, indicadores, e filtros de variáveis
-Version: 0.3.0
+Version: 0.4.0
 Date: 2026-09-17
 Authors@R: 
     c(person(given = "Rodrigo",
@@ -85,7 +85,8 @@ Collate:
     'header_buttons_module.R'
     'mod_atualizacao.R'
     'mod_panel_map.R'
-    'mod_panel_series.R'
+    'mod_panel_regiao.R'
+    'mod_panel_sobre.R'
     'painel_dw.R'
     'raismetadatalayoute.R'
     'raismetadatalayoutv.R'

@@ -4,18 +4,25 @@
 \alias{run_panel}
 \title{Painel de indicadores do DW (app Shiny autonoma)}
 \usage{
-run_panel(port = NULL, titulo = "Painel de Indicadores")
+run_panel(
+  port = NULL,
+  titulo = "Painel de Indicadores",
+  paleta = c("govbr", "pb")
+)
 }
 \arguments{
 \item{port}{porta HTTP; default escolhe uma porta livre}
 
-\item{titulo}{titulo do header (default "Painel de Indicadores")}
+\item{titulo}{titulo do topbar (default "Painel de Indicadores")}
+
+\item{paleta}{paleta inicial, \code{"govbr"} (padrao) ou \code{"pb"} — ver
+\code{\link[=panel_app]{panel_app()}}}
 }
 \description{
-Lanca um painel leve de consulta ao DW de indicadores (aedidb): mapa
-coropletico municipal e serie temporal por localidade de qualquer
-indicador gravado (mdata). Nao abre o AEDi completo — util para
-conferir rapidamente o que foi carregado, inclusive em servidor.
+Lanca um painel leve de consulta ao DW de indicadores (aedidb): serie
+temporal por nivel territorial e localidade, mapa coropletico municipal
+e pagina Sobre. Nao abre o AEDi completo — util para conferir
+rapidamente o que foi carregado, inclusive em servidor.
 }
 \details{
 Para materializar uma app deployavel dentro de um projeto, use
