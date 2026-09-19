@@ -1,9 +1,8 @@
-###Filtra e prepara dados base
- dbdbase <- DBI::dbGetQuery(con,SELECT * from named_datavalues WHERE orig_name IN ('rais_vlr_rem_dez_s38','rais_vinculos_s38')
-dbdbase|>
-
-      tidyr::pivot_wider(names_from='orig_name',values_from = 'value')
-###Cria indicador
-dbdbase <- rais_mediaremdez_s38 <- dbdbase |>
-                     dplyr::rename(setNames(c('rais_vlr_rem_dez_s38','rais_vinculos_s38'), c('a','b'))) |>
-                dplyr::transmute(rais_mediaremdez_s38 = a / b,refdate,local_id)
+# DEPRECATED (2026-09-17): duplicata truncada de rais_media_remdez_s38.R.
+# Este arquivo chegou a NASCER corrompido (SQL sem aspas, pivot descartado,
+# rename(setNames()) invalido) e nunca rodou no lote - falhava no parse.
+# Nao existe mdata 'rais_mediaremdez_s38' no DW; a serie canonica da
+# remuneracao media de dezembro s38 (massa_salarial/vinculos, mdata 84,
+# 2013-2025) e produzida por rais_media_remdez_s38.R (padrao A5b, gravada
+# via gravar_serie_dw). Mantido apenas como historico; aposentado com
+# rais_mediaremdez_s38.R.ignore.
