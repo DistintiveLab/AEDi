@@ -30,11 +30,15 @@ db_datawrite <- \(metadf,datadf,construct,grp=FALSE,engine="postgresql",sanitize
     return("Em construção, não disponível outra engine ainda")
   }
 
+  # mesmo padrao de defaults de gravar_serie_dw/scripts do lote: no app as
+  # vars sempre estao definidas; no lote sob outra raiz (ex.: pndr_dashboard,
+  # cujo .Renviron nao define user/password/host/dbname) evita cair num
+  # socket unix do usuario OS (banco sem o schema do aedidb)
   condw <- DBI::dbConnect(RPostgres::Postgres(),
-                        user=Sys.getenv("user"),
-                        password=Sys.getenv("password"),
-                        host=Sys.getenv("host"),
-                        dbname=Sys.getenv("dbname"))
+                        user=Sys.getenv("user", "aedi"),
+                        password=Sys.getenv("password", "aEd1#man@gR"),
+                        host=Sys.getenv("host", "127.0.0.1"),
+                        dbname=Sys.getenv("dbname", "aedidb"))
 
 
 

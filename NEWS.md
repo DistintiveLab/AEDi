@@ -1,3 +1,18 @@
+# AEDi 0.4.3 (2026-09-17)
+
+Correções de robustez do lote em clones novos (ex.: VPS) e em scripts com
+construtos que quebravam a varredura de pacotes.
+
+## Correções
+
+- **`db_datawrite()` com defaults de conexão**: conectava com
+  `Sys.getenv("user")`... **sem** defaults — no lote sob outra raiz (ex.:
+  pndr_dashboard, cujo `.Renviron` não define `user`/`password`/`host`/
+  `dbname`) caía num socket unix do usuário OS (banco sem schema do aedidb,
+  erro "relation \"mdata\" does not exist"). Agora usa o mesmo padrão de
+  defaults de `gravar_serie_dw()`/scripts (`aedi@127.0.0.1/aedidb`); no app
+  as vars sempre estão definidas, sem mudança de comportamento.
+
 # AEDi 0.4.2 (2026-09-17)
 
 Correções de robustez do lote em clones novos (ex.: VPS) e em scripts com
