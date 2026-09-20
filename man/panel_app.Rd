@@ -4,7 +4,11 @@
 \alias{panel_app}
 \title{App do painel de indicadores (objeto shinyApp)}
 \usage{
-panel_app(titulo = "Painel de Indicadores", paleta = c("govbr", "pb"))
+panel_app(
+  titulo = "Painel de Indicadores",
+  paleta = c("govbr", "pb"),
+  assets_dir = NULL
+)
 }
 \arguments{
 \item{titulo}{titulo do topbar (default "Painel de Indicadores")}
@@ -12,6 +16,10 @@ panel_app(titulo = "Painel de Indicadores", paleta = c("govbr", "pb"))
 \item{paleta}{paleta inicial: \code{"govbr"} (padrao, azul Gov.br) ou \code{"pb"}
 (preto e branco com toques do roxo da Distintive). O visitante pode
 trocar no botao do topo; a escolha fica salva no navegador}
+
+\item{assets_dir}{diretorio com os assets do painel (CSS/JS); default
+o embutido no pacote (inst/painel) — o esqueleto gerado por
+\code{\link[=deploy_panel]{deploy_panel()}} passa o proprio \verb{www/} local}
 }
 \description{
 Constroi o objeto \code{shinyApp} do painel de indicadores do DW (aedidb):
@@ -24,11 +32,15 @@ atravessam a conexão após a primeira carga da geometria) e aba
 "Sobre" com informações do autor e apoio da Distintive. Estrutura
 visual adaptada do labourvaluesdatapanel: topbar com marca, abas
 realçadas e rodapé.
-E o motor por tras de \code{\link[=run_panel]{run_panel()}} e da app gerada por \code{\link[=deploy_panel]{deploy_panel()}}
-— como ultima expressao de um \code{app.R} hospedavel, basta
-\code{AEDi::panel_app()}.
+E o motor por tras de \code{\link[=run_panel]{run_panel()}} e da app launcher gerada por
+\code{\link[=deploy_panel]{deploy_panel()}} — como ultima expressao de um \code{app.R} hospedavel,
+basta \code{AEDi::panel_app()}.
 }
 \details{
+Marca configuravel por variaveis de ambiente (sobrepoem os argumentos;
+ver R/painel_branding.R): \code{painel_titulo}, \code{painel_subtitulo},
+\code{painel_paleta} e \code{painel_contato}.
+
 Conexao via variaveis de ambiente \code{user}/\code{password}/\code{host}/\code{dbname}
 (mesmo padrao de \code{\link[=controle_con]{controle_con()}}), com defaults locais.
 }
