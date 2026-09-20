@@ -1,3 +1,48 @@
+# AEDi 0.6.0 (2026-09-20)
+
+O painel de indicadores do DW deixa de ser só uma launcher sobre o pacote:
+`deploy_panel()` agora gera, por padrão, um **esqueleto minimamente
+funcional e autônomo** — cópia que cada projeto passa a possuir e adapta
+livremente (abas, layout, marca), sem depender do AEDi em execução.
+
+## Novidades
+
+- **`deploy_panel()` gera esqueleto adaptável (novo padrão)**: além do
+  `app.R`, materializa `R/` (módulos das abas, blocos de UI componíveis,
+  camada de dados `painel_dw.R`, marca configurável em `branding.R`),
+  `www/` (CSS/JS/logo), `README.md` de instruções e
+  `esqueleto_manifest.json` com a versão geradora e o SHA-256 de cada
+  arquivo (auditoria de mudanças locais). O modo launcher continua
+  disponível com `esqueleto = FALSE` — na VPS, onde atualizações do
+  painel chegam com o reinstall do pacote, é ele que segue valendo.
+- **`atualizar_painel()`**: absorve melhorias do AEDi num esqueleto já
+  gerado **preservando edições locais** — pelo manifest, arquivos
+  intactos são atualizados, modificados ficam intocados e reportados
+  (com o hash upstream esperado no manifest, a divergência segue
+  detectável na próxima rodada); `forcar = TRUE` repõe tudo pelo
+  upstream. Arquivos novos são adicionados; retirados do esqueleto,
+  apenas reportados, nunca apagados.
+- **UI do painel em blocos componíveis** (`painel_logo_src()`,
+  `painel_recursos()`, `painel_topbar()`, `painel_abas()`,
+  `painel_rodape()`): launcher e esqueleto compartilham exatamente os
+  mesmos fontes, sem duplicação manual — teste de sincronia guarda a
+  igualança dos templates com `R/` do pacote.
+- **Marca configurável por variáveis de ambiente** (`painel_titulo`,
+  `painel_subtitulo`, `painel_paleta`, `painel_contato`) via
+  `painel_brand_*()`.
+- Esqueleto aplicado no consumidor real: o `painel/` do pndr_dashboard
+  migrou da launcher para o esqueleto (título preservado).
+
+## Correções
+
+- O `app.R` do esqueleto anexa `library(shiny)` antes do sourcing dos
+  módulos — usavam `NS()`/`tagList()` sem prefixo, que só resolviam
+  dentro do namespace do pacote.
+- O parse-check pós-geração buscava os arquivos de `R/` no diretório
+  raiz da app em vez de `R/`.
+- Testes do manifest endurecidos (hashes verificados com `vapply`, não
+  mais vacuos).
+
 # AEDi 0.4.3 (2026-09-17)
 
 Correções de robustez do lote em clones novos (ex.: VPS) e em scripts com
