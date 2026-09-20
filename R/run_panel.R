@@ -27,10 +27,14 @@ painel_logo_src <- function() {
 #'
 #' Constroi o objeto `shinyApp` do painel de indicadores do DW (aedidb):
 #' aba "Região" com série temporal por nível territorial e
-#' localidade (região, UF, divisões do IBGE ou município), aba
-#' "Mapa" coroplético municipal e aba "Sobre" com informações do
-#' autor e apoio da Distintive. Estrutura visual adaptada do
-#' labourvaluesdatapanel: topbar com marca, abas realçadas e rodapé.
+#' localidade (região, UF, divisões do IBGE ou município) e globo
+#' interativo de UFs, aba "Mapa" coroplético municipal com slider de
+#' ano animado, paleta divergente centrada em 0 (invertível), ajuda por
+#' indicador e atualização incremental (apenas cores e tooltips
+#' atravessam a conexão após a primeira carga da geometria) e aba
+#' "Sobre" com informações do autor e apoio da Distintive. Estrutura
+#' visual adaptada do labourvaluesdatapanel: topbar com marca, abas
+#' realçadas e rodapé.
 #' E o motor por tras de [run_panel()] e da app gerada por [deploy_panel()]
 #' — como ultima expressao de um `app.R` hospedavel, basta
 #' `AEDi::panel_app()`.
@@ -48,8 +52,11 @@ painel_logo_src <- function() {
 panel_app <- function(titulo = "Painel de Indicadores",
                       paleta = c("govbr", "pb")) {
   paleta <- match.arg(paleta)
-  painel_css <- system.file("painel", "painel.css", package = "AEDi")
-  painel_js <- system.file("painel", "painel.js", package = "AEDi")
+  painel_dir <- function(arquivo) system.file("painel", arquivo, package = "AEDi")
+  painel_css <- painel_dir("painel.css")
+  painel_js <- painel_dir("painel.js")
+  painel_scripts <- vapply(c("painel-geo.js", "painel-map.js",
+    "painel-map-controls.js", "painel-globe.js"), painel_dir, character(1))
   logo <- painel_logo_src()
 
   ui <- shiny::tagList(
@@ -58,6 +65,7 @@ panel_app <- function(titulo = "Painel de Indicadores",
                        content = "width=device-width, initial-scale = 1")),
     htmltools::includeCSS(painel_css),
     htmltools::includeScript(painel_js),
+    lapply(painel_scripts, htmltools::includeScript),
     shinyGovBRstyle::use_govbr(),
     tags$div(id = "painel_raiz", `data-paleta` = paleta, class = "hidden"),
     tags$header(class = "painel-topbar",
@@ -106,9 +114,10 @@ panel_app <- function(titulo = "Painel de Indicadores",
 #' Painel de indicadores do DW (app Shiny autonoma)
 #'
 #' Lanca um painel leve de consulta ao DW de indicadores (aedidb): serie
-#' temporal por nivel territorial e localidade, mapa coropletico municipal
-#' e pagina Sobre. Nao abre o AEDi completo — util para conferir
-#' rapidamente o que foi carregado, inclusive em servidor.
+#' temporal por nivel territorial e localidade com globo de UFs, mapa
+#' coropletico municipal com slider de ano animado e atualizacao
+#' incremental, e pagina Sobre. Nao abre o AEDi completo — util para
+#' conferir rapidamente o que foi carregado, inclusive em servidor.
 #'
 #' Para materializar uma app deployavel dentro de um projeto, use
 #' [deploy_panel()]; para obter so o objeto da app (hospedavel),

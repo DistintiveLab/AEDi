@@ -20,9 +20,10 @@ run_panel(
 }
 \description{
 Lanca um painel leve de consulta ao DW de indicadores (aedidb): serie
-temporal por nivel territorial e localidade, mapa coropletico municipal
-e pagina Sobre. Nao abre o AEDi completo — util para conferir
-rapidamente o que foi carregado, inclusive em servidor.
+temporal por nivel territorial e localidade com globo de UFs, mapa
+coropletico municipal com slider de ano animado e atualizacao
+incremental, e pagina Sobre. Nao abre o AEDi completo — util para
+conferir rapidamente o que foi carregado, inclusive em servidor.
 }
 \details{
 Para materializar uma app deployavel dentro de um projeto, use
