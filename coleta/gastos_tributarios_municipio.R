@@ -1,7 +1,16 @@
 # gastos_tributarios_municipio.R -----------------------------------------
-# Fase D (roadmap_gastos_tributarios.md, D3): municipalizacao dos gastos
-# tributarios FEDERAIS 2022 (bases efetivas, DGT/RFB) como FATO no DW —
+# Fase D (roadmap_gastos_tributarios.md, D3+D3b): municipalizacao dos gastos
+# tributarios FEDERAIS (bases efetivas, DGT/RFB) como FATO no DW —
 # tabela gasto_tributario_municipio(ano, local_id, grupo, valor).
+#
+# Multi-ano (argumento CLI, ex.: Rscript coleta/gastos_tributarios_municipio.R 2023):
+#   2022, 2023 -> EFETIVO: alvos regionais do Quadro VII (REG) da edicao
+#     propria da DGT (dgt_2022.xlsx / dgt_2023.xlsx);
+#   2024, 2025 -> ESTIMATIVA: alvo nacional do Quadro XXVI (PROJECAO) da
+#     dgt_2023.xlsx por tributo, escalando as cotas regionais do Q VII (REG)
+#     2023 congeladas (fator = QXXVI[tributo, ano] / QXXVI[tributo, 2023]).
+#     Camada de projecao explicita, mesma filosofia da extrapolacao do PIB
+#     no D4; sempre registrada em `fonte_alvo` abaixo.
 #
 # Porta a rotina de consulta MIDR-IICA (pndr_relatorios,
 # 2025-08-Produto-5/dataprep/gastos_tributarios.R) com substituicoes
@@ -9,14 +18,25 @@
 #   - demografia do Censo (CSV local)     -> SIDRA v3 tabela 9606 (Censo 2022);
 #   - exportacoes comexstat (secoes I/II) -> VAB agropecuaria (SIDRA 5938, var 513);
 #   - demonstrativo SIMPLES do BB         -> arrecadacao previdenciaria DARF (RFB);
-#   - renuncias PJ da CGU                 -> ADIADA p/ D3b: enquanto isso o grupo
-#     "demais_tributos" (II, IRPJ, IPI-I, IPI-V, IOF, PIS, CSLL, COFINS, CIDE,
-#     AFRMM, CONDECINE) usa a chave DARF como fallback;
+#   - renuncias PJ (ECF/CGU + agregado RFB) -> D3b IMPLEMENTADO: o grupo
+#     "demais_tributos" passa a ser municipalizado pelo agregado PJ da RFB
+#     (gastos-tributarios... agregado-2015-a-2024) x indice de estabelecimentos
+#     ativos por raiz de CNPJ (coleta/cnpj_indice_raiz_municipio.R; espelho
+#     HuggingFace fluowai/datacorp-cnpj-data porque
+#     arquivos.receitafederal.gov.br bloqueia este IP). Substituicoes dentro
+#     da substituicao: sem data_inicio no espelho -> snapshot atual para todo
+#     ano; coluna do agregado = propria do ano, congelando em 2023 (ano cheio)
+#     para 2024+ porque a coluna 2024 e parcial (ate 30/06). DARF permanece
+#     como fallback se o indice nao existir;
 #   - CEBAS/MDS (entidades filantropicas) -> populacao total (SIDRA 9606);
 #   - ITR ODS (SIAFI, sheet 2022)         -> itr.xlsx sheet "2020" como chave
-#     espacial (zip do autor indisponivel, 404).
+#     espacial (zip do autor indisponivel, 404);
+#   - chaves por ano: IRPF grandes numeros = ano-calendario proprio (2025
+#     congela ac 2024, ultimo publicado); BEN = edicao do ano (aba "Valor
+#     Total"; layout varia por edicao — deteccao dinamica); previdenciaria
+#     DARF = edicao do ano; MEI = congela 2023 (ultima edicao publicada).
 #
-# Mecanismo (Quadro VII-REG da DGT, bases efetivas 2022, unidade R$ 1,00):
+# Mecanismo (Quadro VII-REG da DGT, bases efetivas, unidade R$ 1,00):
 #   alvo_subcat[regiao] = (v_subcat[regiao] / soma das 5 subcats-chave do
 #     tributo na regiao) x total do tributo na regiao
 #   gt_municipio = alvo[regiao] x prop da chave do municipio dentro da regiao
@@ -30,14 +50,24 @@
 # GOTCHA: .Renviron do pndr_dashboard SOBRESCREVE essas env vars (aponta p/
 # o remoto 10.214.50.169). Para gravar no DW LOCAL, prefixe
 #   R_ENVIRON_USER=/dev/null env tdbname=aedidb userdb=aedi \
-#     passwddbdev='...' hostdbdev=127.0.0.1 Rscript coleta/gastos_tributarios_municipio.R
+#     passwddbdev='...' hostdbdev=127.0.0.1 Rscript coleta/gastos_tributarios_municipio.R 2023
 
 suppressMessages({
   library(DBI); library(dplyr); library(tidyr); library(readr)
   library(readxl); library(httr); library(jsonlite); library(stringi)
+  library(arrow)
 })
 
-ano_gt    <- 2022L
+args_ano <- commandArgs(TRUE)
+ano_gt <- if (length(args_ano)) as.integer(args_ano[1]) else 2022L
+stopifnot(ano_gt %in% 2022:2025)
+
+ANO_DGT_BASE <- 2023L                  # ultima edicao com Q VII (REG) efetivo
+edicao_dgt   <- min(ano_gt, ANO_DGT_BASE)
+projecao     <- ano_gt > ANO_DGT_BASE  # alvo nacional Q XXVI + cotas REG congeladas
+ano_irpf_ac  <- min(ano_gt, 2024L)     # ac 2025 inedito: congela ac 2024
+ano_mei      <- min(ano_gt, 2023L)     # MEI 2015-a-2023 e a ultima edicao
+ano_agregado <- min(ano_gt, 2023L)     # col 2024 e parcial (30/06): chave espacial no ano cheio 2023
 cache_dir <- "coleta/cache/gastos_tributarios"
 fontes    <- file.path(cache_dir, "fontes")
 dir.create(fontes, recursive = TRUE, showWarnings = FALSE)
@@ -69,7 +99,8 @@ uf_por_codigo <- c(`11` = "RO", `12` = "AC", `13` = "AM", `14` = "RR",
 #   cpss_simples          <- arrecadacao previdenciaria DARF (ref. usava BB)
 #   irrf                  <- grandes numeros IRPF: imposto pago
 #   itr                   <- arrecadacao ITR por municipio (2020, chave espacial)
-#   demais_tributos       <- DARF (fallback; CGU no D3b)
+#   demais_tributos       <- D3b: agregado PJ RFB x indice de estabs CNPJ
+#                            (fallback: DARF, se o indice nao existir)
 
 tiracento <- \(x) toupper(stri_trans_general(x, "latin-ascii"))
 
@@ -141,9 +172,11 @@ if (!file.exists(arq_kelvins))
                 arq_kelvins, mode = "wb", quiet = TRUE)
 base_mun <- read_csv(arq_kelvins, show_col_types = FALSE, progress = FALSE) |>
   transmute(codigo_ibge = as.integer(codigo_ibge), nome, codigo_uf,
+            siafi_id = as.integer(siafi_id),
             municipio = tiracento(nome), uf = unname(uf_por_codigo[as.character(codigo_uf)])) |>
   filter(!is.na(uf))
 stopifnot(nrow(base_mun) >= 5500)
+siafi_map <- base_mun |> transmute(mun_code = siafi_id, codigo_ibge)
 
 con <- dbConnect(RPostgres::Postgres(),
                  dbname = Sys.getenv("tdbname"), user = Sys.getenv("userdb"),
@@ -165,16 +198,31 @@ baixa <- \(arq, url) {
   }
   invisible(arq)
 }
-f_dgt  <- baixa(file.path(fontes, "dgt_2022.xlsx"),
-  "https://www.gov.br/receitafederal/pt-br/centrais-de-conteudo/publicacoes/relatorios/renuncia/gastos-tributarios-bases-efetivas/dgt-bases-efetivas-2022-serie-2020-a-2025-quadros.xlsx/@@download/file")
-f_irpf <- baixa(file.path(fontes, "irpf_gn_2022.xlsx"),
-  "https://www.gov.br/receitafederal/pt-br/centrais-de-conteudo/publicacoes/estudos/imposto-de-renda/estudos-por-ano/grandes-numeros-do-IRPF-2008-a-2023/grandes-numeros-do-irpf-2023-ano-calendario-2022-tabelas/@@download/file")
-f_ben  <- baixa(file.path(fontes, "ben_municipios_especie_2022.xlsx"),
-  "https://www.gov.br/previdencia/pt-br/assuntos/previdencia-social/arquivos/ben_municipios_especie_2022.xlsx")
-f_darf <- baixa(file.path(fontes, "arrecadacao-previdenciaria-por-municipio-2022.xlsx"),
-  "https://www.gov.br/receitafederal/pt-br/acesso-a-informacao/dados-abertos/receitadata/arrecadacao/copy_of_arrecadacao-das-receitas-administradas-pela-rfb-por-municipio/arrecadacao-das-receitas-previdenciarias/arrecadacao-previdenciaria-por-municipio-2022.xlsx")
+url_dgt <- \(ed) sprintf(paste0(
+  "https://www.gov.br/receitafederal/pt-br/centrais-de-conteudo/publicacoes/",
+  "relatorios/renuncia/gastos-tributarios-bases-efetivas/",
+  "dgt-bases-efetivas-%d-serie-%d-a-%d-quadros.xlsx/@@download/file"),
+  ed, ed - 2L, ed + 3L)
+f_dgt <- baixa(file.path(fontes, sprintf("dgt_%d.xlsx", edicao_dgt)),
+               url_dgt(edicao_dgt))
+url_irpf_gn <- c(
+  `2022` = "https://www.gov.br/receitafederal/pt-br/centrais-de-conteudo/publicacoes/estudos/imposto-de-renda/estudos-por-ano/grandes-numeros-do-IRPF-2008-a-2025/grandes-numeros-do-irpf-2023-ano-calendario-2022-tabelas/@@download/file",
+  `2023` = "https://www.gov.br/receitafederal/pt-br/centrais-de-conteudo/publicacoes/estudos/imposto-de-renda/estudos-por-ano/grandes-numeros-do-IRPF-2008-a-2025/grandes-numeros-do-irpf-2024-ano-calendario-2023-tabelas-1/@@download/file",
+  `2024` = "https://www.gov.br/receitafederal/pt-br/centrais-de-conteudo/publicacoes/estudos/imposto-de-renda/estudos-por-ano/grandes-numeros-do-IRPF-2008-a-2025/grandes-numeros-do-irpf-2025-ano-calendario-2024-tabelas/@@download/file")
+f_irpf <- baixa(file.path(fontes, sprintf("irpf_gn_%d.xlsx", ano_irpf_ac)),
+                url_irpf_gn[[as.character(ano_irpf_ac)]])
+f_ben  <- baixa(file.path(fontes, sprintf("ben_municipios_especie_%d.xlsx", ano_gt)),
+  sprintf("https://www.gov.br/previdencia/pt-br/assuntos/previdencia-social/arquivos/ben_municipios_especie_%d.xlsx", ano_gt))
+f_darf <- baixa(file.path(fontes, sprintf("arrecadacao-previdenciaria-por-municipio-%d.xlsx", ano_gt)),
+  sprintf(paste0("https://www.gov.br/receitafederal/pt-br/acesso-a-informacao/dados-abertos/receitadata/",
+                 "arrecadacao/copy_of_arrecadacao-das-receitas-administradas-pela-rfb-por-municipio/",
+                 "arrecadacao-das-receitas-previdenciarias/",
+                 "arrecadacao-previdenciaria-por-municipio-%d.xlsx/@@download/file"), ano_gt))
 f_mei  <- baixa(file.path(fontes, "arrecadacao-do-mei-por-municipio-2015-a-2023.xlsx"),
   "https://www.gov.br/receitafederal/pt-br/acesso-a-informacao/dados-abertos/receitadata/arrecadacao/copy_of_arrecadacao-das-receitas-administradas-pela-rfb-por-municipio/arrecadacao-do-mei-por-municipio/arrecadacao-do-mei-por-municipio-2015-a-2023.xlsx")
+f_agregado <- baixa(
+  file.path("coleta/cache/renuncias", "agregado-2015-a-2024-irpj-csll-pis-imp-cofins-imp-ipi-imp-e-ii-5.xlsx"),
+  "https://www.gov.br/receitafederal/dados/agregado-2015-a-2024-irpj-csll-pis-imp-cofins-imp-ipi-imp-e-ii-5.xlsx/@@download/file")
 f_itr  <- file.path(fontes, "itr.xlsx")
 if (!file.exists(f_itr))
   stop("ITR obrigatorio: coloque 'itr.xlsx' (arrecadacao ITR por municipio) em ", fontes,
@@ -306,7 +354,6 @@ tot_15 <- sum(as.numeric(unlist(totais_reg[COLS_REG])), na.rm = TRUE)
 cat(sprintf("DGT: soma dos 15 tributos = R$ %.2f bi (linha TOTAL: R$ %.2f bi)\n",
             tot_15 / 1e9, tot_raw * fator / 1e9))
 stopifnot(abs(tot_15 - tot_raw * fator) / (tot_raw * fator) < 0.01)
-
 sc_rows <- list()
 for (r in seq_len(nrow(SUBCATS))) {
   hit <- which(is.na(linhas$tributo_hdr) &
@@ -335,13 +382,47 @@ DEMAIS <- c("II", "IRPJ", "IPI-I", "IPI-V", "IOF", "PIS", "CSLL",
             "COFINS", "CIDE", "AFRMM", "CONDECINE")
 alvo_demais <- colSums(as.matrix(totais_reg[totais_reg$tributo %in% DEMAIS, COLS_REG]))
 
+## 4b. camada de projecao (anos > ANO_DGT_BASE): fatores Q XXVI -----------
+# alvo nacional do ano = PROJECAO do Quadro XXVI por tributo; as cotas
+# regionais do Q VII (REG) do ano-base ficam CONGELADAS e sao escaladas
+# fator a fator (fator = QXXVI[tributo, ano] / QXXVI[tributo, ano-base]).
+# Validacao: no ano-base, Q XXVI nacional == soma das 5 regioes do Q VII.
+FATORES <- setNames(rep(1, nrow(totais_reg)), totais_reg$tributo)
+fonte_alvo <- sprintf("DGT Q VII (REG) %d (efetivo)", edicao_dgt)
+if (projecao) {
+  qx <- read_xlsx(f_dgt, sheet = "Q XXVI", col_names = FALSE)
+  labx <- tiracento(trimws(as.character(qx[[1]])))
+  hdx <- which(labx == "TRIBUTO / GASTO TRIBUTARIO")[1]
+  stopifnot(!is.na(hdx))
+  anos_serie <- suppressWarnings(as.integer(trimws(as.character(unlist(qx[hdx + 1L, -1])))))
+  stopifnot(ano_gt %in% anos_serie, ANO_DGT_BASE %in% anos_serie)
+  col_serie <- \(aa) which(anos_serie == aa) + 1L
+  qv <- \(i, aa) suppressWarnings(as.numeric(qx[[col_serie(aa)]][i]))
+  sigx <- vapply(labx, sigla_de, character(1))
+  hitx <- which(!is.na(sigx))
+  dif_base <- vapply(hitx, \(i) {
+    reg <- sum(as.numeric(unlist(totais_reg[totais_reg$tributo == sigx[i], COLS_REG])), na.rm = TRUE)
+    reg / qv(i, ANO_DGT_BASE) - 1 }, numeric(1))
+  stopifnot(all(is.finite(dif_base)), all(abs(dif_base) < 0.01))
+  FATORES <- setNames(qv(hitx, ano_gt) / qv(hitx, ANO_DGT_BASE), sigx[hitx])
+  stopifnot(all(is.finite(FATORES)), all(FATORES > 0))
+  cat(sprintf("DGT Q XXVI: fatores %d/%d por tributo:\n", ano_gt, ANO_DGT_BASE))
+  print(round(FATORES, 4))
+  fonte_alvo <- sprintf("DGT Q XXVI %d (projeccao) x cotas regionais Q VII (REG) %d congeladas",
+                        ano_gt, ANO_DGT_BASE)
+  alvo_sc <- alvo_sc * FATORES[subcats_reg$tributo]
+  alvo_demais <- colSums(FATORES[totais_reg$tributo[totais_reg$tributo %in% DEMAIS]] *
+                           as.matrix(totais_reg[totais_reg$tributo %in% DEMAIS, COLS_REG]))
+}
+tot_alvo <- sum(FATORES[totais_reg$tributo] * rowSums(as.matrix(totais_reg[COLS_REG])))
+
 alvo_de <- \(grupo) {
   v <- if (grupo %in% subcats_reg$grupo) {
     alvo_sc[match(grupo, subcats_reg$grupo), ]
   } else if (grupo == "irrf") {
-    as.numeric(unlist(totais_reg[totais_reg$tributo == "IRRF", COLS_REG]))
+    as.numeric(unlist(totais_reg[totais_reg$tributo == "IRRF", COLS_REG])) * FATORES["IRRF"]
   } else if (grupo == "itr") {
-    as.numeric(unlist(totais_reg[totais_reg$tributo == "ITR", COLS_REG]))
+    as.numeric(unlist(totais_reg[totais_reg$tributo == "ITR", COLS_REG])) * FATORES["ITR"]
   } else if (grupo == "demais_tributos") {
     as.numeric(alvo_demais)
   } else stop("grupo sem alvo: ", grupo)
@@ -369,7 +450,7 @@ cat(sprintf("  pop total (9606): %d munis, %.2f mi\n",
 # com dados N6 publicados. A chave e proporcional dentro da regiao, entao o
 # ano de referencia nao afeta o metodo.
 ch_cpss_exportacao_rural <- NULL
-for (ano_vab in c(ano_gt, ano_gt - 1L, ano_gt - 2L)) {
+for (ano_vab in c(ano_gt, ano_gt - 1L, ano_gt - 2L, 2021L)) {
   cand <- tryCatch(sidra_v3(5938, 513, ano_vab), error = \(e) NULL)
   if (!is.null(cand) && nrow(cand) > 0L) {
     ch_cpss_exportacao_rural <- cand |> select(codmun7, valor)
@@ -382,14 +463,26 @@ for (ano_vab in c(ano_gt, ano_gt - 1L, ano_gt - 2L)) {
 stopifnot(!is.null(ch_cpss_exportacao_rural))
 
 # (c) BEN: aposentadorias por invalidez / pensoes por morte (Cod. IBGE direto)
-ben <- read_xlsx(f_ben, sheet = 3, skip = 7, col_names = FALSE, range = "A8:M5577")
-hdr3 <- read_xlsx(f_ben, sheet = 3, skip = 4, col_names = FALSE, n_max = 3)
-nmb <- vapply(seq_len(ncol(ben)), \(j) {
+# Layout varia por edicao: 2022 tem 3 abas (dados a partir da linha 8);
+# 2023+ tem 4 abas e a aba de valor anual e a "Valor_Total_{ano}" com
+# primeira linha de dados variando (2023: linha 6; 2024/2025: linha 8) —
+# aba e inicio detectados dinamicamente (coluna com mais codigos de 7 digitos).
+ben_sh <- excel_sheets(f_ben)
+sh_val <- which(grepl("VALOR", tiracento(ben_sh)) &
+                  (grepl("TOTAL", tiracento(ben_sh)) | grepl("2022", tiracento(ben_sh))))[1]
+stopifnot(!is.na(sh_val))
+ben_all <- read_xlsx(f_ben, sheet = sh_val, col_names = FALSE)
+n7 <- vapply(ben_all, \(cl) sum(grepl("^[0-9]{7}$", trimws(as.character(cl))), na.rm = TRUE), integer(1))
+col_cod_i <- which.max(n7)
+i0 <- which(grepl("^[0-9]{7}$", trimws(as.character(ben_all[[col_cod_i]]))))[1]
+stopifnot(is.finite(i0), i0 > 3L)
+hdr3 <- ben_all[(i0 - 3L):(i0 - 1L), ]
+nmb <- vapply(seq_len(ncol(ben_all)), \(j) {
   v <- as.character(unlist(hdr3[1:3, j])); v <- v[!is.na(v) & trimws(v) != ""]
   paste(v, collapse = " - ")
 }, character(1))
-names(ben) <- nmb
-col_cod <- nmb[grepl("Cod\\.? IBGE", nmb)][1]
+ben <- setNames(as_tibble(ben_all[i0:nrow(ben_all), ]), nmb)
+col_cod <- nmb[grepl("COD", tiracento(nmb)) & grepl("IBGE", nmb)][1]
 col_inv <- nmb[grepl("Aposentadorias por invalidez", nmb)][1]
 col_mor <- nmb[grepl("Pensões por morte", nmb)][1]
 stopifnot(!is.na(col_cod), !is.na(col_inv), !is.na(col_mor))
@@ -398,8 +491,8 @@ ben_m <- ben |>
             invalidez = suppressWarnings(as.numeric(.data[[col_inv]])),
             morte = suppressWarnings(as.numeric(.data[[col_mor]]))) |>
   filter(!is.na(codmun7))
-cat(sprintf("  BEN: %d munis (invalidez R$ %.1f bi, morte R$ %.1f bi)\n",
-            nrow(ben_m), sum(ben_m$invalidez, na.rm = TRUE) / 1e9,
+cat(sprintf("  BEN (aba %d, dados da linha %d): %d munis (invalidez R$ %.1f bi, morte R$ %.1f bi)\n",
+            sh_val, i0, nrow(ben_m), sum(ben_m$invalidez, na.rm = TRUE) / 1e9,
             sum(ben_m$morte, na.rm = TRUE) / 1e9))
 ch_irpf_molestia <- ben_m |> select(codmun7, valor = invalidez)
 ch_irpf_peculio  <- ben_m |> select(codmun7, valor = morte)
@@ -455,9 +548,11 @@ for (j in seq_along(r3))
 nm_m <- ifelse(is.na(r4), r3, paste(r3, r4, sep = " - "))
 names(mei) <- nm_m
 col_mun <- nm_m[grepl("^MUNICIP", tiracento(nm_m))][1]
-col_inss <- nm_m[grepl("2022", nm_m) & grepl("INSS", tiracento(nm_m)) &
+col_inss <- nm_m[grepl(as.character(ano_mei), nm_m) & grepl("INSS", tiracento(nm_m)) &
                  grepl("MEI", tiracento(nm_m))]
 stopifnot(!is.na(col_mun), length(col_inss) == 1L)
+if (ano_mei < ano_gt)
+  cat(sprintf("  MEI: congelando chave em %d (edicao 2015-a-2023 e a ultima)\n", ano_mei))
 ch_cpss_mei <- mei |>
   transmute(nome_uf = tiracento(as.character(.data[[col_mun]])),
             valor = suppressWarnings(as.numeric(.data[[col_inss]]))) |>
@@ -480,6 +575,40 @@ ch_itr <- itr_raw |>
   join_ibge(base_mun)
 cat(sprintf("  ITR: %d munis, R$ %.0f mi\n", nrow(ch_itr), sum(ch_itr$valor) / 1e6))
 
+# (h) D3b: renuncia PJ por estabelecimentos ativos (indice CNPJ; ref.:
+# pndr_relatorios/2025-08-Produto-5, renun_pj_distr_mun). Join many-to-many
+# agregado (valor por raiz) x estabs por (raiz, municipio) -> soma por mun
+# -> prop dentro da regiao em municipaliza().
+cat(sprintf("  CNPJ (D3b): agregado PJ %d x indice raiz x municipio...\n", ano_agregado))
+arq_indice <- "coleta/cache/bases_cnpj/indice_raiz_municipio.parquet"
+if (file.exists(arq_indice)) {
+  ag <- read_xlsx(f_agregado, skip = 5)
+  nms_ag <- tiracento(gsub("\\s+", " ", names(ag))); names(ag) <- nms_ag
+  col_raiz <- grep("CNPJ RAIZ", nms_ag)[1]
+  col_ano  <- grep(sprintf("^\\*?%d\\b", ano_agregado), nms_ag)[1]
+  stopifnot(!is.na(col_raiz), !is.na(col_ano))
+  raizes <- tibble(cnpj_raiz = trimws(as.character(ag[[col_raiz]])),
+                   valor = suppressWarnings(as.numeric(ag[[col_ano]]))) |>
+    filter(grepl("^[0-9]{8}$", cnpj_raiz), is.finite(valor))
+  indice_cnpj <- read_parquet(arq_indice) |>
+    mutate(mun_code = as.integer(mun_code))
+  cob_val <- sum(raizes$valor[raizes$cnpj_raiz %in% indice_cnpj$cnpj_base], na.rm = TRUE) /
+    sum(raizes$valor, na.rm = TRUE)
+  cat(sprintf("  CNPJ: %d raizes com valor; cobertura por valor: %.1f%%\n",
+              nrow(raizes), 100 * cob_val))
+  stopifnot(cob_val > 0.90)
+  ch_demais_gt <- indice_cnpj |>
+    inner_join(siafi_map, by = "mun_code") |>
+    inner_join(raizes, by = c("cnpj_base" = "cnpj_raiz")) |>
+    group_by(codmun7 = as.integer(codigo_ibge)) |>
+    summarise(valor = sum(n_estabs * valor, na.rm = TRUE), .groups = "drop")
+} else {
+  cat("  AVISO: indice CNPJ ausente (rode coleta/cnpj_indice_raiz_municipio.R) -> fallback DARF\n")
+  ch_demais_gt <- ch_darf
+}
+cat(sprintf("  CNPJ: %d munis, R$ %.2f bi na chave\n",
+            nrow(ch_demais_gt), sum(ch_demais_gt$valor) / 1e9))
+
 chaves <- list(
   irpf65                = ch_irpf65,
   irpf_molestia         = ch_irpf_molestia,
@@ -493,7 +622,7 @@ chaves <- list(
   cpss_simples          = ch_darf,
   irrf                  = ch_irrf,
   itr                   = ch_itr,
-  demais_tributos       = ch_darf)
+  demais_tributos       = ch_demais_gt)
 
 ## 6. municipalizacao: alvo regional x prop da chave na regiao -------------
 municipaliza <- \(chave, alvo) {
@@ -510,6 +639,7 @@ municipaliza <- \(chave, alvo) {
 }
 
 cat("\n== municipalizacao ==\n")
+cat(sprintf("alvo: %s\n", fonte_alvo))
 fato <- bind_rows(lapply(names(chaves), \(grupo) {
   gt <- municipaliza(chaves[[grupo]], alvo_de(grupo))
   cat(sprintf("  %-22s %5d munis  R$ %12.2f mi\n",
@@ -528,22 +658,22 @@ resumo <- fato |> group_by(grupo) |>
   arrange(desc(valor))
 print(as.data.frame(resumo), digits = 10, row.names = FALSE)
 tot_grupos <- sum(resumo$valor[resumo$grupo != "total"])
-stopifnot(abs(tot_grupos - tot_15) / tot_15 < 0.01)
-cat(sprintf("Total municipalizado (13 grupos): R$ %.2f bi | DGT 15 tributos: R$ %.2f bi\n",
-            tot_grupos / 1e9, tot_15 / 1e9))
+stopifnot(abs(tot_grupos - tot_alvo) / tot_alvo < 0.01)
+cat(sprintf("Total municipalizado (13 grupos): R$ %.2f bi | alvo %s: R$ %.2f bi\n",
+            tot_grupos / 1e9, fonte_alvo, tot_alvo / 1e9))
 
 auditoria <- fato |>
   mutate(regiao = regiao_de(codmun7)) |>
   left_join(base_mun |> transmute(codmun7 = codigo_ibge, nome, uf), by = "codmun7") |>
   select(codmun7, nome, uf, regiao, grupo, valor)
-write_csv(auditoria, file.path(cache_dir, "todas_renuncias_municipalizadas_2022.csv"))
+write_csv(auditoria, file.path(cache_dir, sprintf("todas_renuncias_municipalizadas_%d.csv", ano_gt)))
 
 total_csv <- auditoria |>
   filter(grupo == "total") |>
   select(-grupo) |>
   left_join(poptotal |> transmute(codmun7, populacao_2022 = valor), by = "codmun7") |>
   mutate(gasto_tributario_per_capita = valor / populacao_2022)
-write_csv(total_csv, file.path(cache_dir, "total_gastos_tributarios_mun_2022.csv"))
+write_csv(total_csv, file.path(cache_dir, sprintf("total_gastos_tributarios_mun_%d.csv", ano_gt)))
 
 fato_dw <- fato |>
   transmute(ano = ano_gt, codmun7, grupo, valor) |>
@@ -562,7 +692,7 @@ dbExecute(con, sprintf("DELETE FROM gasto_tributario_municipio WHERE ano = %d", 
 dbWriteTable(con, "gasto_tributario_municipio", fato_dw, append = TRUE)
 dbCommit(con)
 chk <- dbGetQuery(con, paste("SELECT grupo, count(*) AS n, sum(valor) AS soma",
-                             "FROM gasto_tributario_municipio WHERE ano = 2022",
+                             "FROM gasto_tributario_municipio WHERE ano =", ano_gt,
                              "GROUP BY grupo ORDER BY soma DESC"))
 print(chk, row.names = FALSE)
 cat(sprintf("OK: %d linhas gravadas em gasto_tributario_municipio (ano %d)\n",
