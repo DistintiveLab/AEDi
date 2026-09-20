@@ -21,7 +21,7 @@ painel_con <- function() {
 #' @keywords internal
 painel_mdata <- function(con) {
   md <- DBI::dbGetQuery(con, paste(
-    "SELECT mdata_id, orig_name, data_name FROM mdata",
+    "SELECT mdata_id, orig_name, data_name, data_desc FROM mdata",
     "ORDER BY orig_name"))
   nome <- ifelse(is.na(md$data_name), md$orig_name, md$data_name)
   md$rotulo <- paste0(nome, " (", md$orig_name, ")")
@@ -124,4 +124,107 @@ painel_local_top <- function(con, mdata_id, nivel_id) {
     "GROUP BY v.local_id ORDER BY count(*) DESC, v.local_id LIMIT 1"),
     as.integer(mdata_id), as.integer(nivel_id)))
   if (nrow(q)) as.integer(q$local_id[1]) else NULL
+}
+
+#' Geometrias das Unidades da Federacao do DW (largura 2 do geoloc_id:
+#' 26 UFs + DF), com code/label para o globo
+#' @keywords internal
+painel_geo_uf <- function(con) {
+  geo <- sf::st_read(con, query = paste(
+    "SELECT l.local_id, l.local_name, g.geometry",
+    "FROM local l JOIN geoloc g USING (geoloc_id)",
+    "WHERE length(g.geoloc_id::text) = 2",
+    "ORDER BY l.local_id"), quiet = TRUE)
+  geo$code <- as.character(geo$local_id)
+  geo$label <- geo$local_name
+  geo[, c("code", "label", "geometry")]
+}
+
+#' Localidades de um nivel territorial (largura do geoloc_id) com dados
+#' para um indicador — disponibilidade para o globo de UFs
+#' @keywords internal
+painel_locais_com_dados <- function(con, mdata_id, nivel_id) {
+  q <- DBI::dbGetQuery(con, sprintf(paste(
+    "SELECT DISTINCT v.local_id",
+    "FROM data_values v",
+    "JOIN local l USING (local_id) JOIN geoloc g USING (geoloc_id)",
+    "WHERE v.mdata_id = %d AND length(g.geoloc_id::text) = %d"),
+    as.integer(mdata_id), as.integer(nivel_id)))
+  as.character(q$local_id)
+}
+
+#' GeoJSON (string) de um objeto sf para mensagens Shiny ao cliente
+#' @keywords internal
+painel_geojson <- function(x) {
+  arquivo <- tempfile(fileext = ".geojson")
+  on.exit(unlink(arquivo), add = TRUE)
+  sf::st_write(x, arquivo, quiet = TRUE)
+  paste(readLines(arquivo, warn = FALSE, encoding = "UTF-8"), collapse = "")
+}
+
+#' Paleta de cores do mapa (port fiel do mypallet do labourvaluesdatapanel):
+#' divergente centrada em 0 quando ha negativos, com rampas invertidas
+#' conforme o argumento (checkbox "Inverter cores da escala")
+#' @keywords internal
+painel_paleta <- function(values, invertida = FALSE) {
+  values[!is.finite(values)] <- NA_real_
+  if (!any(is.finite(values))) {
+    return(function(value) rep("transparent", length(value)))
+  }
+  qtt <- length(values)
+  if (isTRUE(invertida)) {
+    negative <- grDevices::colorRampPalette(c("#0000FF", "#C8C8FF"))(qtt)
+    positive <- grDevices::colorRampPalette(c("#FFC8C8", "#FF0000"))(qtt)
+  } else {
+    negative <- grDevices::colorRampPalette(c("#FF0000", "#C8C8FF"))(qtt)
+    positive <- grDevices::colorRampPalette(c("#C8C8FF", "#0000FF"))(qtt)
+  }
+  onlypositive <- grDevices::colorRampPalette(c("#FFC8C8", "#FF0000"))(qtt)
+
+  suppressWarnings({
+    maximum <- max(values, na.rm = TRUE) * 1.1
+    minimum <- min(values, na.rm = TRUE) * 1.1
+  })
+  if (is.finite(minimum) && is.finite(maximum) &&
+      minimum == 0 && maximum == 0) {
+    minimum <- -1e-12
+    maximum <- 1e-12
+  }
+
+  if (minimum < 0 && maximum > 0) {
+    if (maximum > abs(minimum)) {
+      dominio <- c(-maximum, maximum)
+    } else {
+      dominio <- c(minimum, -minimum)
+    }
+    cores <- c(negative, positive)
+  } else if (maximum < 0) {
+    dominio <- c(minimum, 0)
+    cores <- negative
+  } else {
+    dominio <- c(0, maximum)
+    cores <- onlypositive
+  }
+
+  if (is.infinite(maximum) || is.infinite(minimum)) {
+    function(value) rep("transparent", length(value))
+  } else {
+    leaflet::colorNumeric(cores, domain = dominio, na.color = "transparent")
+  }
+}
+
+#' Numeros no padrao pt-BR para rotulos de mapa e legenda
+#' @keywords internal
+painel_num <- function(x) {
+  format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE,
+         trim = TRUE, digits = 6)
+}
+
+#' Delta de camadas do mapa (port do wlv_map_layer_delta): mantem o par
+#' completo cor/tooltip de cada camada alterada, para o cliente fundir por id
+#' @keywords internal
+painel_delta_camadas <- function(anteriores, camadas) {
+  mudou <- vapply(camadas, function(camada)
+    !identical(anteriores[[camada$id]], camada), logical(1L))
+  camadas[mudou]
 }
