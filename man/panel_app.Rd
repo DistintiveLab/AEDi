@@ -16,10 +16,14 @@ trocar no botao do topo; a escolha fica salva no navegador}
 \description{
 Constroi o objeto \code{shinyApp} do painel de indicadores do DW (aedidb):
 aba "Região" com série temporal por nível territorial e
-localidade (região, UF, divisões do IBGE ou município), aba
-"Mapa" coroplético municipal e aba "Sobre" com informações do
-autor e apoio da Distintive. Estrutura visual adaptada do
-labourvaluesdatapanel: topbar com marca, abas realçadas e rodapé.
+localidade (região, UF, divisões do IBGE ou município) e globo
+interativo de UFs, aba "Mapa" coroplético municipal com slider de
+ano animado, paleta divergente centrada em 0 (invertível), ajuda por
+indicador e atualização incremental (apenas cores e tooltips
+atravessam a conexão após a primeira carga da geometria) e aba
+"Sobre" com informações do autor e apoio da Distintive. Estrutura
+visual adaptada do labourvaluesdatapanel: topbar com marca, abas
+realçadas e rodapé.
 E o motor por tras de \code{\link[=run_panel]{run_panel()}} e da app gerada por \code{\link[=deploy_panel]{deploy_panel()}}
 — como ultima expressao de um \code{app.R} hospedavel, basta
 \code{AEDi::panel_app()}.

@@ -27,13 +27,20 @@ mod_panel_regiao_ui <- function(id) {
         shiny::selectizeInput(ns("localidade"), NULL, choices = NULL,
                               width = "100%", options = list(
                                 placeholder = "Escolha uma localidade")))),
-    tags$div(class = "painel-card",
-      tags$h3(shiny::textOutput(ns("titulo")), class = "sr-only"),
-      plotly::plotlyOutput(ns("serie"), height = "420px"),
-      tags$p(class = "painel-nota",
-        "Série do DW de indicadores do AEDi. Use o seletor de nível",
-        "territorial para mudar de recorte (região, UF, divisões",
-        "regionais do IBGE ou município) e escolher a localidade desejada."))
+    tags$div(class = "painel-regiao-grade",
+      tags$div(class = "painel-card",
+        tags$h3(shiny::textOutput(ns("titulo")), class = "sr-only"),
+        plotly::plotlyOutput(ns("serie"), height = "420px"),
+        tags$p(class = "painel-nota",
+          "Série do DW de indicadores do AEDi. Use o seletor de nível",
+          "territorial para mudar de recorte (região, UF, divisões",
+          "regionais do IBGE ou município) e escolher a localidade desejada.")),
+      tags$div(class = "painel-card painel-globo-card",
+        tags$h3("Globo de UFs"),
+        mod_panel_globe_ui(ns("panel_globe_1")),
+        tags$p(class = "painel-nota",
+          "Arraste para girar e clique em uma UF com dados para selecioná-la",
+          "no nível Unidade da Federação.")))
   )
 }
 
@@ -46,7 +53,6 @@ mod_panel_regiao_ui <- function(id) {
 mod_panel_regiao_server <- function(id,
                                     paleta = shiny::reactive("govbr")) {
   moduleServer(id, function(input, output, session) {
-
     con <- painel_con()
     md <- painel_mdata(con)
     niveis <- painel_niveis(con)
@@ -66,18 +72,51 @@ mod_panel_regiao_server <- function(id,
       painel_locais_nivel(con, input$nivel)
     })
 
+    # Globo de UFs: clicar numa UF seleciona a localidade (e o nivel UF)
+    uf_pendente <- shiny::reactiveVal(NULL)
+    uf_globo <- mod_panel_globe_server("panel_globe_1",
+      indicador = shiny::reactive(if (length(input$indicador)) input$indicador else NULL),
+      uf_atual = shiny::reactive(
+        if (identical(input$nivel, "2") && length(input$localidade) &&
+            nzchar(input$localidade)) as.integer(input$localidade) else NULL))
+
+    # Clique no globo: seleciona a UF e, se preciso, muda o nivel para UF.
+    # A UF fica pendente para o observador do nivel aplica-la sobre as choices
+    # ja recarregadas (locais() ainda veria o nivel antigo neste momento).
+    shiny::observeEvent(uf_globo(), {
+      uf <- uf_globo()
+      shiny::req(length(uf), !is.na(uf))
+      if (!identical(input$nivel, "2")) {
+        uf_pendente(uf)
+        shiny::updateSelectInput(session, "nivel", selected = "2")
+      } else {
+        shiny::updateSelectizeInput(session, "localidade",
+                                    choices = locais(), selected = uf,
+                                    server = TRUE)
+      }
+    })
+
     # Ao trocar de nivel territorial: recarrega localidades e seleciona a
-    # com maior cobertura do indicador corrente naquele nivel
+    # com maior cobertura do indicador corrente naquele nivel — ou a UF
+    # clicada no globo, quando a troca de nivel veio de la
     shiny::observeEvent(input$nivel, {
       escolhas <- locais()
       shiny::req(length(escolhas))
-      indicador <- if (length(input$indicador)) input$indicador else md$mdata_id[1]
-      con <- painel_con()
-      on.exit(DBI::dbDisconnect(con))
-      topo <- painel_local_top(con, indicador, input$nivel)
-      if (is.null(topo)) topo <- as.integer(escolhas[[1]])
+      pendente <- uf_pendente()
+      uf_pendente(NULL)
+      destino <- NULL
+      if (length(pendente) && identical(input$nivel, "2") &&
+          pendente %in% unlist(escolhas, use.names = FALSE)) {
+        destino <- as.integer(pendente)
+      } else {
+        indicador <- if (length(input$indicador)) input$indicador else md$mdata_id[1]
+        con <- painel_con()
+        on.exit(DBI::dbDisconnect(con))
+        topo <- painel_local_top(con, indicador, input$nivel)
+        destino <- if (is.null(topo)) as.integer(escolhas[[1]]) else topo
+      }
       shiny::updateSelectizeInput(session, "localidade",
-                                  choices = escolhas, selected = topo,
+                                  choices = escolhas, selected = destino,
                                   server = TRUE)
     })
 

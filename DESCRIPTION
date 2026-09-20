@@ -1,6 +1,6 @@
 Package: AEDi
 Title: Pacote de inclusão de fontes de dados, indicadores, e filtros de variáveis
-Version: 0.4.3
+Version: 0.5.0
 Date: 2026-09-17
 Authors@R: 
     c(person(given = "Rodrigo",
@@ -26,6 +26,7 @@ Imports:
     futile.logger,
     httr,
     htmltools,
+    htmlwidgets,
     janitor,
     jsonlite,
     latex2r,
@@ -85,6 +86,7 @@ Collate:
     'gravar_serie_dw.R'
     'header_buttons_module.R'
     'mod_atualizacao.R'
+    'mod_panel_globe.R'
     'mod_panel_map.R'
     'mod_panel_regiao.R'
     'mod_panel_sobre.R'
