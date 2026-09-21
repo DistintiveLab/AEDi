@@ -2,12 +2,13 @@
 % Please edit documentation in R/deploy_panel.R
 \name{deploy_panel}
 \alias{deploy_panel}
-\title{Deploy basico do painel de indicadores no projeto corrente}
+\title{Deploy do painel de indicadores no projeto corrente}
 \usage{
 deploy_panel(
   diretorio = "painel",
   titulo = "Painel de Indicadores",
   paleta = c("govbr", "pb"),
+  esqueleto = TRUE,
   sobrescrever = FALSE
 )
 }
@@ -21,22 +22,40 @@ deploy_panel(
 Gov.br) ou \code{"pb"} (preto e branco com o roxo da Distintive); o
 visitante pode trocar no botao do topo em qualquer caso}
 
-\item{sobrescrever}{substitui um \code{app.R} existente (default FALSE)}
+\item{esqueleto}{modo de geracao: TRUE (default) copia o esqueleto
+adaptavel; FALSE gera so a launcher sobre o pacote AEDi}
+
+\item{sobrescrever}{substitui arquivos ja existentes no diretorio
+(default FALSE)}
 }
 \value{
 caminho absoluto do diretorio da app (invisivel)
 }
 \description{
-Materializa uma app Shiny autonoma do painel em \code{diretorio} do projeto
-onde for chamada (default \verb{painel/}), pronta para hospedar — Shiny
-Server (aponte o site para o diretorio) ou \code{rsconnect::deployApp()}
+Materializa uma app Shiny do painel em \code{diretorio} do projeto onde for
+chamada (default \verb{painel/}), pronta para hospedar — Shiny Server
+(aponte o site para o diretorio) ou \code{rsconnect::deployApp()}
 (shinyapps.io/Posit Connect) — ou rodar localmente com
-\code{shiny::runApp(diretorio)}. Diferente de \code{\link[=run_panel]{run_panel()}}, que apenas
-lanca o painel na sessao corrente: aqui o projeto passa a ter a
-propria app, que depende so do pacote AEDi instalado e das
-credenciais do DW.
+\code{shiny::runApp(diretorio)}. Dois modos:
 }
 \details{
-Sao criados \code{app.R} (uma linha chamando \code{\link[=panel_app]{panel_app()}}) e um
-\code{README.md} com as instrucoes de execucao, hospedagem e credenciais.
+\itemize{
+\item \code{esqueleto = TRUE} (default): copia \strong{minimamente funcional e
+autonoma} do painel — o projeto passa a ser dono do codigo e
+adaptar/criar/mudar abas, layout e marca e o esperado. Sao criados
+\code{app.R}, \verb{R/} (modulos das abas, blocos de UI componiveis, camada de
+dados \code{painel_dw.R} e marca configuravel \code{branding.R}), \verb{www/}
+(CSS/JS/logo), um \code{README.md} de instrucoes e
+\code{esqueleto_manifest.json} (versao do AEDi gerador + SHA-256 de cada
+arquivo). A copia nao depende do pacote AEDi em execucao — so das
+dependencias comuns (shiny, leaflet, plotly, DBI/RPostgres e
+shinyGovBRstyle; ver README gerado).
+\item \code{esqueleto = FALSE}: app launcher fina — \code{app.R} de uma linha
+chamando \code{\link[=panel_app]{panel_app()}} e README. Toda a logica continua no pacote
+AEDi instalado, e atualizacoes do painel chegam com o reinstall do
+pacote. Ideal quando o projeto nao pretende customizar.
+}
+
+Esqueletos ja gerados absorvem melhorias do AEDi com
+\code{\link[=atualizar_painel]{atualizar_painel()}}, que preserva arquivos com edicoes locais.
 }
