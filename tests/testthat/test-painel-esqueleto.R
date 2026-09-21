@@ -108,6 +108,23 @@ test_that("esqueleto traz mundo, slider 7s/40% e nenhuma mencao a DW do AEDi", {
     logical(1))))
 })
 
+test_that("esqueleto traz globo por nivel territorial com destaque e zoom 256", {
+  d <- file.path(tempdir(), "painel_globo")
+  unlink(d, recursive = TRUE)
+  deploy_panel(d)
+  js <- readLines(file.path(d, "www/painel-globe.js"), warn = FALSE)
+  expect_true(any(grepl("ZOOM = [1, 256]", js, fixed = TRUE)))
+  expect_true(any(grepl("destaqueGeojson", js, fixed = TRUE)))
+  expect_true(any(grepl("contextoGeojson", js, fixed = TRUE)))
+  expect_true(any(grepl("fitZoom", js, fixed = TRUE)))
+  expect_true(any(grepl("painel_geo_nivel_cache",
+    readLines(file.path(d, "R/mod_panel_globe.R"), warn = FALSE),
+    fixed = TRUE)))
+  regiao <- readLines(file.path(d, "R/mod_panel_regiao.R"), warn = FALSE)
+  expect_true(any(grepl("painel_local_top_uf_cache", regiao, fixed = TRUE)))
+  expect_true(any(grepl("Globo de localidades", regiao, fixed = TRUE)))
+})
+
 test_that("atualizar_painel preserva edicoes locais e regenera manifest", {
   d <- file.path(tempdir(), "painel_upd")
   unlink(d, recursive = TRUE)

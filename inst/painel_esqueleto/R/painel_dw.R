@@ -200,6 +200,14 @@ painel_local_top <- function(con, mdata_id, nivel_id) {
   if (nrow(q)) as.integer(q$local_id[1]) else NULL
 }
 
+#' sf vazio tipado (colunas code/label/geometry) para as leituras de
+#' geometria do globo
+#' @keywords internal
+painel_geo_vazio <- function() {
+  sf::st_sf(code = character(0), label = character(0),
+            geometry = sf::st_sfc(crs = 4326))
+}
+
 #' Geometrias das Unidades da Federacao do DW (largura 2 do geoloc_id:
 #' 26 UFs + DF), com code/label para o globo
 #' @keywords internal
@@ -212,6 +220,111 @@ painel_geo_uf <- function(con) {
   geo$code <- as.character(geo$local_id)
   geo$label <- geo$local_name
   geo[, c("code", "label", "geometry")]
+}
+
+#' Geometrias de um nivel territorial do DW para o globo, simplificadas
+#' no SQL (0.01 grau ~ 1 km) para o geojson ficar leve; niveis acima do
+#' limite de feicoes (municipio: 5.7 mil poligonos) voltam vazio e o
+#' chamador cai nas UFs como base do desenho
+#' @keywords internal
+painel_geo_nivel <- function(con, nivel_id, max_feicoes = 700L) {
+  nivel_id <- suppressWarnings(as.integer(nivel_id))[1]
+  if (is.na(nivel_id)) return(painel_geo_vazio())
+  n_geo <- DBI::dbGetQuery(con, sprintf(
+    "SELECT count(*) AS n FROM geoloc WHERE length(geoloc_id::text) = %d",
+    nivel_id))$n
+  if (!length(n_geo) || is.na(n_geo) || n_geo > max_feicoes) {
+    return(painel_geo_vazio())
+  }
+  geometria <- if (nivel_id <= 2L) "g.geometry" else
+    "ST_SimplifyPreserveTopology(g.geometry, 0.01) AS geometry"
+  geo <- sf::st_read(con, query = sprintf(paste(
+    "SELECT l.local_id, l.local_name,", geometria,
+    "FROM local l JOIN geoloc g USING (geoloc_id)",
+    "WHERE length(g.geoloc_id::text) = %d",
+    "ORDER BY l.local_id"),
+    nivel_id), quiet = TRUE)
+  geo$code <- as.character(geo$local_id)
+  geo$label <- geo$local_name
+  geo[, c("code", "label", "geometry")]
+}
+
+#' Geometria de uma localidade (destaque do globo quando a base e a das
+#' UFs e a selecao nao esta entre as feicoes)
+#' @keywords internal
+painel_geo_local <- function(con, local_id) {
+  local_id <- suppressWarnings(as.integer(local_id))[1]
+  if (is.na(local_id)) return(painel_geo_vazio())
+  geo <- sf::st_read(con, query = sprintf(paste(
+    "SELECT l.local_id, l.local_name, g.geometry",
+    "FROM local l JOIN geoloc g USING (geoloc_id)",
+    "WHERE l.local_id = %d"),
+    local_id), quiet = TRUE)
+  geo$code <- as.character(geo$local_id)
+  geo$label <- geo$local_name
+  geo[, c("code", "label", "geometry")]
+}
+
+#' Geometria da UF que contem uma localidade (contexto do globo: o
+#' estado aparece inteiro com a localidade em destaque)
+#' @keywords internal
+painel_geo_pai_uf <- function(con, local_id) {
+  local_id <- suppressWarnings(as.integer(local_id))[1]
+  if (is.na(local_id)) return(painel_geo_vazio())
+  geo <- sf::st_read(con, query = sprintf(paste(
+    "SELECT luf.local_id, luf.local_name, guf.geometry",
+    "FROM local lf",
+    "JOIN geoloc gf ON gf.geoloc_id = lf.geoloc_id",
+    "JOIN geoloc guf ON length(guf.geoloc_id::text) = 2",
+    "AND left(guf.geoloc_id::text, 2) = left(gf.geoloc_id::text, 2)",
+    "JOIN local luf ON luf.geoloc_id = guf.geoloc_id",
+    "WHERE lf.local_id = %d"),
+    local_id), quiet = TRUE)
+  geo$code <- as.character(geo$local_id)
+  geo$label <- geo$local_name
+  geo[, c("code", "label", "geometry")]
+}
+
+#' UFs que contem localidades de um nivel com dados de um indicador —
+#' pintura do globo quando a base e a das UFs (nivel municipal)
+#' @keywords internal
+painel_ufs_com_dados <- function(con, mdata_id, nivel_id) {
+  mdata_id <- suppressWarnings(as.integer(mdata_id))[1]
+  nivel_id <- suppressWarnings(as.integer(nivel_id))[1]
+  if (is.na(mdata_id) || is.na(nivel_id)) return(character(0))
+  q <- DBI::dbGetQuery(con, sprintf(paste(
+    "SELECT DISTINCT luf.local_id",
+    "FROM data_values v",
+    "JOIN local l ON l.local_id = v.local_id",
+    "JOIN geoloc g ON g.geoloc_id = l.geoloc_id",
+    "JOIN geoloc guf ON length(guf.geoloc_id::text) = 2",
+    "AND left(guf.geoloc_id::text, 2) = left(g.geoloc_id::text, 2)",
+    "JOIN local luf ON luf.geoloc_id = guf.geoloc_id",
+    "WHERE v.mdata_id = %d AND length(g.geoloc_id::text) = %d"),
+    mdata_id, nivel_id))
+  as.character(q$local_id)
+}
+
+#' Localidade de um nivel com maior cobertura de um indicador DENTRO de
+#' uma UF — destino do clique na UF quando o globo usa base estadual
+#' @keywords internal
+painel_local_top_uf <- function(con, mdata_id, nivel_id, uf_local_id) {
+  mdata_id <- suppressWarnings(as.integer(mdata_id))[1]
+  nivel_id <- suppressWarnings(as.integer(nivel_id))[1]
+  uf_local_id <- suppressWarnings(as.integer(uf_local_id))[1]
+  if (is.na(mdata_id) || is.na(nivel_id) || is.na(uf_local_id)) return(NULL)
+  q <- DBI::dbGetQuery(con, sprintf(paste(
+    "SELECT v.local_id FROM data_values v",
+    "JOIN local l ON l.local_id = v.local_id",
+    "JOIN geoloc g ON g.geoloc_id = l.geoloc_id",
+    "JOIN geoloc guf ON length(guf.geoloc_id::text) = 2",
+    "AND left(guf.geoloc_id::text, 2) = left(g.geoloc_id::text, 2)",
+    "JOIN local luf ON luf.geoloc_id = guf.geoloc_id",
+    "WHERE v.mdata_id = %d AND length(g.geoloc_id::text) = %d",
+    "AND luf.local_id = %d",
+    "GROUP BY v.local_id ORDER BY count(*) DESC, v.local_id LIMIT 1"),
+    mdata_id, nivel_id, uf_local_id))
+  if (nrow(q)) as.integer(q$local_id[1]) else NULL
 }
 
 #' Localidades de um nivel territorial (largura do geoloc_id) com dados
@@ -393,6 +506,67 @@ painel_geo_mun_cache <- function() {
 painel_geo_uf_cache <- function() {
   painel_cache_get(painel_cache_chave("geo_uf"), painel_cache_ttl[["geo"]],
                    function() painel_com_con(painel_geo_uf))
+}
+
+#' Geometrias de um nivel territorial, cacheado
+#' @keywords internal
+painel_geo_nivel_cache <- function(nivel_id) {
+  nivel_id <- suppressWarnings(as.integer(nivel_id))[1]
+  if (is.na(nivel_id)) return(painel_geo_vazio())
+  painel_cache_get(
+    painel_cache_chave(sprintf("geo_nivel_%d", nivel_id)),
+    painel_cache_ttl[["geo"]],
+    function() painel_com_con(function(con) painel_geo_nivel(con, nivel_id)))
+}
+
+#' Geometria de uma localidade, cacheada
+#' @keywords internal
+painel_geo_local_cache <- function(local_id) {
+  local_id <- suppressWarnings(as.integer(local_id))[1]
+  if (is.na(local_id)) return(painel_geo_vazio())
+  painel_cache_get(
+    painel_cache_chave(sprintf("geo_local_%d", local_id)),
+    painel_cache_ttl[["geo"]],
+    function() painel_com_con(function(con) painel_geo_local(con, local_id)))
+}
+
+#' Geometria da UF de uma localidade, cacheada
+#' @keywords internal
+painel_geo_pai_uf_cache <- function(local_id) {
+  local_id <- suppressWarnings(as.integer(local_id))[1]
+  if (is.na(local_id)) return(painel_geo_vazio())
+  painel_cache_get(
+    painel_cache_chave(sprintf("geo_pai_uf_%d", local_id)),
+    painel_cache_ttl[["geo"]],
+    function() painel_com_con(function(con) painel_geo_pai_uf(con, local_id)))
+}
+
+#' UFs com dados num nivel, cacheado
+#' @keywords internal
+painel_ufs_com_dados_cache <- function(mdata_id, nivel_id) {
+  mdata_id <- suppressWarnings(as.integer(mdata_id))[1]
+  nivel_id <- suppressWarnings(as.integer(nivel_id))[1]
+  if (is.na(mdata_id) || is.na(nivel_id)) return(character(0))
+  painel_cache_get(
+    painel_cache_chave(sprintf("ufs_com_dados_%d_%d", mdata_id, nivel_id)),
+    painel_cache_ttl[["catalogo"]],
+    function() painel_com_con(function(con)
+      painel_ufs_com_dados(con, mdata_id, nivel_id)))
+}
+
+#' Localidade com maior cobertura numa UF, cacheada
+#' @keywords internal
+painel_local_top_uf_cache <- function(mdata_id, nivel_id, uf_local_id) {
+  mdata_id <- suppressWarnings(as.integer(mdata_id))[1]
+  nivel_id <- suppressWarnings(as.integer(nivel_id))[1]
+  uf_local_id <- suppressWarnings(as.integer(uf_local_id))[1]
+  if (is.na(mdata_id) || is.na(nivel_id) || is.na(uf_local_id)) return(NULL)
+  painel_cache_get(
+    painel_cache_chave(sprintf("local_top_uf_%d_%d_%d",
+                               mdata_id, nivel_id, uf_local_id)),
+    painel_cache_ttl[["catalogo"]],
+    function() painel_com_con(function(con)
+      painel_local_top_uf(con, mdata_id, nivel_id, uf_local_id)))
 }
 
 #' Localidades de um nivel territorial, cacheado

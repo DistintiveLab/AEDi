@@ -4,6 +4,25 @@ Painel de indicadores contra a lentidão do DW remoto (handshake ~4s e
 consultas agregadas de segundos, medidas contra o `aedidb` remoto do
 `pndr_dashboard`), mais blindagem de `mdata_id` inválido.
 
+## Globo com as delimitações do IBGE do nível territorial
+
+- As camadas do globo passam a seguir o nível escolhido na aba Região:
+  níveis leves desenham as próprias delimitações do IBGE lidas do banco de
+  dados (`painel_geo_nivel()`, simplificadas no SQL e limitadas a 700
+  feições), enquanto níveis pesados (ex.: município) mantêm a base de UFs,
+  destacam a localidade escolhida (`painel_geo_local()`) sobre a UF pai
+  (`painel_geo_pai_uf()`) e animam o zoom até o estado inteiro caber no
+  globo.
+- Clique contextual: clicar em uma área com dados escolhe localidade do
+  nível corrente; no modo UF, o clique leva à localidade com mais pontos do
+  indicador naquela UF (`painel_local_top_uf()`) e a pintura de
+  disponibilidade usa as UFs com dados no nível corrente
+  (`painel_ufs_com_dados()`).
+- Zoom máximo ampliado de 6× para 256×, com precisão dinâmica do d3 e passo
+  de rotação escalado para manter a suavidade em zoom alto.
+- Todos os novos acessores de geometria têm versão `_cache` (TTL de
+  catálogo/geo conforme o tipo de leitura).
+
 ## Globo com o mundo inteiro e zoom (aba Região)
 
 - `inst/painel/painel-globe.js` agora desenha o mundo inteiro atrás das

@@ -14,7 +14,7 @@ adaptar, criar e mudar elementos é o esperado:
 | `R/painel_cache.R` | Cache de duas camadas (memória + disco) das leituras do banco de dados — ver seção Cache. |
 | `R/painel_basemap.R` | Basemap do mapa: tiles Carto com `CARTO_API_KEY` ou fundo neutro vetorial — ver seção Basemap. |
 | `R/branding.R` | Marca configurável por variáveis de ambiente. |
-| `www/` | CSS/JS do painel (mapa incremental, globo com zoom, resumo da aba Região), logo e `painel-mundo.geojson` (contorno dos países no globo). |
+| `www/` | CSS/JS do painel (mapa incremental, globo com zoom e delimitações do IBGE por nível territorial, resumo da aba Região), logo e `painel-mundo.geojson` (contorno dos países no globo). |
 | `esqueleto_manifest.json` | Versão do AEDi gerador + SHA-256 de cada arquivo (auditoria de mudanças locais). |
 
 ## Rodar localmente
