@@ -1,3 +1,35 @@
+# AEDi 0.6.1 (2026-09-21)
+
+Robustez do orquestrador `atualizar_indicadores()` validada num lote
+completo de 44 scripts do `pndr_dashboard` (ambiente real de produção),
+e migração da dependência educabR → edubr (rename CRAN).
+
+## Correções no orquestrador
+
+- **Bookkeeping do lote protegido**: o registro de contabilidade ao fim
+  de cada script (tabelas `controle_execucao`) roda em `tryCatch` — um
+  crash aí não aborta mais o lote inteiro.
+- **`commandArgs()` mascarado por script**: scripts escritos para
+  Rscript standalone liam os argumentos do processo do orquestrador (ex.:
+  índice do batch interpretado como "ano 4"). Agora cada script roda como
+  se sem argumentos; argumentos pontuais vêm da env var
+  `AEDI_SCRIPT_ARGS` (ex.: `AEDI_SCRIPT_ARGS="2025"`).
+- **Helper de sessão `somasna` provisionado**: padrão A5b histórico,
+  definido "na sessão" por scripts fora do lote e usado sem definição por
+  `indicadores_agregado_uf` e variantes de população.
+- **`AEDi` e `edubr` nos pacotes candidatos** do lote: resolve chamadas
+  bare como `gravar_serie_dw()` nos scripts de coleta.
+- **`.dado_edubr()` corrigido**: `data(list = nome)` em vez de
+  `data(nome)` — antes buscava um dataset literal chamado "nome" e
+  deixava o módulo INEP com catálogos vazios.
+
+## Rename de dependência
+
+- **educabR → edubr** (DESCRIPTION, `upload_inep`, `verifica_fonte`):
+  `metainep`/`metaideb` são datasets lazy-data do edubr (carregados via
+  `data()`), não exports; `verifica_fonte` ainda aceita chamadas
+  `educabR::le_*` em scripts gerados antes do rename.
+
 # AEDi 0.6.0 (2026-09-20)
 
 O painel de indicadores do DW deixa de ser só uma launcher sobre o pacote:
