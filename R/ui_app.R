@@ -4,7 +4,7 @@
 #' @return tagList for app's UI
 #' @importFrom shiny tagList
 #' @importFrom shinydashboardPlus dashboardPage
-#' @importFrom shinymath mathInput latex2r
+#' @importFrom shinymath mathInput
 #' @export
 app_ui <- function(){
 
