@@ -238,6 +238,21 @@ Some `R/` files run code with side effects at build/load time:
 - `upload_datasus.R` / `upload_inep.R` — read `datasus::metatabnet` and
   `educabR::metainep`/`metaideb` at load (just needs those packages installed).
 
+### Painel skeleton is duplicated (keep in sync)
+
+The painel sources exist in TWO places that must stay byte-identical:
+`R/painel_*.R` + `R/mod_panel_*.R` (used by launcher mode, `panel_app()`) and
+`inst/painel_esqueleto/R/` (copied verbatim by `deploy_panel()` /
+`atualizar_painel()`; `www/` assets likewise live once in `inst/painel/`).
+`tests/testthat/test-painel-esqueleto.R` enforces the sync — edit one copy,
+`file.copy()` to the other, and update both `exatas` in `R/deploy_panel.R` and
+`compartilhados` in the test when adding/renaming a file. Skeleton R files are
+plain (no `%%PLACEHOLDER%%`; those only exist in `app.R`, `README.md`,
+`R/app_ui.R`). New R files must be added to `exatas` or `deploy_panel()` will
+not copy them and generated apps break. The skeleton has its own two-tier DW
+cache (`painel_cache.R`, `cache/` dir at runtime, TTLs per data kind;
+`painel_cache_limpar()` after ETL, `painel_sem_cache=1` to bypass).
+
 ### `eval(parse(text = ...))` is pervasive
 
 Submodules emit R code as strings and the parent module `eval`s it. This is

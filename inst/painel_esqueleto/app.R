@@ -8,6 +8,7 @@ library(shiny)  # modulos usam NS(), tagList(), reactive() etc. sem prefixo
 
 for (f in c(
   "R/branding.R",
+  "R/painel_cache.R",
   "R/painel_dw.R",
   "R/painel_ui.R",
   "R/mod_panel_globe.R",
