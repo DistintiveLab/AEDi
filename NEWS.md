@@ -1,3 +1,14 @@
+# AEDi 0.6.2 (2026-09-21)
+
+- **latex2r → latexr** (rename CRAN; `latex2r` foi arquivado): Imports
+  trocado para `latexr` e a conversão de equações usa
+  `latexr::latex2r()` (a função mantém o nome no fork). Os
+  `@importFrom` redundantes caíram — o símbolo re-exportado por
+  `shinymath` não é mais importado, eliminando o note de "replacing
+  previous import" no load. Nota: `shinymath` ainda depende de
+  `latex2r`, que segue instalado; quando o shinymath migrar para o
+  `latexr`, nenhuma mudança será necessária aqui.
+
 # AEDi 0.6.1 (2026-09-21)
 
 Robustez do orquestrador `atualizar_indicadores()` validada num lote

@@ -165,7 +165,6 @@ upload_data_ui <- function(id) {
 #' @importFrom rio import
 #' @importFrom shiny reactive req observe renderUI
 #' @importFrom shinymath mathInput
-#' @importFrom latex2r latex2r
 #' @importFrom shinyFiles getVolumes shinyFileChoose parseFilePaths
 #' @importFrom shinyWidgets pickerInput pickerOptions
 #' @importFrom summarytools dfSummary
@@ -483,7 +482,7 @@ tipocarga <- reactive({
 
       print(traduzeq)
 
-      baseq <- latex2r::latex2r( traduzeq)
+      baseq <- latexr::latex2r( traduzeq)
 
       # if (class(baseq)=='try-error'){
       #   return("erro")
