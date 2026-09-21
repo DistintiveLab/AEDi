@@ -4,6 +4,53 @@ Painel de indicadores contra a lentidão do DW remoto (handshake ~4s e
 consultas agregadas de segundos, medidas contra o `aedidb` remoto do
 `pndr_dashboard`), mais blindagem de `mdata_id` inválido.
 
+## Globo com o mundo inteiro e zoom (aba Região)
+
+- `inst/painel/painel-globe.js` agora desenha o mundo inteiro atrás das
+  UFs: contornos dos países do pacote `maps`, convertidos uma única vez
+  por `data-raw/painel_mundo.R` no asset `inst/painel/painel-mundo.geojson`
+  (134 KB, 253 feições simplificadas), servido pelo resource path
+  `painel_recursos` e buscado pelo cliente com falha silenciosa.
+- Zoom no estilo Google Earth: botões Aproximar/Afastar e roda do mouse
+  (com `preventDefault`), clamped entre 1× e 6× sobre o raio base; a
+  projeção continua ortográfica arrastável.
+- A aba Região abre por padrão no nível municipal quando disponível
+  (`painel_nivel_default()`; fallback UF).
+
+## Resumo da localidade na aba Região (padrão labourvaluesdatapanel)
+
+- Novo card "Resumo da localidade" acima da série: chips com o último
+  valor de cada indicador composto (`mdata_exts.data_class_id = 4`)
+  vinculado a cada objetivo (raiz "Objetivos" do `datagroup`), com o ano
+  de referência; sem hierarquia ou sem compostos, mensagem explicativa.
+- O botão "Mostrar mais" expande um accordeon aninhado raiz (Eixos,
+  Objetivos) > grupo > indicador com mini-gráficos da série na
+  localidade corrente; os `plotOutput`s são registrados uma única vez e
+  filtram os valores por id.
+- Leituras novas em `R/painel_dw.R` (+ cópia no esqueleto):
+  `painel_hierarquia()`, `painel_compostos()` e
+  `painel_valores_local_todos()` (uma única leitura alimenta resumo e
+  mini-gráficos), com acessores `_cache` (catálogo 7d / valores 24h) e
+  guards de `local_id` inválido retornando vazio sem tocar no cache.
+
+## Mapa: slider, animação e legenda
+
+- Slider de ano ocupa ~40% da barra em telas largas (era flex de 300px)
+  e continua integral no mobile; a animação passou a 7 segundos por ano
+  (`animationOptions(interval = 7000)`), dando tempo de pintar o ano e
+  de o usuário ler o mapa.
+- Caixa de legenda colapsável deixa de esticar em tela grande:
+  `width: max-content` com teto `min(360px, calc(100vw - 48px))` e
+  tabela `width: auto`.
+
+## "No DW do AEDi" → "no banco de dados do painel"
+
+- Todo texto visível ao usuário que mencionava o DW (títulos e lead do
+  Sobre, modal e validação do Mapa, nota e validações da Região, rodapé,
+  subtítulo default do topbar e da marca, launcher gerado e
+  app.R/README.md do esqueleto) agora diz "banco de dados do painel".
+  Identificadores internos e comentários dev-facing mantêm "DW".
+
 ## Cache de duas camadas e agregação por ano
 
 - **Novo `R/painel_cache.R`** (copiado para o esqueleto e listado em

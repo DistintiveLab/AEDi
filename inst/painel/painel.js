@@ -1,4 +1,4 @@
-/* Painel de indicadores do DW AEDi: paleta govbr/pb persistente, ultima aba
+/* Painel de indicadores do banco de dados do painel: paleta govbr/pb persistente, ultima aba
    visitada e sincronizacao da paleta com o servidor (cores dos graficos). */
 (function () {
   'use strict';

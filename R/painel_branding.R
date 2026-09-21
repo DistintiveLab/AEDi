@@ -22,7 +22,7 @@ painel_brand_titulo <- function(default = "Painel de Indicadores") {
 
 #' Subtitulo do painel (usa painel_subtitulo)
 #' @keywords internal
-painel_brand_subtitulo <- function(default = "AEDi — DW de indicadores") {
+painel_brand_subtitulo <- function(default = "AEDi — banco de dados do painel") {
   Sys.getenv("painel_subtitulo", default)
 }
 
