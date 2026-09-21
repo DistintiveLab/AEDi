@@ -1,18 +1,23 @@
 /* Globo de UFs (port do wlv-country-globe.js do labourvaluesdatapanel).
- * Globo ortografico com as 27 Unidades da Federacao do DW do AEDi:
- * arrastar gira (com limites que mantem o Brasil visivel), clicar numa UF
- * atualiza a aba Regiao via setInputValue. Requer painel-geo.js. A geometria
- * chega pela mensagem Shiny "painel-globe" (string GeoJSON do DW), nunca por
- * fetch. Cores acompanham a paleta do painel (govbr/pb) via variaveis CSS. */
+ * Globo ortografico do mundo com as 27 Unidades da Federacao do banco de
+ * dados do painel: arrastar gira livremente pelo mundo, a roda do mouse e
+ * os botoes aproximam e afastam (estilo Google Earth) e clicar numa UF
+ * atualiza a aba Regiao via setInputValue. Requer painel-geo.js. A
+ * geometria das UFs chega pela mensagem Shiny "painel-globe" (string
+ * GeoJSON do banco de dados); o contorno mundial vem do asset local
+ * painel-mundo.geojson por fetch (o globo tambem funciona sem ele). Cores
+ * acompanham a paleta do painel (govbr/pb) via variaveis CSS. */
 (function (root) {
   "use strict";
 
   const document = root.document;
   const geo = () => root.PainelGeo;
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-  // Limites de rotacao que mantem o Brasil na face visivel do globo.
-  const LAMBDA = [18, 92];
-  const PHI = [-42, 46];
+  // Rotacao livre pelo mundo inteiro (lambda completo, phi ate os polos) e
+  // zoom aproximado/afastado estilo Google Earth: 1 e o globo inteiro.
+  const LAMBDA = [-180, 180];
+  const PHI = [-90, 90];
+  const ZOOM = [1, 6];
   // Uma primeira mensagem ausente e distinta de uma lista de UFs vazia.
   let latest = null;
   let controller = null;
@@ -32,6 +37,7 @@
     north: "Girar para o norte", south: "Girar para o sul",
     west: "Girar para o oeste", east: "Girar para o leste",
     reset: "Centralizar UF selecionada",
+    zoomIn: "Aproximar", zoomOut: "Afastar",
     ocean: "Oceano",
     empty: "Nenhuma UF com dados neste indicador."
   };
@@ -51,7 +57,8 @@
       selectedStroke: cssVar("--p-destaque-hover", "#0C3F91"),
       markerStroke: "#5F7285",
       oceanFrom: "#EAF2F8", oceanTo: "#D8E4EE", oceanStroke: "#A9BCCE",
-      graticule: "rgba(125,145,168,0.35)"
+      graticule: "rgba(125,145,168,0.35)",
+      land: "#EFECE4", landStroke: "rgba(125,145,168,0.45)"
     };
   }
 
@@ -85,6 +92,7 @@
       readyId: latest ? String(latest.readyId || "") : "",
       localClick: null,
       features: [], rotation: [53.5, 10.5, 0], width: 360, radius: 160,
+      zoom: 1, world: [],
       frame: 0, animation: null, pointer: null, hovered: null, error: false,
       disposed: false, loaded: false, received: false
     };
@@ -114,7 +122,8 @@
     const instructions = element("p", "painel-globo-instrucao", host);
     const controls = element("div", "painel-globo-controles", host);
     const buttonSpecs = [["west", "\u2190", 16, 0], ["north", "\u2191", 0, -12],
-      ["south", "\u2193", 0, 12], ["east", "\u2192", -16, 0], ["reset", "\u21ba", 0, 0]];
+      ["south", "\u2193", 0, 12], ["east", "\u2192", -16, 0], ["reset", "\u21ba", 0, 0],
+      ["zoomIn", "+"], ["zoomOut", "\u2212"]];
     const buttons = buttonSpecs.map(spec => {
       const button = element("button", "painel-globo-controle", controls);
       button.type = "button";
@@ -122,6 +131,8 @@
       button.textContent = spec[1];
       button.addEventListener("click", () => {
         if (spec[0] === "reset") centerSelected();
+        else if (spec[0] === "zoomIn") zoomBy(1.35);
+        else if (spec[0] === "zoomOut") zoomBy(1 / 1.35);
         else rotate(spec[2], spec[3]);
       }, { signal: signal });
       return button;
@@ -137,7 +148,7 @@
       return { label: element("span", "", item), key: key };
     });
     const attribution = element("small", "painel-globo-atribuicao", host);
-    attribution.textContent = "Geometrias: IBGE · DW de indicadores do AEDi";
+    attribution.textContent = "Geometrias: IBGE · mundo: pacote maps · banco de dados do painel";
 
     function ufLabel(item) {
       if (!item) return text("ocean");
@@ -218,6 +229,17 @@
       context.lineWidth = 0.55;
       context.stroke();
 
+      // Massas de terra continentais sob as UFs (asset local opcional).
+      if (state.world.length) {
+        context.beginPath();
+        state.world.forEach(feature => { path(feature); });
+        context.fillStyle = colors.land;
+        context.fill();
+        context.strokeStyle = colors.landStroke;
+        context.lineWidth = 0.4;
+        context.stroke();
+      }
+
       const selected = state.features.find(item => item.code === state.selected);
       state.features.forEach(item => {
         if (item === selected) return;
@@ -258,7 +280,7 @@
       const width = Math.max(1, host.getBoundingClientRect().width);
       if (width < 2) return;
       state.width = width;
-      state.radius = width * 0.455;
+      state.radius = width * 0.455 * state.zoom;
       const ratio = Math.min(root.devicePixelRatio || 1, 3);
       canvas.width = Math.round(width * ratio);
       canvas.height = Math.round(width * ratio);
@@ -329,6 +351,16 @@
       state.rotation[1] = clamp(state.rotation[1] + latitude, PHI[0], PHI[1]);
       hideTooltip();
       schedule();
+    }
+
+    // Zoom estilo Google Earth: aumenta o raio da projecao ortografica
+    // mantendo o centro (a rotacao corrente) — o mundo aproxima do olho.
+    function zoomBy(factor) {
+      const zoom = clamp(state.zoom * factor, ZOOM[0], ZOOM[1]);
+      if (zoom === state.zoom) return;
+      stopAnimation();
+      state.zoom = zoom;
+      resize();
     }
 
     function centerSelected(animate = true) {
@@ -406,6 +438,11 @@
     canvas.addEventListener("pointercancel", cancelPointer, { signal: signal });
     canvas.addEventListener("lostpointercapture", cancelPointer, { signal: signal });
     canvas.addEventListener("pointerleave", () => { if (!state.pointer) hideTooltip(); }, { signal: signal });
+    canvas.addEventListener("wheel", event => {
+      if (!state.loaded || !state.received) return;
+      event.preventDefault();
+      zoomBy(Math.exp(-event.deltaY * 0.0016));
+    }, { signal: signal, passive: false });
 
     const resizeObserver = root.ResizeObserver ? new root.ResizeObserver(resize) : null;
     if (resizeObserver) resizeObserver.observe(host);
@@ -432,6 +469,20 @@
       } catch (error) {
         failed();
       }
+    }
+
+    // Contorno mundial de fundo (asset local; falha silenciosa).
+    function loadWorld() {
+      if (state.world.length) return;
+      fetch("painel_recursos/painel-mundo.geojson").then(response => {
+        if (!response.ok) throw new Error("contorno mundial indisponivel");
+        return response.json();
+      }).then(collection => {
+        if (state.disposed) return;
+        state.world = collection && Array.isArray(collection.features) ?
+          collection.features : [];
+        schedule();
+      }).catch(() => { /* sem mundo, segue esfera + graticule + UFs */ });
     }
 
     function failed() {
@@ -481,6 +532,7 @@
 
     if (latest) update(latest);
     load();
+    loadWorld();
     // Handshake: o servidor reenvia a geometria apos cada remontagem do host.
     if (state.readyId && root.Shiny && root.Shiny.setInputValue) {
       root.Shiny.setInputValue(state.readyId, ++handshake, { priority: "event" });
