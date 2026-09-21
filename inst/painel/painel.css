@@ -357,3 +357,24 @@ h3 { font-size: 19px; }
   .painel-mapa-toolbar .form-group { width: 100%; }
   .painel-mapa-indicador-linha .selectize-control { min-width: 0; }
 }
+
+/* Indicador de recalculo (sobreposicao giratoria) em saidas lentas: o Shiny
+   adiciona .recalculating a todo output ocupado; textos inline ficam de fora
+   para nao quebrar o fluxo da barra de status do mapa. */
+.shiny-bound-output.recalculating:not(.shiny-text-output) {
+  position: relative;
+}
+.shiny-bound-output.recalculating:not(.shiny-text-output)::before {
+  content: ""; position: absolute; inset: 0; z-index: 900;
+  background: rgba(255, 255, 255, .72); border-radius: 8px;
+}
+.shiny-bound-output.recalculating:not(.shiny-text-output)::after {
+  content: ""; position: absolute; z-index: 901;
+  top: calc(50% - 16px); left: calc(50% - 16px);
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 3px solid var(--p-linha); border-top-color: var(--p-destaque);
+  animation: painel-girar .8s linear infinite;
+}
+@keyframes painel-girar {
+  to { transform: rotate(360deg); }
+}

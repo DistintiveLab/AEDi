@@ -11,6 +11,7 @@ adaptar, criar e mudar elementos é o esperado:
 | `R/mod_panel_*.R` | Uma aba por módulo Shiny (`moduleServer`): Região, Mapa, Sobre (+ globo). |
 | `R/painel_ui.R` | Blocos reutilizáveis: topbar, abas (`painel_abas()`), rodapé, recursos. |
 | `R/painel_dw.R` | Camada de dados: conexão e leituras do DW (`painel_con()` e `painel_*`). |
+| `R/painel_cache.R` | Cache de duas camadas (memória + disco) das leituras do DW — ver seção Cache. |
 | `R/branding.R` | Marca configurável por variáveis de ambiente. |
 | `www/` | CSS/JS do painel (mapa incremental, globo) e logo. |
 | `esqueleto_manifest.json` | Versão do AEDi gerador + SHA-256 de cada arquivo (auditoria de mudanças locais). |
@@ -36,6 +37,25 @@ A conexão usa as variáveis de ambiente `user`, `password`, `host` e
 `dbname` (defaults: aedi@127.0.0.1/aedidb), lidas por `painel_con()` em
 `R/painel_dw.R`. Em hospedagem, configure-as no painel da plataforma ou
 no `.Renviron` lido pelo processo do Shiny.
+
+## Cache de leituras do DW
+
+O handshake com o DW remoto é lento e as consultas agregadas levam
+segundos, então as leituras passam por um cache de duas camadas em
+`R/painel_cache.R` — memória do processo (compartilhada entre sessões
+Shiny) e RDS em disco no diretório `cache/` (sobrevive a reinícios do
+processo e a redeploys). As chaves incluem `host` + `dbname`, então DW
+local e remoto nunca dividem entradas.
+
+- Validade: geometrias 30 dias, catálogo (indicadores, níveis e
+  localidades) 7 dias, valores 24 horas;
+- Após rodar um ETL que atualiza o DW: `painel_cache_limpar()` no console
+  do projeto, ou aguarde o TTL expirar;
+- `painel_sem_cache=1` no ambiente desativa o cache (leitura direta);
+- Em hospedagem, `cache/` é criado em tempo de execução no diretório da
+  app (a primeira visita preenche; as seguintes servem do disco).
+
+Adicione `cache/` ao `.gitignore` do projeto: é dado derivado, não fonte.
 
 ## Marca e configuração (`.Renviron`, sem editar código)
 
