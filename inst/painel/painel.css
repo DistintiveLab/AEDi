@@ -1,4 +1,4 @@
-/* Painel de indicadores do DW AEDi — estrutura inspirada no labourvaluesdatapanel.
+/* Painel de indicadores do banco de dados do painel — estrutura inspirada no labourvaluesdatapanel.
    Duas paletas: govbr (padrao, azul gov.br #1351B4) e pb (preto e branco com
    toques do roxo da Distintive #78529D), trocadas por classe em <body>. */
 
@@ -243,7 +243,7 @@ h3 { font-size: 19px; }
     background: var(--p-destaque); color: #fff;
   }
   .painel-toolbar { gap: 8px; padding: 10px 16px; margin: 0 -16px 18px; }
-  .painel-toolbar .form-group { width: 100%; }
+  .painel-toolbar .form-group { width: 100%; flex-basis: 100%; max-width: none; }
   .painel-pagina { padding: 18px 16px 32px; }
   .painel-apoio { grid-template-columns: 1fr; gap: 20px; padding: 20px; }
   .painel-apoio-logo { max-width: 240px; }
@@ -270,7 +270,7 @@ h3 { font-size: 19px; }
 .painel-info-btn:hover, .painel-info-btn:focus-visible {
   background: var(--p-superficie); border-color: var(--p-destaque);
 }
-.painel-mapa-ano { flex: 1 1 300px; min-width: 240px; }
+.painel-mapa-ano { flex: 0 0 40%; max-width: 40%; min-width: 240px; }
 .painel-mapa-ano .irs.irs--shiny { margin-top: 0; }
 .irs--shiny .irs-line { border-top: 1px solid var(--p-linha); border-bottom: 1px solid var(--p-linha); background: var(--p-superficie); }
 .irs--shiny .irs-bar { border-top: 1px solid var(--p-destaque); border-bottom: 1px solid var(--p-destaque); background: var(--p-destaque); }
@@ -287,7 +287,11 @@ h3 { font-size: 19px; }
 .painel-mapa-inverter { flex: 0 0 auto; }
 .painel-mapa-inverter .checkbox { margin: 0; font-size: 13px; color: var(--p-texto); }
 .painel-mapa-status { color: #9d302c; font-size: 13px; min-height: 19px; margin: 0 0 8px; }
-.painel-mapa-legenda { border: 1px solid var(--p-linha); border-radius: 8px; background: var(--p-papel); box-shadow: 0 2px 10px rgba(0,0,0,.12); font-size: 12.5px; color: var(--p-texto); }
+.painel-mapa-legenda {
+  border: 1px solid var(--p-linha); border-radius: 8px; background: var(--p-papel);
+  box-shadow: 0 2px 10px rgba(0,0,0,.12); font-size: 12.5px; color: var(--p-texto);
+  width: max-content; max-width: min(360px, calc(100vw - 48px));
+}
 .painel-mapa-legenda summary {
   list-style: none; cursor: pointer; padding: 7px 14px; font-weight: 600;
   color: var(--p-destaque); user-select: none;
@@ -296,7 +300,7 @@ h3 { font-size: 19px; }
 .painel-mapa-legenda summary::after { content: " ▾"; font-size: 11px; }
 .painel-mapa-legenda[open] summary::after { content: " ▴"; }
 .painel-mapa-legenda-conteudo { border-top: 1px solid var(--p-linha); padding: 10px 14px; position: relative; }
-.painel-mapa-legenda-conteudo table { margin: 0; }
+.painel-mapa-legenda-conteudo table { margin: 0; width: auto; }
 .painel-mapa-legenda-fechar {
   position: absolute; top: 4px; right: 6px; width: 24px; height: 24px;
   min-height: 24px; padding: 0; border: none; background: none;
@@ -310,6 +314,31 @@ h3 { font-size: 19px; }
   gap: 22px; align-items: start;
 }
 .painel-regiao-grade .painel-card { margin-bottom: 0; }
+
+/* ---- Aba Regiao: resumo da localidade + accordeon eixo > objetivo ---- */
+.painel-resumo-grade {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;
+}
+.painel-resumo-chip {
+  border: 1px solid var(--p-linha); border-radius: 8px;
+  background: var(--p-superficie); padding: 10px 14px; min-width: 0;
+}
+.painel-resumo-chip-rotulo { font-size: 12px; color: var(--p-mudo); line-height: 1.3; }
+.painel-resumo-chip-valor { font-size: 18px; font-weight: 700; color: var(--p-tinta); margin-top: 2px; }
+.painel-resumo-chip-valor small { font-size: 12px; font-weight: 500; color: var(--p-mudo); }
+.painel-resumo-nota { color: var(--p-mudo); font-size: 13px; margin: 8px 0 0; }
+.painel-resumo-acoes { margin-top: 14px; }
+.painel-grupo {
+  border: 1px solid var(--p-linha); border-radius: 8px;
+  background: var(--p-papel); margin: 10px 0;
+}
+.painel-grupo summary { cursor: pointer; font-weight: 600; padding: 10px 14px; color: var(--p-destaque); user-select: none; }
+.painel-grupo summary small { color: var(--p-mudo); font-weight: 500; }
+.painel-grupo[open] > summary { border-bottom: 1px solid var(--p-linha); }
+.painel-grupo-corpo { padding: 2px 14px 12px; }
+.painel-grupo-nivel2 { margin: 8px 0 0; }
+.painel-grupo-indicador { margin: 10px 0 2px; font-size: 13px; color: var(--p-texto); }
+.painel-grupo-indicador small { color: var(--p-mudo); }
 
 /* ---- Globo de UFs (port do labourvaluesdatapanel) ---- */
 .painel-globo-card { text-align: center; }
@@ -356,4 +385,32 @@ h3 { font-size: 19px; }
 @media (max-width: 767px) {
   .painel-mapa-toolbar .form-group { width: 100%; }
   .painel-mapa-indicador-linha .selectize-control { min-width: 0; }
+}
+
+/* Indicador de recalculo (sobreposicao giratoria) em saidas lentas: o Shiny
+   adiciona .recalculating a todo output ocupado; textos inline ficam de fora
+   para nao quebrar o fluxo da barra de status do mapa. */
+.shiny-bound-output.recalculating:not(.shiny-text-output) {
+  position: relative;
+}
+.shiny-bound-output.recalculating:not(.shiny-text-output)::before {
+  content: ""; position: absolute; inset: 0; z-index: 900;
+  background: rgba(255, 255, 255, .72); border-radius: 8px;
+}
+.shiny-bound-output.recalculating:not(.shiny-text-output)::after {
+  content: ""; position: absolute; z-index: 901;
+  top: calc(50% - 16px); left: calc(50% - 16px);
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 3px solid var(--p-linha); border-top-color: var(--p-destaque);
+  animation: painel-girar .8s linear infinite;
+}
+@keyframes painel-girar {
+  to { transform: rotate(360deg); }
+}
+
+/* Fundo neutro do mapa quando sem tiles Carto (padrao do
+   labourvaluesdatapanel): malha municipal + contorno de UFs do IBGE
+   sobre fundo cinza claro; com CARTO_API_KEY, os tiles cobrem o fundo. */
+.painel-mapa .leaflet-container {
+  background-color: #e9ecef;
 }

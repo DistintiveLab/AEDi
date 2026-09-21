@@ -30,7 +30,7 @@ mod_panel_map_ui <- function(id) {
         tags$label(`for` = ns("ano"), "Ano"),
         shiny::sliderInput(ns("ano"), NULL, min = 2000, max = 2025,
                            value = 2025, step = 1, sep = "", ticks = FALSE,
-                           animate = shiny::animationOptions(interval = 500,
+                           animate = shiny::animationOptions(interval = 7000,
                                                              loop = FALSE),
                            width = "100%")),
       tags$div(class = "form-group painel-mapa-inverter",
@@ -38,7 +38,8 @@ mod_panel_map_ui <- function(id) {
         shiny::checkboxInput(ns("inverter"), "Inverter cores"))),
     tags$p(class = "painel-mapa-status",
            shiny::textOutput(ns("status"), inline = TRUE)),
-    leaflet::leafletOutput(ns("mapa"), height = "calc(100vh - 370px)")
+    tags$div(class = "painel-mapa",
+             leaflet::leafletOutput(ns("mapa"), height = "calc(100vh - 370px)"))
   )
 }
 
@@ -48,24 +49,21 @@ mod_panel_map_ui <- function(id) {
 mod_panel_map_server <- function(id) {
   moduleServer(id, function(input, output, session) {
 
-    con <- painel_con()
-    md <- painel_mdata(con)
-    geo <- painel_geo_mun(con)
-    DBI::dbDisconnect(con)
+    md <- painel_mdata_cache()
+    geo <- painel_geo_mun_cache()
     geo$layer_id <- as.character(geo$local_id)
     shiny::updateSelectizeInput(session, "indicador",
                                 choices = setNames(md$mdata_id, md$rotulo),
-                                selected = md$mdata_id[1], server = TRUE)
+                                selected = if (nrow(md)) md$mdata_id[1] else NULL,
+                                server = TRUE)
 
-    serie_ind <- shiny::reactive({
-      shiny::req(input$indicador)
-      con <- painel_con()
-      on.exit(DBI::dbDisconnect(con))
-      painel_valores(con, input$indicador)
-    })
-
+    # Anos disponiveis do indicador direto do DW (agregacao cacheada), sem
+    # puxar a serie completa para descobri-los
     anos_ind <- shiny::reactive({
-      sort(unique(format(as.Date(serie_ind()$refdate), "%Y")))
+      shiny::validate(shiny::need(nrow(md) > 0,
+        "Banco de dados do painel sem indicadores (tabela mdata vazia): confira as variáveis user, password, host e dbname e reinicie a sessão R antes de relançar o app."))
+      shiny::req(input$indicador)
+      painel_anos_cache(input$indicador)$ano
     })
 
     # Envia apenas os limites: o navegador conserva a selecao de ano mais
@@ -79,15 +77,14 @@ mod_panel_map_server <- function(id) {
         years = as.integer(anos)))
     })
 
-    # ultimo refdate dentro do ano escolhido (valor mais recente do ano)
+    # ultimo refdate dentro do ano escolhido (valor mais recente do ano),
+    # agregado no proprio SQL e cacheado; NULL quando vazio e o contrato
+    # assumido por paleta, status, camadas e legenda abaixo
     mapa_dados <- shiny::reactive({
-      shiny::req(input$ano)
-      v <- serie_ind()
-      v <- v[format(as.Date(v$refdate), "%Y") == as.character(input$ano) &
-               !is.na(v$value), ]
+      shiny::req(input$indicador, input$ano)
+      v <- painel_valores_ano_cache(input$indicador, input$ano)
       if (!nrow(v)) return(NULL)
-      ult <- stats::aggregate(refdate ~ local_id, v, max)
-      merge(v, ult, by = c("local_id", "refdate"))
+      v
     })
 
     paleta <- shiny::reactive({
@@ -120,7 +117,9 @@ mod_panel_map_server <- function(id) {
       leaflet::leaflet(geo) |>
         leaflet::setView(lng = -53.633308, lat = -13.550520, zoom = 4) |>
         leaflet::setMaxBounds(-77, -38, -27, 10) |>
-        leaflet::addProviderTiles(leaflet::providers$CartoDB.PositronNoLabels) |>
+        # tiles Carto com CARTO_API_KEY ou fundo neutro vetorial sem tiles
+        # (padrao do labourvaluesdatapanel + contorno de UFs do IBGE)
+        painel_basemap_adicionar(contorno_uf = painel_geo_uf_cache) |>
         htmlwidgets::onRender("function(el, x) { window.PainelMap.attach(el, this); }")
     })
 
@@ -200,7 +199,7 @@ mod_panel_map_server <- function(id) {
       }
       shiny::showModal(shiny::modalDialog(
         title = titulo,
-        tags$p(tags$strong("Código no DW: "), linha$orig_name),
+        tags$p(tags$strong("Código no banco de dados do painel: "), linha$orig_name),
         tags$p(descricao),
         easyClose = TRUE,
         footer = shiny::modalButton("Fechar")))
