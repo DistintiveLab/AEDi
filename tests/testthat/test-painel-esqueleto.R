@@ -79,6 +79,35 @@ test_that("deploy_panel(esqueleto=FALSE) gera launcher fina", {
   expect_false(dir.exists(file.path(d, "R")))
 })
 
+test_that("esqueleto traz mundo, slider 7s/40% e nenhuma mencao a DW do AEDi", {
+  d <- file.path(tempdir(), "painel_chk")
+  unlink(d, recursive = TRUE)
+  deploy_panel(d)
+  # asset mundial do globo copiado para www/
+  expect_true(file.exists(file.path(d, "www/painel-mundo.geojson")))
+  # animacao do slider em 7s por ano
+  mapa <- readLines(file.path(d, "R/mod_panel_map.R"), warn = FALSE)
+  expect_true(any(grepl("interval = 7000", mapa, fixed = TRUE)))
+  # slider ocupando ~40% da barra
+  css <- readLines(file.path(d, "www/painel.css"), warn = FALSE)
+  expect_true(any(grepl("painel-mapa-ano .*40%", css)))
+  # globo buscando o asset e o resumo da aba Regiao presentes
+  expect_true(any(grepl("painel-mundo.geojson",
+    readLines(file.path(d, "www/painel-globe.js"), warn = FALSE),
+    fixed = TRUE)))
+  regiao <- readLines(file.path(d, "R/mod_panel_regiao.R"), warn = FALSE)
+  expect_true(any(grepl("Resumo da localidade", regiao, fixed = TRUE)))
+  expect_true(any(grepl("painel_nivel_default", regiao, fixed = TRUE)))
+  # nenhum texto gerado menciona "DW do AEDi"
+  textos <- c(
+    list.files(file.path(d, "R"), full.names = TRUE),
+    file.path(d, c("app.R", "README.md")),
+    list.files(file.path(d, "www"), pattern = "[.](js|css)$", full.names = TRUE))
+  expect_false(any(vapply(textos, function(f)
+    any(grepl("DW do AEDi|DW AEDi", readLines(f, warn = FALSE))),
+    logical(1))))
+})
+
 test_that("atualizar_painel preserva edicoes locais e regenera manifest", {
   d <- file.path(tempdir(), "painel_upd")
   unlink(d, recursive = TRUE)
@@ -124,4 +153,25 @@ test_that("atualizar_painel preserva edicoes locais e regenera manifest", {
   atualizar_painel(d, forcar = TRUE)
   expect_false(any(grepl("# edicao local do projeto",
                          readLines(app_ui_p, warn = FALSE), fixed = TRUE)))
+})
+
+test_that("atualizar_painel reponta arquivo presente fora do manifest", {
+  d <- file.path(tempdir(), "painel_fora")
+  unlink(d, recursive = TRUE)
+  deploy_panel(d, titulo = "T Fora", paleta = "pb")
+  # simula propagacao interrompida: arquivo fica em disco sem registro
+  m <- jsonlite::fromJSON(file.path(d, "esqueleto_manifest.json"))
+  m$versao_aedi <- "0.0.0.9000"
+  m$arquivos <- m$arquivos[names(m$arquivos) != "R/painel_ui.R"]
+  writeLines(jsonlite::toJSON(m, auto_unbox = TRUE, pretty = TRUE),
+             file.path(d, "esqueleto_manifest.json"))
+  expect_error(atualizar_painel(d), NA)
+  # sem registro de edicao local, o arquivo vem igual ao deploy fresco
+  d_ref <- file.path(tempdir(), "painel_fora_ref")
+  unlink(d_ref, recursive = TRUE)
+  deploy_panel(d_ref, titulo = "T Fora", paleta = "pb")
+  expect_identical(
+    digest::digest(file.path(d, "R/painel_ui.R"), file = TRUE, algo = "sha256"),
+    digest::digest(file.path(d_ref, "R/painel_ui.R"), file = TRUE,
+                   algo = "sha256"))
 })

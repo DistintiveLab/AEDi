@@ -30,7 +30,7 @@ mod_panel_map_ui <- function(id) {
         tags$label(`for` = ns("ano"), "Ano"),
         shiny::sliderInput(ns("ano"), NULL, min = 2000, max = 2025,
                            value = 2025, step = 1, sep = "", ticks = FALSE,
-                           animate = shiny::animationOptions(interval = 500,
+                           animate = shiny::animationOptions(interval = 7000,
                                                              loop = FALSE),
                            width = "100%")),
       tags$div(class = "form-group painel-mapa-inverter",
@@ -61,7 +61,7 @@ mod_panel_map_server <- function(id) {
     # puxar a serie completa para descobri-los
     anos_ind <- shiny::reactive({
       shiny::validate(shiny::need(nrow(md) > 0,
-        "DW sem indicadores (tabela mdata vazia): confira as variáveis user, password, host e dbname e reinicie a sessão R antes de relançar o app."))
+        "Banco de dados do painel sem indicadores (tabela mdata vazia): confira as variáveis user, password, host e dbname e reinicie a sessão R antes de relançar o app."))
       shiny::req(input$indicador)
       painel_anos_cache(input$indicador)$ano
     })
@@ -199,7 +199,7 @@ mod_panel_map_server <- function(id) {
       }
       shiny::showModal(shiny::modalDialog(
         title = titulo,
-        tags$p(tags$strong("Código no DW: "), linha$orig_name),
+        tags$p(tags$strong("Código no banco de dados do painel: "), linha$orig_name),
         tags$p(descricao),
         easyClose = TRUE,
         footer = shiny::modalButton("Fechar")))

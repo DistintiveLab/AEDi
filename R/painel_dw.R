@@ -151,6 +151,15 @@ painel_niveis <- function(con) {
   q[!is.na(q$rotulo), ]
 }
 
+#' Nivel territorial de abertura default da aba Regiao: municipal quando
+#' disponivel, senao UF
+#' @keywords internal
+painel_nivel_default <- function(niveis) {
+  if (is.null(niveis) || !nrow(niveis)) return("2")
+  alvo <- which(grepl("Munic", niveis$rotulo, fixed = TRUE))
+  if (length(alvo)) as.character(niveis$nivel_id[alvo[1]]) else "2"
+}
+
 #' Localidades de um nivel territorial (pela largura do geoloc_id) que
 #' possuem dados, rotuladas por nome (municipios ganham sigla da UF)
 #' @keywords internal
@@ -219,6 +228,47 @@ painel_locais_com_dados <- function(con, mdata_id, nivel_id) {
     "WHERE v.mdata_id = %d AND length(g.geoloc_id::text) = %d"),
     mdata_id, nivel_id))
   as.character(q$local_id)
+}
+
+#' Hierarquia de agrupamentos de indicadores: filhos diretos das raizes
+#' "Eixos" e "Objetivos" com os indicadores vinculados (mdata_group) —
+#' estrutura do resumo e do accordeon da aba Regiao
+#' @keywords internal
+painel_hierarquia <- function(con) {
+  DBI::dbGetQuery(con, paste(
+    "SELECT p.datagroup_parentid AS raiz_id, r.datagroup_name AS raiz_nome,",
+    "g.datagroup_id, g.datagroup_name, mg.mdata_id",
+    "FROM group_parent p",
+    "JOIN datagroup r ON r.datagroup_id = p.datagroup_parentid",
+    "AND r.datagroup_name IN ('Eixos', 'Objetivos')",
+    "JOIN datagroup g ON g.datagroup_id = p.datagroup_id",
+    "LEFT JOIN mdata_group mg ON mg.datagroup_id = g.datagroup_id",
+    "ORDER BY 1, 3, mg.mdata_id"))
+}
+
+#' Indicadores compostos do catalogo (data_class_id = 4 no mdata_exts)
+#' @keywords internal
+painel_compostos <- function(con) {
+  DBI::dbGetQuery(con, paste(
+    "SELECT m.mdata_id, m.orig_name, m.data_name",
+    "FROM mdata m",
+    "JOIN mdata_exts e ON e.mdata_id = m.mdata_id AND e.data_class_id = 4",
+    "ORDER BY m.orig_name"))
+}
+
+#' Valores de TODOS os indicadores em uma localidade — alimenta o resumo
+#' e os mini-graficos da aba Regiao em uma unica leitura
+#' @keywords internal
+painel_valores_local_todos <- function(con, local_id) {
+  local_id <- suppressWarnings(as.integer(local_id))[1]
+  if (is.na(local_id)) {
+    return(data.frame(mdata_id = integer(0), refdate = as.Date(character(0)),
+                      value = numeric(0)))
+  }
+  DBI::dbGetQuery(con, sprintf(paste(
+    "SELECT mdata_id, refdate, value FROM data_values",
+    "WHERE local_id = %d ORDER BY mdata_id, refdate"),
+    local_id))
 }
 
 #' GeoJSON (string) de um objeto sf para mensagens Shiny ao cliente
@@ -317,6 +367,20 @@ painel_niveis_cache <- function() {
                    function() painel_com_con(painel_niveis))
 }
 
+#' Hierarquia de agrupamentos (Eixos/Objetivos), cacheado
+#' @keywords internal
+painel_hierarquia_cache <- function() {
+  painel_cache_get(painel_cache_chave("hierarquia"), painel_cache_ttl[["catalogo"]],
+                   function() painel_com_con(painel_hierarquia))
+}
+
+#' Indicadores compostos do catalogo, cacheado
+#' @keywords internal
+painel_compostos_cache <- function() {
+  painel_cache_get(painel_cache_chave("compostos"), painel_cache_ttl[["catalogo"]],
+                   function() painel_com_con(painel_compostos))
+}
+
 #' Geometrias municipais, cacheado
 #' @keywords internal
 painel_geo_mun_cache <- function() {
@@ -381,6 +445,21 @@ painel_valores_local_cache <- function(mdata_id, local_id) {
     painel_cache_ttl[["valores"]],
     function() painel_com_con(function(con)
       painel_valores_local(con, mdata_id, local_id)))
+}
+
+#' Valores de todos os indicadores em uma localidade, cacheado
+#' @keywords internal
+painel_valores_local_todos_cache <- function(local_id) {
+  local_id <- suppressWarnings(as.integer(local_id))[1]
+  if (is.na(local_id)) {
+    return(data.frame(mdata_id = integer(0), refdate = as.Date(character(0)),
+                      value = numeric(0)))
+  }
+  painel_cache_get(
+    painel_cache_chave(sprintf("valores_local_todos_%d", local_id)),
+    painel_cache_ttl[["valores"]],
+    function() painel_com_con(function(con)
+      painel_valores_local_todos(con, local_id)))
 }
 
 #' Anos com observacoes de um indicador, cacheado

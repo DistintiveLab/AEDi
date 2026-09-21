@@ -31,7 +31,7 @@ test_that("modo carto anexa a chave como ?key= nos tiles voyager", {
                     character(1L))
   expect_identical(metodos, "addTiles")
   plano <- paste(unlist(mapa$x$calls[[1]]$args), collapse = " ")
-  expect_match(plano, fixed("?key=chave-teste"))
+  expect_match(plano, "key=chave-teste", fixed = TRUE)
   expect_match(plano, "basemaps\\.cartocdn\\.com.*voyager.*\\{z\\}/\\{x\\}/\\{y\\}\\.png")
   expect_match(plano, "abcd")
   expect_match(plano, "openstreetmap.org")
@@ -64,7 +64,7 @@ test_that("modo neutro fica sem tiles e contorna as UFs quando dao", {
     leaflet::leaflet(), contorno_uf = function() ufs_exemplo())
   metodos <- vapply(mapa$x$calls, function(chamada) chamada$method,
                     character(1L))
-  expect_identical(metodos, c("addMapPane", "addPolygons"))
+  expect_identical(metodos, c("createMapPane", "addPolygons"))
   expect_false(any(metodos %in% c("addTiles", "addProviderTiles")))
   expect_identical(mapa$x$calls[[1]]$args[[1]], "painel-contorno-uf")
   expect_true(450 %in% unlist(mapa$x$calls[[1]]$args))

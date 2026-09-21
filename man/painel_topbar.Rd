@@ -6,7 +6,7 @@
 \usage{
 painel_topbar(
   titulo,
-  subtitulo = "AEDi — DW de indicadores",
+  subtitulo = "AEDi — banco de dados do painel",
   logo_src = painel_logo_src()
 )
 }

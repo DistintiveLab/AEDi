@@ -41,6 +41,10 @@ painel_logo_src <- function(assets_dir = NULL) {
 #' @keywords internal
 painel_recursos <- function(assets_dir, paleta = c("govbr", "pb")) {
   paleta <- match.arg(paleta)
+  # publica o diretorio de assets por URL: o globo busca o contorno
+  # mundial (painel-mundo.geojson) em painel_recursos/...
+  shiny::addResourcePath("painel_recursos",
+                         normalizePath(assets_dir, mustWork = FALSE))
   shiny::tagList(
     shiny::tags$head(
       shiny::tags$meta(name = "viewport",
@@ -58,7 +62,7 @@ painel_recursos <- function(assets_dir, paleta = c("govbr", "pb")) {
 #' Topbar do painel com marca e botao de troca de paleta
 #' @keywords internal
 painel_topbar <- function(titulo,
-                          subtitulo = "AEDi — DW de indicadores",
+                          subtitulo = "AEDi — banco de dados do painel",
                           logo_src = painel_logo_src()) {
   shiny::tags$header(class = "painel-topbar",
     shiny::tags$a(class = "painel-brand", href = "#",
@@ -100,6 +104,6 @@ painel_rodape <- function(contato = NULL) {
       shiny::tags$a(href = "https://www.distintive.com.br",
                     target = "_blank", rel = "noopener", "Distintive"))
   shiny::tags$footer(class = "painel-rodape",
-    shiny::tags$span("Dados: DW de indicadores do AEDi (aedidb)."),
+    shiny::tags$span("Dados: banco de dados do painel (aedidb)."),
     credito)
 }
