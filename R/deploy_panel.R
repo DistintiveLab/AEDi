@@ -78,7 +78,9 @@ deploy_panel <- function(diretorio = "painel",
   ler_tpl <- function(rel)
     readLines(file.path(tpl_dir, rel), encoding = "UTF-8", warn = FALSE)
   exatas <- c("R/branding.R" = "painel_branding.R",
+              "R/painel_basemap.R" = "painel_basemap.R",
               "R/painel_ui.R" = "painel_ui.R",
+              "R/painel_cache.R" = "painel_cache.R",
               "R/painel_dw.R" = "painel_dw.R",
               "R/mod_panel_globe.R" = "mod_panel_globe.R",
               "R/mod_panel_map.R" = "mod_panel_map.R",
@@ -92,7 +94,7 @@ deploy_panel <- function(diretorio = "painel",
     conteudo[[rel]] <- .gsub_placeholders(ler_tpl(rel), valores_txt)
   # UI com defaults de marca (valores como literais R)
   valores_r <- c(TITULO = deparse(titulo), PALETA = deparse(paleta),
-                 SUBTITULO = deparse("AEDi — DW de indicadores"))
+                 SUBTITULO = deparse("AEDi — banco de dados do painel"))
   conteudo[["R/app_ui.R"]] <- .gsub_placeholders(
     ler_tpl("R/app_ui.R"), valores_r)
   # copias exatas dos fontes compartilhados com o pacote + server
@@ -269,7 +271,10 @@ atualizar_painel <- function(diretorio = "painel", forcar = FALSE) {
   atualizados <- preservados <- adicionados <- character(0)
   for (rel in todos) {
     caminho <- file.path(diretorio, rel)
-    if (!file.exists(caminho)) {
+    if (!file.exists(caminho) || !rel %in% names(hash_antigo)) {
+      # ausente em disco ou fora do manifest anterior (ex.: propagacao
+      # anterior interrompida deixou arquivo sem registro): sem edicao
+      # local rastreavel, vale o upstream como arquivo adicionado
       gravar_fonte(rel)
       adicionados <- c(adicionados, rel)
       hashes_novo[[rel]] <- digest::digest(caminho, file = TRUE,
@@ -277,8 +282,7 @@ atualizar_painel <- function(diretorio = "painel", forcar = FALSE) {
       next
     }
     hash_local <- digest::digest(caminho, file = TRUE, algo = "sha256")
-    hash_registrado <- hash_antigo[[rel]]
-    if (is.null(hash_registrado)) hash_registrado <- NA_character_
+    hash_registrado <- unname(hash_antigo[[rel]])
     intacto <- !is.na(hash_registrado) &&
       identical(hash_local, hash_registrado)
     if (intacto || isTRUE(forcar)) {
@@ -322,15 +326,15 @@ atualizar_painel <- function(diretorio = "painel", forcar = FALSE) {
     stop("app.R ja existe em ", normalizePath(diretorio),
          " — use sobrescrever = TRUE para substituir")
   writeLines(c(
-    "# Painel de indicadores do DW — app gerada por AEDi::deploy_panel()",
-    "# Credenciais do DW (variaveis de ambiente): user, password, host, dbname",
+    "# Painel de indicadores do banco de dados do painel — app gerada por AEDi::deploy_panel()",
+    "# Credenciais do banco de dados (variaveis de ambiente): user, password, host, dbname",
     sprintf("AEDi::panel_app(titulo = %s, paleta = %s)",
             deparse(titulo), deparse(paleta)),
     ""), app_r)
   writeLines(c(
     "# Painel de indicadores",
     "",
-    "App Shiny autonoma de consulta ao DW de indicadores (series por nivel",
+    "App Shiny autonoma de consulta ao banco de dados do painel (series por nivel",
     "territorial, mapa municipal dinamico com slider de ano animado e globo",
     "interativo das UFs), gerada por `AEDi::deploy_panel()` e",
     "montada sobre o pacote AEDi. A paleta de cores pode ser Gov.br (azul) ou",
@@ -352,7 +356,7 @@ atualizar_painel <- function(diretorio = "painel", forcar = FALSE) {
     'rsconnect::deployApp("painel")',
     "```",
     "",
-    "## Credenciais do DW",
+    "## Credenciais do banco de dados",
     "",
     "A conexao usa as variaveis de ambiente `user`, `password`, `host` e",
     "`dbname` (defaults: aedi@127.0.0.1/aedidb). Em hospedagem, configure-as",

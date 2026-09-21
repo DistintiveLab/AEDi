@@ -1,18 +1,27 @@
-/* Globo de UFs (port do wlv-country-globe.js do labourvaluesdatapanel).
- * Globo ortografico com as 27 Unidades da Federacao do DW do AEDi:
- * arrastar gira (com limites que mantem o Brasil visivel), clicar numa UF
- * atualiza a aba Regiao via setInputValue. Requer painel-geo.js. A geometria
- * chega pela mensagem Shiny "painel-globe" (string GeoJSON do DW), nunca por
- * fetch. Cores acompanham a paleta do painel (govbr/pb) via variaveis CSS. */
+/* Globo de localidades (port do wlv-country-globe.js do labourvaluesdatapanel).
+ * Globo ortografico do mundo com as delimitacoes territoriais do nivel
+ * corrente do banco de dados do painel: arrastar gira livremente pelo
+ * mundo, a roda do mouse e os botoes aproximam e afastam (estilo Google
+ * Earth) e clicar numa area com dados atualiza a aba Regiao via
+ * setInputValue. No nivel municipal a base sao as UFs com o municipio
+ * escolhido destacado e a UF inteira em foco (a mensagem traz o geojson
+ * do destaque e do contexto). Requer painel-geo.js. A geometria do nivel
+ * chega pela mensagem Shiny "painel-globe" (string GeoJSON do banco de
+ * dados); o contorno mundial vem do asset local painel-mundo.geojson por
+ * fetch (o globo tambem funciona sem ele). Cores acompanham a paleta do
+ * painel (govbr/pb) via variaveis CSS. */
 (function (root) {
   "use strict";
 
   const document = root.document;
   const geo = () => root.PainelGeo;
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-  // Limites de rotacao que mantem o Brasil na face visivel do globo.
-  const LAMBDA = [18, 92];
-  const PHI = [-42, 46];
+  // Rotacao livre pelo mundo inteiro (lambda completo, phi ate os polos) e
+  // zoom aproximado/afastado estilo Google Earth: 1 e o globo inteiro e o
+  // maximo deixa uma area municipal preencher boa parte do disco.
+  const LAMBDA = [-180, 180];
+  const PHI = [-90, 90];
+  const ZOOM = [1, 256];
   // Uma primeira mensagem ausente e distinta de uma lista de UFs vazia.
   let latest = null;
   let controller = null;
@@ -21,19 +30,20 @@
   let handshake = 0;
 
   const labels = {
-    globe: "Globo interativo para escolher uma Unidade da Federação",
-    instruction: "Arraste para girar e clique em uma UF para vê-la na aba Região.",
+    globe: "Globo interativo das delimitações territoriais do IBGE",
+    instruction: "Arraste para girar, aproxime com a roda ou pelos botões e clique em uma área com dados para escolher a localidade.",
     loading: "Carregando o globo…",
-    error: "Não foi possível carregar o globo. Você pode escolher a UF na aba Região.",
+    error: "Não foi possível carregar o globo. Você pode escolher a localidade na aba Região.",
     retry: "Tentar novamente",
     unavailable: "Sem dados neste indicador",
     available: "Com dados",
-    selected: "UF selecionada",
+    selected: "Localidade selecionada",
     north: "Girar para o norte", south: "Girar para o sul",
     west: "Girar para o oeste", east: "Girar para o leste",
-    reset: "Centralizar UF selecionada",
+    reset: "Centralizar seleção",
+    zoomIn: "Aproximar", zoomOut: "Afastar",
     ocean: "Oceano",
-    empty: "Nenhuma UF com dados neste indicador."
+    empty: "Nenhuma área com dados neste indicador."
   };
 
   function cssVar(name, fallback) {
@@ -51,14 +61,15 @@
       selectedStroke: cssVar("--p-destaque-hover", "#0C3F91"),
       markerStroke: "#5F7285",
       oceanFrom: "#EAF2F8", oceanTo: "#D8E4EE", oceanStroke: "#A9BCCE",
-      graticule: "rgba(125,145,168,0.35)"
+      graticule: "rgba(125,145,168,0.35)",
+      land: "#EFECE4", landStroke: "rgba(125,145,168,0.45)"
     };
   }
 
   function geometry(message) {
     const collection = JSON.parse(message.geojson);
     if (!collection || !Array.isArray(collection.features) || !collection.features.length) {
-      throw new Error("Geometria das UFs ausente");
+      throw new Error("Geometria das localidades ausente");
     }
     return collection.features.map(feature => ({
       feature: feature,
@@ -66,6 +77,22 @@
       center: (feature.properties && feature.properties.center) || geo().geoCentroid(feature),
       area: geo().geoArea(feature)
     }));
+  }
+
+  // Uma feicao unica (destaque ou contexto) vinda de string GeoJSON.
+  function parseGeojsonFeature(text) {
+    const collection = JSON.parse(text);
+    const feature = collection && Array.isArray(collection.features) &&
+      collection.features.length ? collection.features[0] : null;
+    if (!feature) return null;
+    const props = feature.properties || {};
+    return {
+      feature: feature,
+      code: String((props.code != null ? props.code : props.local_id) || ""),
+      label: props.label != null ? String(props.label) : "",
+      center: props.center || geo().geoCentroid(feature),
+      area: geo().geoArea(feature)
+    };
   }
 
   function element(tag, className, parent) {
@@ -85,6 +112,8 @@
       readyId: latest ? String(latest.readyId || "") : "",
       localClick: null,
       features: [], rotation: [53.5, 10.5, 0], width: 360, radius: 160,
+      zoom: 1, world: [], modo: "uf",
+      destaque: null, destaqueCode: "", contexto: null, contextoCode: "",
       frame: 0, animation: null, pointer: null, hovered: null, error: false,
       disposed: false, loaded: false, received: false
     };
@@ -114,15 +143,22 @@
     const instructions = element("p", "painel-globo-instrucao", host);
     const controls = element("div", "painel-globo-controles", host);
     const buttonSpecs = [["west", "\u2190", 16, 0], ["north", "\u2191", 0, -12],
-      ["south", "\u2193", 0, 12], ["east", "\u2192", -16, 0], ["reset", "\u21ba", 0, 0]];
+      ["south", "\u2193", 0, 12], ["east", "\u2192", -16, 0], ["reset", "\u21ba", 0, 0],
+      ["zoomIn", "+"], ["zoomOut", "\u2212"]];
     const buttons = buttonSpecs.map(spec => {
       const button = element("button", "painel-globo-controle", controls);
       button.type = "button";
       button.dataset.direction = spec[0];
       button.textContent = spec[1];
       button.addEventListener("click", () => {
-        if (spec[0] === "reset") centerSelected();
-        else rotate(spec[2], spec[3]);
+        if (spec[0] === "reset") focusSelection();
+        else if (spec[0] === "zoomIn") zoomBy(1.35);
+        else if (spec[0] === "zoomOut") zoomBy(1 / 1.35);
+        else {
+          // O passo de rotacao diminui com o zoom para manter precisao.
+          const fator = Math.max(1, state.zoom / 4);
+          rotate(spec[2] / fator, spec[3] / fator);
+        }
       }, { signal: signal });
       return button;
     });
@@ -137,7 +173,7 @@
       return { label: element("span", "", item), key: key };
     });
     const attribution = element("small", "painel-globo-atribuicao", host);
-    attribution.textContent = "Geometrias: IBGE · DW de indicadores do AEDi";
+    attribution.textContent = "Geometrias: IBGE · mundo: pacote maps · banco de dados do painel";
 
     function ufLabel(item) {
       if (!item) return text("ocean");
@@ -147,6 +183,10 @@
     function selectionStatus() {
       if (state.error) return text("error");
       if (!state.loaded || !state.received) return text("loading");
+      if (state.destaque) {
+        return text("selected") + ": " +
+          (state.destaque.label || state.destaqueCode);
+      }
       if (!state.disponiveis.size) return text("empty");
       const selected = state.features.find(item => item.code === state.selected);
       const name = state.ufs.get(state.selected) || (selected ? ufLabel(selected) : "");
@@ -167,7 +207,11 @@
     }
 
     function updateProjection() {
+      state.radius = state.width * 0.455 * state.zoom;
       projection.rotate(state.rotation).translate([state.width / 2, state.width / 2]).scale(state.radius);
+      // Resampling mais grosso em zoom alto mantem o redesenho leve.
+      const precisao = clamp(0.35 * state.zoom / 4, 0.35, 6);
+      if (projection.precision() !== precisao) projection.precision(precisao);
       host.dataset.longitude = (-state.rotation[0]).toFixed(4);
       host.dataset.latitude = (-state.rotation[1]).toFixed(4);
     }
@@ -195,6 +239,10 @@
           1 - Math.pow(-2 * progress + 2, 3) / 2;
         state.rotation = [clamp(animation.from[0] + animation.delta[0] * eased, LAMBDA[0], LAMBDA[1]),
           clamp(animation.from[1] + animation.delta[1] * eased, PHI[0], PHI[1]), 0];
+        if (animation.zoomTo != null) {
+          state.zoom = clamp(animation.zoomFrom *
+            Math.pow(animation.zoomTo / animation.zoomFrom, eased), ZOOM[0], ZOOM[1]);
+        }
         if (progress === 1) stopAnimation();
       }
       updateProjection();
@@ -218,6 +266,27 @@
       context.lineWidth = 0.55;
       context.stroke();
 
+      // Massas de terra continentais sob as UFs (asset local opcional).
+      if (state.world.length) {
+        context.beginPath();
+        state.world.forEach(feature => { path(feature); });
+        context.fillStyle = colors.land;
+        context.fill();
+        context.strokeStyle = colors.landStroke;
+        context.lineWidth = 0.4;
+        context.stroke();
+      }
+
+      // Contexto (UF que contem a selecao): preenchimento leve e contorno
+      // forte por baixo das feicoes — o estado aparece inteiro em foco.
+      if (state.contexto) {
+        context.save();
+        context.globalAlpha = 0.10;
+        drawFeature(state.contexto, colors.selected, null, 0);
+        context.restore();
+        drawFeature(state.contexto, "rgba(0,0,0,0)", colors.selectedStroke, 1.6);
+      }
+
       const selected = state.features.find(item => item.code === state.selected);
       state.features.forEach(item => {
         if (item === selected) return;
@@ -228,6 +297,11 @@
           hovered && available ? 1.2 : 0.55);
       });
       if (selected) drawFeature(selected, colors.selected, colors.selectedStroke, 0.9);
+
+      // Destaque (localidade fora das feicoes da base): por cima de tudo.
+      if (state.destaque) {
+        drawFeature(state.destaque, colors.selected, colors.selectedStroke, 1.3);
+      }
 
       // UFs de area muito pequena (caso do DF) continuam clicaveis nesta
       // escala, usando o ponto do centro quando a projecao teria poucos px.
@@ -258,7 +332,6 @@
       const width = Math.max(1, host.getBoundingClientRect().width);
       if (width < 2) return;
       state.width = width;
-      state.radius = width * 0.455;
       const ratio = Math.min(root.devicePixelRatio || 1, 3);
       canvas.width = Math.round(width * ratio);
       canvas.height = Math.round(width * ratio);
@@ -331,20 +404,52 @@
       schedule();
     }
 
-    function centerSelected(animate = true) {
-      const item = state.features.find(feature => feature.code === state.selected);
-      if (state.animation && state.animation.uf === state.selected) return;
+    // Zoom estilo Google Earth: aumenta o raio da projecao ortografica
+    // mantendo o centro (a rotacao corrente) — o mundo aproxima do olho.
+    function zoomBy(factor) {
+      const zoom = clamp(state.zoom * factor, ZOOM[0], ZOOM[1]);
+      if (zoom === state.zoom) return;
       stopAnimation();
-      if (item) {
-        const target = [-item.center[0], -item.center[1], 0];
-        const delta = [clamp(-item.center[0], LAMBDA[0], LAMBDA[1]) - state.rotation[0],
-          -item.center[1] - state.rotation[1]];
-        if (animate && !(reducedMotion && reducedMotion.matches) && Math.hypot(delta[0], delta[1]) > 0.05) {
-          // Preserva a orientacao corrente e usa o arco mais curto.
-          state.animation = { uf: state.selected, from: state.rotation.slice(), delta: delta,
-            started: root.performance.now() };
+      state.zoom = zoom;
+      schedule();
+    }
+
+    // Zoom que faz a feicao caber no disco: mede a extensao projetada
+    // com scale de referencia (zoom 1) e reescala para ocupar ~80% do raio.
+    function fitZoom(item) {
+      if (!item) return state.zoom;
+      projection.rotate([-item.center[0], -item.center[1], 0])
+        .translate([state.width / 2, state.width / 2])
+        .scale(state.width * 0.455);
+      const b = geo().geoPath(projection).bounds(item.feature);
+      const half = Math.max(b[1][0] - b[0][0], b[1][1] - b[0][1]) / 2;
+      if (!Number.isFinite(half) || half <= 1) return state.zoom;
+      return clamp((state.width * 0.40) / half, ZOOM[0], ZOOM[1]);
+    }
+
+    // Centraliza e aproxima ate o alvo caber: a feicao selecionada, ou a
+    // UF de contexto quando a selecao e um destaque (municipio dentro do
+    // estado). Preserva a orientacao corrente e usa o arco mais curto.
+    function focusSelection(animate = true, alvo = null) {
+      alvo = alvo || state.contexto ||
+        state.features.find(feature => feature.code === state.selected) || null;
+      if (state.animation && alvo && state.animation.alvo === alvo.code) return;
+      stopAnimation();
+      if (alvo) {
+        const delta = [clamp(-alvo.center[0], LAMBDA[0], LAMBDA[1]) - state.rotation[0],
+          -alvo.center[1] - state.rotation[1]];
+        const zoomTo = fitZoom(alvo);
+        if (animate && !(reducedMotion && reducedMotion.matches) &&
+            (Math.hypot(delta[0], delta[1]) > 0.05 ||
+             Math.abs(zoomTo - state.zoom) > 0.01)) {
+          state.animation = { alvo: alvo.code, from: state.rotation.slice(), delta: delta,
+            zoomFrom: state.zoom, zoomTo: zoomTo, started: root.performance.now() };
           host.dataset.animating = "true";
-        } else state.rotation = [clamp(target[0], LAMBDA[0], LAMBDA[1]), clamp(target[1], PHI[0], PHI[1]), 0];
+        } else {
+          state.rotation = [clamp(-alvo.center[0], LAMBDA[0], LAMBDA[1]),
+            clamp(-alvo.center[1], PHI[0], PHI[1]), 0];
+          state.zoom = zoomTo;
+        }
       }
       hideTooltip();
       schedule();
@@ -358,12 +463,13 @@
         return;
       }
       // Inicia imediatamente; o eco do Shiny nao deve reiniciar a rotacao.
-      state.selected = item.code;
+      if (state.modo !== "uf") state.selected = item.code;
       state.localClick = { code: item.code, at: Date.now() };
       host.dataset.selected = item.code;
-      centerSelected();
+      focusSelection(true, item);
       if (root.Shiny && root.Shiny.setInputValue && state.inputId) {
-        root.Shiny.setInputValue(state.inputId, item.code, { priority: "event" });
+        root.Shiny.setInputValue(state.inputId,
+          { code: item.code, modo: state.modo }, { priority: "event" });
       }
     }
 
@@ -406,6 +512,11 @@
     canvas.addEventListener("pointercancel", cancelPointer, { signal: signal });
     canvas.addEventListener("lostpointercapture", cancelPointer, { signal: signal });
     canvas.addEventListener("pointerleave", () => { if (!state.pointer) hideTooltip(); }, { signal: signal });
+    canvas.addEventListener("wheel", event => {
+      if (!state.loaded || !state.received) return;
+      event.preventDefault();
+      zoomBy(Math.exp(-event.deltaY * 0.0016));
+    }, { signal: signal, passive: false });
 
     const resizeObserver = root.ResizeObserver ? new root.ResizeObserver(resize) : null;
     if (resizeObserver) resizeObserver.observe(host);
@@ -428,10 +539,24 @@
         host.setAttribute("aria-busy", "false");
         translate();
         resize();
-        centerSelected(false);
+        focusSelection(false);
       } catch (error) {
         failed();
       }
+    }
+
+    // Contorno mundial de fundo (asset local; falha silenciosa).
+    function loadWorld() {
+      if (state.world.length) return;
+      fetch("painel_recursos/painel-mundo.geojson").then(response => {
+        if (!response.ok) throw new Error("contorno mundial indisponivel");
+        return response.json();
+      }).then(collection => {
+        if (state.disposed) return;
+        state.world = collection && Array.isArray(collection.features) ?
+          collection.features : [];
+        schedule();
+      }).catch(() => { /* sem mundo, segue esfera + graticule + UFs */ });
     }
 
     function failed() {
@@ -444,28 +569,60 @@
     }
 
     function update(message) {
-      const previous = state.selected;
+      const previous = state.destaqueCode || state.selected;
       state.received = true;
       host.dataset.received = "true";
       if (message.inputId) state.inputId = String(message.inputId);
       if (message.readyId) state.readyId = String(message.readyId);
-      const entries = Array.isArray(message.ufs) ? message.ufs : [];
+      state.modo = String(message.modo || "uf");
+      if (message.geojson) {
+        // Troca de nivel territorial: substitui as feicoes da base.
+        try {
+          state.features = geometry(message);
+        } catch (error) { /* mantem as feicoes atuais */ }
+        if (!state.loaded) {
+          state.loaded = true;
+          host.dataset.ready = "true";
+          host.dataset.featureCount = String(state.features.length);
+          host.setAttribute("aria-busy", "false");
+          resize();
+        }
+      }
+      const entries = Array.isArray(message.locais) ? message.locais :
+        Array.isArray(message.ufs) ? message.ufs : [];
       state.ufs = new Map(entries.filter(uf => uf && uf.code != null)
         .map(uf => [String(uf.code), String(uf.label || uf.code)]));
       state.disponiveis = new Set((Array.isArray(message.disponiveis) ? message.disponiveis : [])
         .filter(code => code != null).map(String));
+      // Destaque (localidade fora das feicoes) e contexto (UF que a
+      // contem): a geometria viaja quando muda; o cliente guarda a ultima.
+      state.destaqueCode = String(message.destaque || "");
+      if (message.destaqueGeojson) {
+        state.destaque = parseGeojsonFeature(message.destaqueGeojson);
+      } else if (!state.destaqueCode) state.destaque = null;
+      if (state.destaque && state.destaqueCode) state.destaque.code = state.destaqueCode;
+      if (!state.destaqueCode) state.destaque = null;
+      state.contextoCode = String(message.contexto || "");
+      if (message.contextoGeojson) {
+        state.contexto = parseGeojsonFeature(message.contextoGeojson);
+      } else if (!state.contextoCode) state.contexto = null;
+      if (state.contexto && state.contextoCode) state.contexto.code = state.contextoCode;
+      if (!state.contextoCode) state.contexto = null;
       // A selecao local pode estar varios cliques a frente desta mensagem do
       // servidor; mantem-a quando ainda valida para a disponibilidade recebida.
       const local = state.localClick;
       const localFresh = local && Date.now() - local.at < 600 && state.disponiveis.has(local.code);
       const server = String(message.selected || "");
-      state.selected = localFresh ? local.code :
+      state.selected = state.modo === "uf" ? "" :
+        localFresh ? local.code :
         state.disponiveis.has(server) ? server : "";
-      host.dataset.selected = state.selected;
+      host.dataset.selected = state.destaqueCode || state.selected;
       host.dataset.availableCount = String(state.disponiveis.size);
       translate();
       if (!state.loaded && latest && latest.geojson) load();
-      else if (state.loaded && previous !== state.selected) centerSelected(Boolean(previous));
+      else if (state.loaded && previous !== (state.destaqueCode || state.selected)) {
+        focusSelection(Boolean(previous));
+      }
       hideTooltip();
       schedule();
     }
@@ -481,6 +638,7 @@
 
     if (latest) update(latest);
     load();
+    loadWorld();
     // Handshake: o servidor reenvia a geometria apos cada remontagem do host.
     if (state.readyId && root.Shiny && root.Shiny.setInputValue) {
       root.Shiny.setInputValue(state.readyId, ++handshake, { priority: "event" });

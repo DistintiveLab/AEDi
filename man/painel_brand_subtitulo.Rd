@@ -4,7 +4,7 @@
 \alias{painel_brand_subtitulo}
 \title{Subtitulo do painel (usa painel_subtitulo)}
 \usage{
-painel_brand_subtitulo(default = "AEDi — DW de indicadores")
+painel_brand_subtitulo(default = "AEDi — banco de dados do painel")
 }
 \description{
 Subtitulo do painel (usa painel_subtitulo)
