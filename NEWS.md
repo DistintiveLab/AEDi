@@ -1,3 +1,25 @@
+# AEDi 0.6.3 (2026-09-21)
+
+Marco do orquestrador em produção: primeiro lote completo do
+`pndr_dashboard` encerrado com a família era-RAIS resolvida de ponta a
+ponta (contrato de eras centralizado no pacote **raisqlr** 0.1.0) e 13
+scripts aposentados via `.R.ignore`. Sem mudanças de código no AEDi —
+esta versão apenas marca o ponto em que o pipeline externo consumidor
+estabilizou sobre o AEDi 0.6.2.
+
+- **Placar do lote (44 scripts): 27 ✓ / 17 ✗**, encerrado com a família
+  era-RAIS (7 scripts) resolvida via `raisqlr` 0.1.0 (7/7 ✓ no re-run)
+  e 13 marcadores `.R.ignore` (no-ops, rascunhos, utilitários legados,
+  insumo manual pendente e `gastos_tributarios_municipio`, que
+  downdata sem `AEDI_SCRIPT_ARGS`); `listar_scripts_coleta()` devolve
+  34 ativos.
+- **Séries RAIS estendidas a 2000-2025** nos indicadores do
+  `pndr_dashboard`: os 7 scripts era-RAIS passaram a montar o SQL por
+  era com `raisqlr::cnae_equivalentes()`, `raisqlr::rais_coluna()` e
+  `raisqlr::rais_divisor()`, absorvendo as mudanças de esquema do
+  `mte_rais` (CNAE 95→2.0, porte/tamanho, CBO-94) sem lógica de era
+  nos próprios scripts.
+
 # AEDi 0.6.2 (2026-09-21)
 
 - **latex2r → latexr** (rename CRAN; `latex2r` foi arquivado): Imports
