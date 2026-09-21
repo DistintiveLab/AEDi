@@ -378,3 +378,10 @@ h3 { font-size: 19px; }
 @keyframes painel-girar {
   to { transform: rotate(360deg); }
 }
+
+/* Fundo neutro do mapa quando sem tiles Carto (padrao do
+   labourvaluesdatapanel): malha municipal + contorno de UFs do IBGE
+   sobre fundo cinza claro; com CARTO_API_KEY, os tiles cobrem o fundo. */
+.painel-mapa .leaflet-container {
+  background-color: #e9ecef;
+}
