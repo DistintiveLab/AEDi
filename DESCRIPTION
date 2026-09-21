@@ -91,6 +91,7 @@ Collate:
     'mod_panel_regiao.R'
     'mod_panel_sobre.R'
     'painel_branding.R'
+    'painel_cache.R'
     'painel_dw.R'
     'painel_ui.R'
     'raismetadatalayoute.R'

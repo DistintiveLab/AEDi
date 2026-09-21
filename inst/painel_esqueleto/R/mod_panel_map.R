@@ -48,24 +48,21 @@ mod_panel_map_ui <- function(id) {
 mod_panel_map_server <- function(id) {
   moduleServer(id, function(input, output, session) {
 
-    con <- painel_con()
-    md <- painel_mdata(con)
-    geo <- painel_geo_mun(con)
-    DBI::dbDisconnect(con)
+    md <- painel_mdata_cache()
+    geo <- painel_geo_mun_cache()
     geo$layer_id <- as.character(geo$local_id)
     shiny::updateSelectizeInput(session, "indicador",
                                 choices = setNames(md$mdata_id, md$rotulo),
-                                selected = md$mdata_id[1], server = TRUE)
+                                selected = if (nrow(md)) md$mdata_id[1] else NULL,
+                                server = TRUE)
 
-    serie_ind <- shiny::reactive({
-      shiny::req(input$indicador)
-      con <- painel_con()
-      on.exit(DBI::dbDisconnect(con))
-      painel_valores(con, input$indicador)
-    })
-
+    # Anos disponiveis do indicador direto do DW (agregacao cacheada), sem
+    # puxar a serie completa para descobri-los
     anos_ind <- shiny::reactive({
-      sort(unique(format(as.Date(serie_ind()$refdate), "%Y")))
+      shiny::validate(shiny::need(nrow(md) > 0,
+        "DW sem indicadores (tabela mdata vazia): confira as variáveis user, password, host e dbname e reinicie a sessão R antes de relançar o app."))
+      shiny::req(input$indicador)
+      painel_anos_cache(input$indicador)$ano
     })
 
     # Envia apenas os limites: o navegador conserva a selecao de ano mais
@@ -79,15 +76,14 @@ mod_panel_map_server <- function(id) {
         years = as.integer(anos)))
     })
 
-    # ultimo refdate dentro do ano escolhido (valor mais recente do ano)
+    # ultimo refdate dentro do ano escolhido (valor mais recente do ano),
+    # agregado no proprio SQL e cacheado; NULL quando vazio e o contrato
+    # assumido por paleta, status, camadas e legenda abaixo
     mapa_dados <- shiny::reactive({
-      shiny::req(input$ano)
-      v <- serie_ind()
-      v <- v[format(as.Date(v$refdate), "%Y") == as.character(input$ano) &
-               !is.na(v$value), ]
+      shiny::req(input$indicador, input$ano)
+      v <- painel_valores_ano_cache(input$indicador, input$ano)
       if (!nrow(v)) return(NULL)
-      ult <- stats::aggregate(refdate ~ local_id, v, max)
-      merge(v, ult, by = c("local_id", "refdate"))
+      v
     })
 
     paleta <- shiny::reactive({
