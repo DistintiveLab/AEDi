@@ -29,6 +29,18 @@ consultas agregadas de segundos, medidas contra o `aedidb` remoto do
   `recalculating` ganha overlay com círculo giratório, no estilo Gov.br
   (usa as variáveis da paleta), sem dependência nova.
 
+## Basemap do mapa: Carto com chave ou fundo neutro
+
+- **Novo `R/painel_basemap.R`** (pacote e esqueleto): o Carto passou a
+  exigir chave de API nos tiles. Com `CARTO_API_KEY` no ambiente, o mapa
+  usa os rastertiles voyager com a chave anexada como `?key=` nas
+  chamadas (`subdomains abcd`, `maxZoom 20`). Sem chave, vale o padrão
+  do labourvaluesdatapanel: fundo neutro vetorial sem tiles, com o
+  contorno das UFs (malha do IBGE, lida do próprio DW) em um pane acima
+  da camada municipal e fundo cinza no CSS — nenhuma dependência
+  externa. `PAINEL_BASEMAP=carto|neutro` força a opção; `carto` sem
+  chave cai no neutro com aviso.
+
 ## Robustez
 
 - `mdata_id`/`nivel_id`/`local_id` inválidos (`"NA"`, `""`, ausentes —

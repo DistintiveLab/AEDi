@@ -3,11 +3,15 @@
 # livremente (abas em R/mod_*.R e R/painel_ui.R, composicao em
 # R/app_ui.R, marca em R/branding.R, dados em R/painel_dw.R).
 # Credenciais do DW (variaveis de ambiente): user, password, host, dbname.
+# Basemap: CARTO_API_KEY habilita tiles Carto; sem ela, fundo neutro
+# vetorial (padrao do labourvaluesdatapanel + contorno de UFs do IBGE).
+# PAINEL_BASEMAP=carto|neutro forca a escolha.
 
 library(shiny)  # modulos usam NS(), tagList(), reactive() etc. sem prefixo
 
 for (f in c(
   "R/branding.R",
+  "R/painel_basemap.R",
   "R/painel_cache.R",
   "R/painel_dw.R",
   "R/painel_ui.R",

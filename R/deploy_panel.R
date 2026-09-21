@@ -78,6 +78,7 @@ deploy_panel <- function(diretorio = "painel",
   ler_tpl <- function(rel)
     readLines(file.path(tpl_dir, rel), encoding = "UTF-8", warn = FALSE)
   exatas <- c("R/branding.R" = "painel_branding.R",
+              "R/painel_basemap.R" = "painel_basemap.R",
               "R/painel_ui.R" = "painel_ui.R",
               "R/painel_cache.R" = "painel_cache.R",
               "R/painel_dw.R" = "painel_dw.R",

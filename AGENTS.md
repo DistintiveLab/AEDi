@@ -251,7 +251,11 @@ plain (no `%%PLACEHOLDER%%`; those only exist in `app.R`, `README.md`,
 `R/app_ui.R`). New R files must be added to `exatas` or `deploy_panel()` will
 not copy them and generated apps break. The skeleton has its own two-tier DW
 cache (`painel_cache.R`, `cache/` dir at runtime, TTLs per data kind;
-`painel_cache_limpar()` after ETL, `painel_sem_cache=1` to bypass).
+`painel_cache_limpar()` after ETL, `painel_sem_cache=1` to bypass). Map
+basemap is chosen at runtime by `painel_basemap.R`: Carto tiles require
+`CARTO_API_KEY` (appended as `?key=`); without it the map uses the tile-less
+labourvaluesdatapanel pattern (IBGE UF outlines from the DW). `PAINEL_BASEMAP`
+forces `carto`/`neutro`.
 
 ### `eval(parse(text = ...))` is pervasive
 

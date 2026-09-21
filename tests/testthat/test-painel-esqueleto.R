@@ -2,6 +2,7 @@
 
 compartilhados <- c(
   "R/branding.R"          = "painel_branding.R",
+  "R/painel_basemap.R"    = "painel_basemap.R",
   "R/painel_ui.R"         = "painel_ui.R",
   "R/painel_cache.R"      = "painel_cache.R",
   "R/painel_dw.R"         = "painel_dw.R",

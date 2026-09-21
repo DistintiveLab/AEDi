@@ -38,7 +38,8 @@ mod_panel_map_ui <- function(id) {
         shiny::checkboxInput(ns("inverter"), "Inverter cores"))),
     tags$p(class = "painel-mapa-status",
            shiny::textOutput(ns("status"), inline = TRUE)),
-    leaflet::leafletOutput(ns("mapa"), height = "calc(100vh - 370px)")
+    tags$div(class = "painel-mapa",
+             leaflet::leafletOutput(ns("mapa"), height = "calc(100vh - 370px)"))
   )
 }
 
@@ -116,7 +117,9 @@ mod_panel_map_server <- function(id) {
       leaflet::leaflet(geo) |>
         leaflet::setView(lng = -53.633308, lat = -13.550520, zoom = 4) |>
         leaflet::setMaxBounds(-77, -38, -27, 10) |>
-        leaflet::addProviderTiles(leaflet::providers$CartoDB.PositronNoLabels) |>
+        # tiles Carto com CARTO_API_KEY ou fundo neutro vetorial sem tiles
+        # (padrao do labourvaluesdatapanel + contorno de UFs do IBGE)
+        painel_basemap_adicionar(contorno_uf = painel_geo_uf_cache) |>
         htmlwidgets::onRender("function(el, x) { window.PainelMap.attach(el, this); }")
     })
 
