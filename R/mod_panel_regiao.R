@@ -43,11 +43,13 @@ mod_panel_regiao_ui <- function(id) {
           "territorial para mudar de recorte (região, UF, divisões",
           "regionais do IBGE ou município) e escolher a localidade desejada.")),
       tags$div(class = "painel-card painel-globo-card",
-        tags$h3("Globo de UFs"),
+        tags$h3("Globo de localidades"),
         mod_panel_globe_ui(ns("panel_globe_1")),
         tags$p(class = "painel-nota",
-          "Arraste para girar e clique em uma UF com dados para selecioná-la",
-          "no nível Unidade da Federação.")))
+          "Arraste para girar, aproxime com a roda ou pelos botões e clique",
+          "em uma área com dados para escolher a localidade do nível",
+          "territorial corrente; no nível municipal o município escolhido",
+          "aparece destacado sobre o estado inteiro.")))
   )
 }
 
@@ -78,30 +80,45 @@ mod_panel_regiao_server <- function(id,
       painel_locais_nivel_cache(input$nivel)
     })
 
-    # Globo de UFs: clicar numa UF seleciona a localidade (e o nivel UF)
+    # Globo de localidades: as delimitacoes do nivel corrente e o clique
+    # contextualizado — numa feicao do nivel seleciona direto; numa UF da
+    # base municipal escolhe a localidade com maior cobertura dentro dela
     uf_pendente <- shiny::reactiveVal(NULL)
-    uf_globo <- mod_panel_globe_server("panel_globe_1",
+    clique_globo <- mod_panel_globe_server("panel_globe_1",
+      nivel = shiny::reactive(input$nivel),
       indicador = shiny::reactive({
         ind <- suppressWarnings(as.integer(input$indicador))[1]
         if (!is.na(ind)) ind else NULL
       }),
-      uf_atual = shiny::reactive(
-        if (identical(input$nivel, "2") && length(input$localidade) &&
-            nzchar(input$localidade)) as.integer(input$localidade) else NULL))
+      localidade = shiny::reactive(
+        if (length(input$localidade) && nzchar(input$localidade))
+          suppressWarnings(as.integer(input$localidade))[1] else NULL))
 
-    # Clique no globo: seleciona a UF e, se preciso, muda o nivel para UF.
-    # A UF fica pendente para o observador do nivel aplica-la sobre as choices
-    # ja recarregadas (locais() ainda veria o nivel antigo neste momento).
-    shiny::observeEvent(uf_globo(), {
-      uf <- uf_globo()
-      shiny::req(length(uf), !is.na(uf))
-      if (!identical(input$nivel, "2")) {
-        uf_pendente(uf)
-        shiny::updateSelectInput(session, "nivel", selected = "2")
+    # Clique no globo: feicao do proprio nivel vai direto ao seletor;
+    # UF (base do nivel municipal) leva a localidade com mais pontos do
+    # indicador dentro dela — sem candidatos, cai no nivel UF com ela
+    shiny::observeEvent(clique_globo(), {
+      escolha <- clique_globo()
+      shiny::req(is.list(escolha), length(escolha$code),
+                 !is.na(escolha$code))
+      if (identical(escolha$modo, "nivel")) {
+        escolhas <- locais()
+        if (escolha$code %in% unlist(escolhas)) {
+          shiny::updateSelectizeInput(session, "localidade",
+            choices = escolhas, selected = escolha$code, server = TRUE)
+        }
       } else {
-        shiny::updateSelectizeInput(session, "localidade",
-                                    choices = locais(), selected = uf,
-                                    server = TRUE)
+        indicador <- suppressWarnings(as.integer(input$indicador))[1]
+        if (is.na(indicador) && nrow(md)) indicador <- md$mdata_id[1]
+        destino <- if (!is.na(indicador))
+          painel_local_top_uf_cache(indicador, input$nivel, escolha$code) else NULL
+        if (is.null(destino)) {
+          uf_pendente(escolha$code)
+          shiny::updateSelectInput(session, "nivel", selected = "2")
+        } else {
+          shiny::updateSelectizeInput(session, "localidade",
+            choices = locais(), selected = destino, server = TRUE)
+        }
       }
     })
 
