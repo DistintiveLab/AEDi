@@ -8,6 +8,16 @@ test_that("painel_valores_local_todos_cache com id invalido retorna vazio sem to
   expect_identical(nrow(AEDi:::painel_valores_local_todos_cache("abc")), 0L)
 })
 
+test_that("guards dos novos caches de geometria do globo retornam vazio sem tocar no cache", {
+  geo <- AEDi:::painel_geo_nivel_cache(NA)
+  expect_identical(nrow(geo), 0L)
+  expect_identical(names(geo), c("code", "label", "geometry"))
+  expect_identical(nrow(AEDi:::painel_geo_local_cache("abc")), 0L)
+  expect_identical(nrow(AEDi:::painel_geo_pai_uf_cache(NA)), 0L)
+  expect_identical(AEDi:::painel_ufs_com_dados_cache(NA, 7L), character(0))
+  expect_null(AEDi:::painel_local_top_uf_cache(NA, 7L, 31L))
+})
+
 test_that("painel_nivel_default prefere municipio e cai na UF", {
   com_mun <- data.frame(nivel_id = c(1, 7), n_locais = c(5L, 5570L),
                         rotulo = c("Região", "Município"))
