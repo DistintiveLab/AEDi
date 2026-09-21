@@ -31,19 +31,15 @@ mod_panel_globe_server <- function(id,
                                    uf_atual = shiny::reactive(NULL)) {
   moduleServer(id, function(input, output, session) {
 
-    con <- painel_con()
-    geo <- painel_geo_uf(con)
-    DBI::dbDisconnect(con)
+    geo <- painel_geo_uf_cache()
     geojson <- painel_geojson(geo)
     ufs <- lapply(seq_len(nrow(geo)), function(i) list(
       code = geo$code[i], label = geo$label[i]))
 
     disponiveis <- shiny::reactive({
-      ind <- indicador()
-      shiny::req(length(ind))
-      con <- painel_con()
-      on.exit(DBI::dbDisconnect(con))
-      painel_locais_com_dados(con, ind, 2L)
+      ind <- suppressWarnings(as.integer(indicador()))[1]
+      shiny::req(!is.na(ind))
+      painel_locais_com_dados_cache(ind, 2L)
     })
 
     uf_escolhida <- shiny::reactiveVal(NULL)

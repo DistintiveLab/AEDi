@@ -1,3 +1,41 @@
+# AEDi 0.6.2.9000 (2026-09-20)
+
+Painel de indicadores contra a lentidão do DW remoto (handshake ~4s e
+consultas agregadas de segundos, medidas contra o `aedidb` remoto do
+`pndr_dashboard`), mais blindagem de `mdata_id` inválido.
+
+## Cache de duas camadas e agregação por ano
+
+- **Novo `R/painel_cache.R`** (copiado para o esqueleto e listado em
+  `deploy_panel()`/`atualizar_painel()`): leituras do DW passam por
+  memória do processo (compartilhada entre sessões Shiny) + RDS em disco
+  em `cache/` relativo à app, sobrevivendo a reinícios e redeploys.
+  Chaves incluem `host`+`dbname` (DW local e remoto nunca dividem
+  entradas); TTLs: geometrias 30d, catálogo 7d, valores 24h.
+  `painel_cache_limpar()` descarta tudo (rodar após ETL) e
+  `painel_sem_cache=1` desativa.
+- **Acessores `painel_*_cache()`** em `R/painel_dw.R`: `painel_com_con()`
+  abre conexão só na falha de cache; os módulos (Região, Mapa, Globo)
+  não tocam mais `painel_con()` diretamente. A partida da app, que
+  abria 3 conexões sequenciais (~50s a cada reload no remoto), cai para
+  zero conexões com cache quente.
+- **`painel_valores_ano()`**: o mapa agrega no próprio SQL (`DISTINCT
+  ON` + faixa `make_date`, amigável ao índice da PK) — último `refdate`
+  de cada localidade no ano, ~5,6 mil linhas em vez das ~73 mil do
+  indicador inteiro (verificado equivalente à derivação em R).
+  `painel_valores_local()` e `painel_anos()` fazem o mesmo para a série
+  da aba Região e os limites do slider.
+- **Spinner em CSS puro** (`inst/painel/painel.css`): toda saída
+  `recalculating` ganha overlay com círculo giratório, no estilo Gov.br
+  (usa as variáveis da paleta), sem dependência nova.
+
+## Robustez
+
+- `mdata_id`/`nivel_id`/`local_id` inválidos (`"NA"`, `""`, ausentes —
+  possíveis com `selectizeInput(server = TRUE)`) retornam vazio em vez de
+  estourar erro de SQL; seleções iniciais tratam `mdata` vazia; aba
+  Mapa/Região explicam DW sem indicadores via `validate()`.
+
 # AEDi 0.6.2 (2026-09-21)
 
 - **latex2r → latexr** (rename CRAN; `latex2r` foi arquivado): Imports

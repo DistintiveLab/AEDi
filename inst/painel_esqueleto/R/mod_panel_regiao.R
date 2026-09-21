@@ -53,13 +53,12 @@ mod_panel_regiao_ui <- function(id) {
 mod_panel_regiao_server <- function(id,
                                     paleta = shiny::reactive("govbr")) {
   moduleServer(id, function(input, output, session) {
-    con <- painel_con()
-    md <- painel_mdata(con)
-    niveis <- painel_niveis(con)
-    DBI::dbDisconnect(con)
+    md <- painel_mdata_cache()
+    niveis <- painel_niveis_cache()
     shiny::updateSelectizeInput(session, "indicador",
                                 choices = setNames(md$mdata_id, md$rotulo),
-                                selected = md$mdata_id[1], server = TRUE)
+                                selected = if (nrow(md)) md$mdata_id[1] else NULL,
+                                server = TRUE)
     shiny::updateSelectInput(session, "nivel",
       choices = setNames(niveis$nivel_id,
                          paste0(niveis$rotulo, " (", niveis$n_locais, ")")),
@@ -67,15 +66,16 @@ mod_panel_regiao_server <- function(id,
 
     locais <- shiny::reactive({
       shiny::req(input$nivel)
-      con <- painel_con()
-      on.exit(DBI::dbDisconnect(con))
-      painel_locais_nivel(con, input$nivel)
+      painel_locais_nivel_cache(input$nivel)
     })
 
     # Globo de UFs: clicar numa UF seleciona a localidade (e o nivel UF)
     uf_pendente <- shiny::reactiveVal(NULL)
     uf_globo <- mod_panel_globe_server("panel_globe_1",
-      indicador = shiny::reactive(if (length(input$indicador)) input$indicador else NULL),
+      indicador = shiny::reactive({
+        ind <- suppressWarnings(as.integer(input$indicador))[1]
+        if (!is.na(ind)) ind else NULL
+      }),
       uf_atual = shiny::reactive(
         if (identical(input$nivel, "2") && length(input$localidade) &&
             nzchar(input$localidade)) as.integer(input$localidade) else NULL))
@@ -109,10 +109,9 @@ mod_panel_regiao_server <- function(id,
           pendente %in% unlist(escolhas, use.names = FALSE)) {
         destino <- as.integer(pendente)
       } else {
-        indicador <- if (length(input$indicador)) input$indicador else md$mdata_id[1]
-        con <- painel_con()
-        on.exit(DBI::dbDisconnect(con))
-        topo <- painel_local_top(con, indicador, input$nivel)
+        indicador <- suppressWarnings(as.integer(input$indicador))[1]
+        if (is.na(indicador) && nrow(md)) indicador <- md$mdata_id[1]
+        topo <- painel_local_top_cache(indicador, input$nivel)
         destino <- if (is.null(topo)) as.integer(escolhas[[1]]) else topo
       }
       shiny::updateSelectizeInput(session, "localidade",
@@ -121,14 +120,15 @@ mod_panel_regiao_server <- function(id,
     })
 
     serie_loc <- shiny::reactive({
+      shiny::validate(shiny::need(nrow(md) > 0,
+        "DW sem indicadores (tabela mdata vazia): confira as variáveis user, password, host e dbname e reinicie a sessão R antes de relançar o app."))
       shiny::req(input$indicador, input$localidade)
-      con <- painel_con()
-      on.exit(DBI::dbDisconnect(con))
-      v <- painel_valores(con, input$indicador)
-      v[v$local_id == as.integer(input$localidade), ]
+      painel_valores_local_cache(input$indicador, input$localidade)
     })
 
     titulo <- shiny::reactive({
+      shiny::validate(shiny::need(nrow(md) > 0,
+        "DW sem indicadores (tabela mdata vazia): confira as variáveis user, password, host e dbname e reinicie a sessão R antes de relançar o app."))
       shiny::req(input$indicador, input$localidade)
       nome <- md$data_name[md$mdata_id == input$indicador]
       if (is.na(nome)) nome <- md$orig_name[md$mdata_id == input$indicador]
