@@ -12,6 +12,7 @@ adaptar, criar e mudar elementos é o esperado:
 | `R/painel_ui.R` | Blocos reutilizáveis: topbar, abas (`painel_abas()`), rodapé, recursos. |
 | `R/painel_dw.R` | Camada de dados: conexão e leituras do DW (`painel_con()` e `painel_*`). |
 | `R/painel_cache.R` | Cache de duas camadas (memória + disco) das leituras do DW — ver seção Cache. |
+| `R/painel_basemap.R` | Basemap do mapa: tiles Carto com `CARTO_API_KEY` ou fundo neutro vetorial — ver seção Basemap. |
 | `R/branding.R` | Marca configurável por variáveis de ambiente. |
 | `www/` | CSS/JS do painel (mapa incremental, globo) e logo. |
 | `esqueleto_manifest.json` | Versão do AEDi gerador + SHA-256 de cada arquivo (auditoria de mudanças locais). |
@@ -56,6 +57,21 @@ local e remoto nunca dividem entradas.
   app (a primeira visita preenche; as seguintes servem do disco).
 
 Adicione `cache/` ao `.gitignore` do projeto: é dado derivado, não fonte.
+
+## Basemap do mapa
+
+O Carto passou a exigir chave de API nos tiles, então o fundo do mapa
+municipal é decidido por variáveis de ambiente (sem editar código):
+
+- `CARTO_API_KEY` definida: rastertiles voyager do Carto, com a chave
+  anexada como `?key=` nas chamadas de tiles (a chave fica embutida na
+  página, como em qualquer basemap servido por URL);
+- sem chave: fundo neutro vetorial sem tiles, no padrão do
+  labourvaluesdatapanel — malha municipal + contorno das UFs (malha do
+  IBGE lida do DW) sobre fundo cinza claro; nenhuma chamada externa de
+  tiles;
+- `PAINEL_BASEMAP=carto|neutro` força uma das opções (`carto` sem chave
+  cai no neutro, com aviso no console).
 
 ## Marca e configuração (`.Renviron`, sem editar código)
 
