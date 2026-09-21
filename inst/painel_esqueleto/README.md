@@ -10,11 +10,11 @@ adaptar, criar e mudar elementos é o esperado:
 | `R/app_ui.R` / `R/app_server.R` | Composição da UI e do server — por onde começar a adaptar. |
 | `R/mod_panel_*.R` | Uma aba por módulo Shiny (`moduleServer`): Região, Mapa, Sobre (+ globo). |
 | `R/painel_ui.R` | Blocos reutilizáveis: topbar, abas (`painel_abas()`), rodapé, recursos. |
-| `R/painel_dw.R` | Camada de dados: conexão e leituras do DW (`painel_con()` e `painel_*`). |
-| `R/painel_cache.R` | Cache de duas camadas (memória + disco) das leituras do DW — ver seção Cache. |
+| `R/painel_dw.R` | Camada de dados: conexão e leituras do banco de dados (`painel_con()` e `painel_*`). |
+| `R/painel_cache.R` | Cache de duas camadas (memória + disco) das leituras do banco de dados — ver seção Cache. |
 | `R/painel_basemap.R` | Basemap do mapa: tiles Carto com `CARTO_API_KEY` ou fundo neutro vetorial — ver seção Basemap. |
 | `R/branding.R` | Marca configurável por variáveis de ambiente. |
-| `www/` | CSS/JS do painel (mapa incremental, globo) e logo. |
+| `www/` | CSS/JS do painel (mapa incremental, globo com zoom, resumo da aba Região), logo e `painel-mundo.geojson` (contorno dos países no globo). |
 | `esqueleto_manifest.json` | Versão do AEDi gerador + SHA-256 de cada arquivo (auditoria de mudanças locais). |
 
 ## Rodar localmente
@@ -32,25 +32,25 @@ shiny::runApp("painel")
 rsconnect::deployApp("painel")
 ```
 
-## Credenciais do DW
+## Credenciais do banco de dados
 
 A conexão usa as variáveis de ambiente `user`, `password`, `host` e
 `dbname` (defaults: aedi@127.0.0.1/aedidb), lidas por `painel_con()` em
 `R/painel_dw.R`. Em hospedagem, configure-as no painel da plataforma ou
 no `.Renviron` lido pelo processo do Shiny.
 
-## Cache de leituras do DW
+## Cache de leituras do banco de dados
 
-O handshake com o DW remoto é lento e as consultas agregadas levam
+O handshake com o banco de dados remoto é lento e as consultas agregadas levam
 segundos, então as leituras passam por um cache de duas camadas em
 `R/painel_cache.R` — memória do processo (compartilhada entre sessões
 Shiny) e RDS em disco no diretório `cache/` (sobrevive a reinícios do
-processo e a redeploys). As chaves incluem `host` + `dbname`, então DW
+processo e a redeploys). As chaves incluem `host` + `dbname`, então banco
 local e remoto nunca dividem entradas.
 
 - Validade: geometrias 30 dias, catálogo (indicadores, níveis e
   localidades) 7 dias, valores 24 horas;
-- Após rodar um ETL que atualiza o DW: `painel_cache_limpar()` no console
+- Após rodar um ETL que atualiza o banco de dados: `painel_cache_limpar()` no console
   do projeto, ou aguarde o TTL expirar;
 - `painel_sem_cache=1` no ambiente desativa o cache (leitura direta);
 - Em hospedagem, `cache/` é criado em tempo de execução no diretório da
@@ -68,10 +68,18 @@ municipal é decidido por variáveis de ambiente (sem editar código):
   página, como em qualquer basemap servido por URL);
 - sem chave: fundo neutro vetorial sem tiles, no padrão do
   labourvaluesdatapanel — malha municipal + contorno das UFs (malha do
-  IBGE lida do DW) sobre fundo cinza claro; nenhuma chamada externa de
+  IBGE lida do banco de dados) sobre fundo cinza claro; nenhuma chamada externa de
   tiles;
 - `PAINEL_BASEMAP=carto|neutro` força uma das opções (`carto` sem chave
   cai no neutro, com aviso no console).
+
+## Aba Região: resumo e accordeon
+
+A aba abre em um resumo da localidade — último valor de cada indicador
+composto, agrupado por objetivo — com o nível municipal selecionado por
+padrão. O botão "Mostrar mais" expande um accordeon com todos os
+indicadores agrupados por eixo e por objetivo, cada um com um mini-gráfico
+da série histórica.
 
 ## Marca e configuração (`.Renviron`, sem editar código)
 
