@@ -3,7 +3,7 @@
 \docType{data}
 \name{.assunto_educabr}
 \alias{.assunto_educabr}
-\title{Mapa funcao educabR -> filtro de assunto no metainep (sem acentos)}
+\title{Mapa funcao edubr (ex-educabR) -> filtro de assunto no metainep (sem acentos)}
 \format{
 An object of class \code{character} of length 3.
 }
@@ -11,6 +11,6 @@ An object of class \code{character} of length 3.
 .assunto_educabr
 }
 \description{
-Mapa funcao educabR -> filtro de assunto no metainep (sem acentos)
+Mapa funcao edubr (ex-educabR) -> filtro de assunto no metainep (sem acentos)
 }
 \keyword{internal}

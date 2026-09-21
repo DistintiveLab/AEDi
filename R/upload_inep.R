@@ -8,7 +8,7 @@
 #' @noRd
 #'
 #' @importFrom shiny NS tagList selectizeInput uiOutput
-#' @importFrom educabR le_ideb
+#' @importFrom edubr le_ideb
 #'
 
 
@@ -16,9 +16,16 @@
 {
 
 
-  infoinep <- educabR::metainep
+  # edubr (ex-educabR): metainep/metaideb sao datasets lazy-data, nao exports
+  .dado_edubr <- function(nome) {
+    e <- new.env(parent = emptyenv())
+    data(list = nome, package = "edubr", envir = e)
+    e[[nome]]
+  }
 
-infoideb <-educabR::metaideb
+  infoinep <- .dado_edubr("metainep")
+
+  infoideb <- .dado_edubr("metaideb")
 
 gruposinep <- unique(infoinep$assunto_id)
 names(gruposinep) <- unique(infoinep$assunto)
@@ -125,10 +132,10 @@ upload_inep_server <- function(id,parent_session){
       shiny::req(input$inepagr,input$ineprede,input$buscainep)
       print("gerando url consulta")
 
-      url <- "educabR::le_ideb"
+      url <- "edubr::le_ideb"
 
       apichamada <- paste0(
-        "educabR::le_ideb(nivel='",input$inepagr,
+        "edubr::le_ideb(nivel='",input$inepagr,
         "')|>dplyr::filter(indicador=='",input$inepfiltr,
         "',rede=='",input$ineprede,
         "',detalhe=='",input$inepfiltr,

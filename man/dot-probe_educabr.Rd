@@ -2,11 +2,11 @@
 % Please edit documentation in R/verifica_fonte.R
 \name{.probe_educabr}
 \alias{.probe_educabr}
-\title{Probe INEP/educabR: ultimo ano disponivel no catalogo metainep}
+\title{Probe INEP/edubr: ultimo ano disponivel no catalogo metainep}
 \usage{
 .probe_educabr(fun)
 }
 \description{
-Probe INEP/educabR: ultimo ano disponivel no catalogo metainep
+Probe INEP/edubr: ultimo ano disponivel no catalogo metainep
 }
 \keyword{internal}

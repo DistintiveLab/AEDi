@@ -47,12 +47,14 @@ listar_scripts_coleta <- function(raiz = .aedi_raiz()) {
 }
 
 # Pacotes cujas funcoes costumam ser chamadas SEM namespace nos scripts
-# de coleta antigos (ex.: dbGetQuery em citec1_aedi). Deteccao por
-# export, nessa ordem (DBI antes dos drivers que reexportam)
-.pacotes_candidatos <- c("DBI", "RPostgres", "RPostgreSQL", "dplyr",
+# de coleta antigos (ex.: dbGetQuery em citec1_aedi). "AEDi" abre para os
+# proprios exports (gravar_serie_dw/db_datawrite chamados bare em scripts
+# A5b). Deteccao por export, nessa ordem (DBI antes dos drivers que
+# reexportam)
+.pacotes_candidatos <- c("AEDi", "DBI", "RPostgres", "RPostgreSQL", "dplyr",
                          "data.table", "readr", "readxl", "tidyr",
                          "lubridate", "stringr", "purrr", "sf", "digest",
-                         "educabR", "sidra", "httr", "jsonlite")
+                         "edubr", "sidra", "httr", "jsonlite")
 
 #' Carrega o .Renviron da raiz do projeto no processo atual
 #'
@@ -123,6 +125,23 @@ listar_scripts_coleta <- function(raiz = .aedi_raiz()) {
 .prover_objetos_sessao <- function(env) {
   abertas <- list()
   pendentes <- character()
+  # scripts escritos para Rscript standalone leem argumentos proprios via
+  # commandArgs(TRUE) (ex.: ano-alvo em gastos_tributarios_municipio.R).
+  # Dentro do lote, commandArgs() devolveria os args do processo do
+  # orquestrador (ja visto: indice de batch lido como "ano 4"). Mascara:
+  # o script roda como se sem argumentos; args por script, quando
+  # necessarios, vem da env var AEDI_SCRIPT_ARGS (separados por espaco).
+  if (!exists("commandArgs", envir = env, inherits = FALSE))
+    assign("commandArgs", function(trailingOnly = FALSE) {
+      if (!trailingOnly) return(character(0))
+      a <- strsplit(Sys.getenv("AEDI_SCRIPT_ARGS", ""), " +")[[1]]
+      a[nzchar(a)]
+    }, envir = env)
+  # helper A5b historico: definido "na sessao" por scripts que hoje estao
+  # fora do lote (empregoformal_agricola_nacional.R, .ignore) e usado sem
+  # definicao por variantes de populacao e indicadores_agregado_uf
+  if (!exists("somasna", envir = env, inherits = FALSE))
+    assign("somasna", function(x) sum(x, na.rm = TRUE), envir = env)
   falta <- function(obj, motivo) {
     pendentes <<- c(pendentes, setNames(motivo, obj))
     warning(sprintf("objeto de sessao '%s' nao fornecido: %s", obj, motivo))
@@ -264,7 +283,7 @@ executar_script_coleta <- function(arquivo, raiz = .aedi_raiz(),
     env <- new.env(parent = globalenv())
     .source_script_coleta(arquivo, raiz, env)
     nlin <- tryCatch({
-      v <- verificar_necessidade_atualizacao(orig_names = NULL)
+      v <- AEDi:::verificar_necessidade_atualizacao(orig_names = NULL)
       NA_integer_
     }, error = function(e) NA_integer_)
     flog.info("Script concluido: %s em %.1f min", nome,
@@ -274,9 +293,15 @@ executar_script_coleta <- function(arquivo, raiz = .aedi_raiz(),
     flog.error(log_messages$script_erro, nome, conditionMessage(e))
     list(ok = FALSE, msg = conditionMessage(e), nlin = NA_integer_)
   })
-  AEDi:::controle_fim(nome, hist_id, res$ok, mensagem = res$msg,
-                      linhas = res$nlin, projeto = projeto,
-                      hash_estado = hash_coleta_csv(nome, raiz))
+  # o registro de fim e best-effort: uma falha de bookkeeping (ex.: hash do
+  # cache) nao pode abortar o lote inteiro - o script ja foi executado
+  tryCatch(
+    AEDi:::controle_fim(nome, hist_id, res$ok, mensagem = res$msg,
+                        linhas = res$nlin, projeto = projeto,
+                        hash_estado = AEDi:::hash_coleta_csv(nome, raiz)),
+    error = function(e)
+      flog.error("falha ao registrar o fim de %s no controle: %s",
+                 nome, conditionMessage(e)))
   invisible(res$ok)
 }
 
