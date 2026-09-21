@@ -7,11 +7,11 @@
 # Sem novidades -> o lote marca a atualizacao como completa e PULA a coleta
 # (ver executar_script_coleta / atualizar_indicadores em executa_atualizacao.R).
 #
-# Familias suportadas: educabR (metainep: le_afd, le_idadeserie, le_ideb),
-# sidra (API v3 do IBGE) e leitura/download por URL (HEAD/Last-Modified).
+# Familias suportadas: edubr (ex-educabR; metainep: le_afd, le_idadeserie,
+# le_ideb), sidra (API v3 do IBGE) e leitura/download por URL (HEAD/Last-Modified).
 # Fonte nao reconhecida, primeira carga ou probe indisponivel -> executa.
 
-#' Mapa funcao educabR -> filtro de assunto no metainep (sem acentos)
+#' Mapa funcao edubr (ex-educabR) -> filtro de assunto no metainep (sem acentos)
 #' @keywords internal
 .assunto_educabr <- c(
   le_afd        = "Adequa",
@@ -41,6 +41,14 @@
   NULL
 }
 
+#' Catalogo metainep do edubr (dataset lazy-data, nao vai em exports)
+#' @keywords internal
+.metainep_edubr <- function() {
+  e <- new.env(parent = emptyenv())
+  data("metainep", package = "edubr", envir = e)
+  e$metainep
+}
+
 #' Classifica uma call como chamada de coleta (educabr/sidra/url).
 #' O head pode ser simbolo ("sidra(...)") ou call de namespace
 #' ("educabR::le_afd(...)") / acesso ("obj$metodo(...)"), por isso a
@@ -48,7 +56,7 @@
 #' @keywords internal
 .classifica_chamada <- function(call) {
   nome <- deparse(call[[1]])[1]
-  if (grepl("^educabR::le_", nome))
+  if (grepl("^(educabR|edubr)::le_", nome))  # educabR: scripts gerados pre-rename
     return(list(tipo = "educabr", fun = sub("^.*::", "", nome)))
   if (nome %in% c("sidra::sidra", "sidra")) {
     tab <- .arg_call(call, c("tabela", "x"), 1)
@@ -101,12 +109,13 @@
   NULL
 }
 
-#' Probe INEP/educabR: ultimo ano disponivel no catalogo metainep
+#' Probe INEP/edubr: ultimo ano disponivel no catalogo metainep
 #' @keywords internal
 .probe_educabr <- function(fun) {
   padrao <- .assunto_educabr[[fun]]
   if (is.na(padrao)) return(NULL)
-  meta <- educabR::metainep[grepl(padrao, educabR::metainep$assunto), ]
+  meta <- .metainep_edubr()
+  meta <- meta[grepl(padrao, meta$assunto), ]
   anos <- suppressWarnings(as.integer(meta$periodo))
   anos <- sort(anos[!is.na(anos)])
   if (!length(anos)) return(NULL)
