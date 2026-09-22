@@ -1,3 +1,24 @@
+# AEDi 0.6.4 (2026-09-22)
+
+## Correção do bug de cobertura municipal (lookup 6d sombreado por RGINT)
+
+Em `gravar_serie_dw()`, o lookup de códigos de local priorizava o
+`geoloc_id` como texto antes do prefixo IBGE de 6 dígitos. Como o
+`geoloc_id` das Regiões Imediatas também tem 6 dígitos, 63 municípios
+(cujo código 6d coincide com o geoloc de uma RGINT) tinham suas séries
+municipais gravadas no local da RGINT — eram exatamente os municípios
+"primeiros no sequencial por UF" que faltavam na cobertura do painel.
+
+- O prefixo 6d (RAIS) agora tem prioridade sobre o `geoloc_id` como
+  texto; geoloc 7d e o próprio `local_id` continuam resolvendo como
+  antes (verificado contra o DW: exatamente 63 entradas mudam).
+- O lookup foi extraído para `montar_lookup_locais()` (interna), com
+  teste de regressão (`test-montar_lookup_locais.R`).
+- Séries já gravadas nos locais errados **não** são corrigidas
+  automaticamente: os scripts vivos se autocuram no próximo run
+  (`replace = TRUE`); o remapeamento das demais é documentado em
+  `pndr_coord/bug_RGINT_2026-09-22.md`.
+
 # AEDi 0.6.3 (2026-09-21)
 
 Marco do orquestrador em produção: primeiro lote completo do
