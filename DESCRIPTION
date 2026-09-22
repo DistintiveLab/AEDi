@@ -1,6 +1,6 @@
 Package: AEDi
 Title: Pacote de inclusão de fontes de dados, indicadores, e filtros de variáveis
-Version: 0.6.6
+Version: 0.6.7
 Date: 2026-09-22
 Authors@R: 
     c(person(given = "Rodrigo",
