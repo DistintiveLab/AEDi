@@ -17,6 +17,25 @@ anos_rais <- function(con) {
     value = TRUE))))
 }
 
+#' Monta o lookup de codigos de local para local_id do DW
+#'
+#' Prioridade: prefixo IBGE 6d (RAIS) > geoloc_id completo > proprio local_id.
+#' O prefixo 6d precisa vir primeiro porque o geoloc_id das Regioes Imediatas
+#' tem 6 digitos e collide com o codigo 6d do municipio (1100023 -> 110002),
+#' o que despachava series municipais para o local da RGINT (bug de cobertura
+#' municipal, corrigido 2026-09-22).
+#'
+#' @param locais data.frame com `local_id` e `geoloc_id` (tabela `local`)
+#' @keywords internal
+montar_lookup_locais <- function(locais) {
+  lookup <- c(
+    setNames(locais$local_id[locais$local_id < 6000],
+             as.numeric(substr(as.character(locais$geoloc_id[locais$local_id < 6000]), 1, 6))),
+    setNames(locais$local_id, as.character(locais$geoloc_id)),
+    setNames(locais$local_id, as.character(locais$local_id)))
+  lookup[!duplicated(names(lookup))]
+}
+
 #' Grava (recalculando por completo ou acrescentando) a serie de um indicador
 #'
 #' @param orig_name nome do indicador em mdata
@@ -48,14 +67,13 @@ gravar_serie_dw <- function(orig_name, serie, modo = c("replace", "append")) {
   locais <- DBI::dbGetQuery(con_aedi,
     "SELECT local_id, geoloc_id FROM local")
 
-  # lookup triplo: geoloc_id completo (7d), prefixo IBGE da RAIS (6d) ou o
-  # proprio local_id (agregados: Brasil, UF, regioes...)
-  lookup <- c(
-    setNames(locais$local_id, as.character(locais$geoloc_id)),
-    setNames(locais$local_id[locais$local_id < 6000],
-             as.numeric(substr(as.character(locais$geoloc_id[locais$local_id < 6000]), 1, 6))),
-    setNames(locais$local_id, as.character(locais$local_id)))
-  lookup <- lookup[!duplicated(names(lookup))]
+  # lookup triplo: prefixo IBGE 6d da RAIS, geoloc_id completo (7d) ou o
+  # proprio local_id (agregados: Brasil, UF, regioes...). O prefixo 6d TEM
+  # PRIORIDADE sobre o geoloc_id como texto: o geoloc das Regioes Imediatas
+  # tem 6 digitos e collide com o codigo 6d do municipio (1100023 ->
+  # 110002), despachando a serie municipal para o local da RGINT (bug de
+  # cobertura municipal, corrigido 2026-09-22).
+  lookup <- montar_lookup_locais(locais)
 
   lid <- lookup[as.character(as.numeric(serie$local))]
   serie <- serie[!is.na(lid), ]
