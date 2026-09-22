@@ -25,3 +25,6 @@ visualiza/cache/
 
 # Artefatos temporários de consolidação
 _consolidacao/
+
+# Microdados RAIS brutos (volumosos, ~99 MB; ficam só na máquina local)
+data-raw/testdata/**/*.7z
