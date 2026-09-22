@@ -1,3 +1,40 @@
+# AEDi 0.6.7 (2026-09-22)
+
+## Grafo de dependências no orquestrador (fase 1)
+
+Scripts que derivam séries de outras (DW→DW: compostos, sincronizações
+`_via_aedi`→builder, diferenciais) agora podem ser bloqueados quando o
+insumo está menos fresco que a série própria — o cenário que zerou o
+objetivo2_3 em 2025 (`massa_salarial_municipal` rodado com o popmun sem
+2025-07-01; ver `pndr_coord/bug_obj23_zeros_2025_2026-09-22.md`).
+
+- O grafo vive no DW: coluna `controle_execucao.dependencias_json`
+  (JSONB, dormante desde a criação da tabela), no formato
+  `{"series_proprias": [...], "deps": [{"serie","regua","acao"}]}`.
+  `definir_dependencias()` grava via UPSERT; `carregar_dependencias()`
+  carrega a semente versionada `<raiz>/coleta/dependencias.csv`, que
+  segue como fallback do runtime quando a linha do DW não tem grafo.
+- `executar_script_coleta()` verifica as dependências logo após a
+  novidade de fonte (C5): dependência em ano anterior ao da série própria
+  (régua por ANO, nunca data completa — popmun é -07-01) com
+  `acao="pular"` registra skip ok no controle e pula o script;
+  `acao="avisar"` apenas loga em warn e executa (lags crônicos legítimos:
+  sust4/citec4/infra1 em 2024). Em dúvida (grafo ausente, DW fora, série
+  própria ausente = primeira carga), executa — mesma política do C5.
+- Séries próprias detectadas do texto do script (literais de
+  `gravar_serie_dw()`), com override por `serie_propria` no manifesto
+  (compostos gravam via variável e não são detectados pelo parse).
+- Na fase 1 as réguas "proprio" e "fonte" coincidem (comparam com o ano
+  da série própria); a régua "fonte" plena (ano-alvo da fonte primária,
+  que pegaria o bug original) depende de reconhecer RAIS em
+  `verificar_novidade_fonte()` e fica para a fase 1.5.
+- Semente inicial do `pndr_dashboard` em `coleta/dependencias.csv`
+  (compostos_recalc_dw, massa_salarial_municipal,
+  objetivo1_diferenciais_recalc, objetivo4_1_via_aedi_recalc,
+  primazia_populacional_estadual, sincroniza_via_aedi_local).
+- `controle_preparar()` agora garante a coluna `dependencias_json` em
+  bancos criados antes dela (`ALTER ... ADD COLUMN IF NOT EXISTS`).
+
 # AEDi 0.6.6 (2026-09-22)
 
 ## Correção do bug de cobertura municipal, segunda ordem (local_id sombreado por geoloc de agregado)
