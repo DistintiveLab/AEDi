@@ -19,11 +19,15 @@ anos_rais <- function(con) {
 
 #' Monta o lookup de codigos de local para local_id do DW
 #'
-#' Prioridade: prefixo IBGE 6d (RAIS) > geoloc_id completo > proprio local_id.
-#' O prefixo 6d precisa vir primeiro porque o geoloc_id das Regioes Imediatas
-#' tem 6 digitos e collide com o codigo 6d do municipio (1100023 -> 110002),
-#' o que despachava series municipais para o local da RGINT (bug de cobertura
-#' municipal, corrigido 2026-09-22).
+#' Prioridade: prefixo IBGE 6d (RAIS) > proprio local_id > geoloc_id completo.
+#' O prefixo 6d vem primeiro porque o geoloc_id das Regioes Imediatas
+#' tem 6 digitos e collide com o codigo 6d do municipio (1100023 -> 110002).
+#' O local_id vem antes do geoloc_id completo porque derivacoes DW->DW
+#' (padrao A5b) repassam local_ids, e os ids pequenos dos municipios
+#' collidem com geoloc_ids de agregados (1=Alta Floresta vs 1=Norte,
+#' 53=Acrelandia vs 53=DF), o que despachava series municipais para
+#' regiao/UF/DF (bug de cobertura municipal, segunda ordem, corrigido
+#' 2026-09-22). Series agregadas devem ser passadas por local_id.
 #'
 #' @param locais data.frame com `local_id` e `geoloc_id` (tabela `local`)
 #' @keywords internal
@@ -31,8 +35,8 @@ montar_lookup_locais <- function(locais) {
   lookup <- c(
     setNames(locais$local_id[locais$local_id < 6000],
              as.numeric(substr(as.character(locais$geoloc_id[locais$local_id < 6000]), 1, 6))),
-    setNames(locais$local_id, as.character(locais$geoloc_id)),
-    setNames(locais$local_id, as.character(locais$local_id)))
+    setNames(locais$local_id, as.character(locais$local_id)),
+    setNames(locais$local_id, as.character(locais$geoloc_id)))
   lookup[!duplicated(names(lookup))]
 }
 
@@ -67,12 +71,12 @@ gravar_serie_dw <- function(orig_name, serie, modo = c("replace", "append")) {
   locais <- DBI::dbGetQuery(con_aedi,
     "SELECT local_id, geoloc_id FROM local")
 
-  # lookup triplo: prefixo IBGE 6d da RAIS, geoloc_id completo (7d) ou o
-  # proprio local_id (agregados: Brasil, UF, regioes...). O prefixo 6d TEM
-  # PRIORIDADE sobre o geoloc_id como texto: o geoloc das Regioes Imediatas
-  # tem 6 digitos e collide com o codigo 6d do municipio (1100023 ->
-  # 110002), despachando a serie municipal para o local da RGINT (bug de
-  # cobertura municipal, corrigido 2026-09-22).
+  # lookup triplo: prefixo IBGE 6d da RAIS, proprio local_id (agregados:
+  # Brasil, UF, regioes... e derivacoes DW->DW) ou geoloc_id completo (7d).
+  # O prefixo 6d TEM PRIORIDADE sobre o geoloc como texto (colisao RGINT,
+  # 1100023 -> 110002) e o local_id TEM PRIORIDADE sobre o geoloc pequeno
+  # de agregados (colisao 1=Alta Floresta vs 1=Norte; bug de cobertura
+  # municipal, corrigido 2026-09-22).
   lookup <- montar_lookup_locais(locais)
 
   lid <- lookup[as.character(as.numeric(serie$local))]
