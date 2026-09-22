@@ -1,3 +1,14 @@
+# AEDi 0.6.5 (2026-09-22)
+
+## Conexão de source-time não vaza mais para o namespace
+
+- `R/create_extend_geogroup_view.R` conectava ao banco remoto (`tdbname`)
+  em source-time e deixava o objeto `con` no namespace; sob
+  `pkgload::load_all()` (desenvolvimento), scripts A5b com guard
+  `if (!exists("con"))` herdavam essa conexão remota e liam o banco
+  errado sem qualquer erro. A conexão agora é criada sob demanda dentro
+  de `criar_recortes_geograficos()` e desconectada ao final.
+
 # AEDi 0.6.4 (2026-09-22)
 
 ## Correção do bug de cobertura municipal (lookup 6d sombreado por RGINT)
