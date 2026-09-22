@@ -1,3 +1,17 @@
+# AEDi 0.6.6 (2026-09-22)
+
+## Correção do bug de cobertura municipal, segunda ordem (local_id sombreado por geoloc de agregado)
+
+Em `gravar_serie_dw()`, o lookup ainda priorizava o `geoloc_id` como
+texto antes do próprio `local_id`. Derivações DW→DW (padrão A5b: séries
+derivadas, compostos) repassam `local_id` — e os ids pequenos dos
+municípios collidem com geoloc_ids de agregados (1 = Alta Floresta
+D'oeste vs 1 = Norte; 2 = Ariquemes vs 2 = Nordeste; 53 = Acrelândia
+vs 53 = DF etc.), de modo que essas séries eram gravadas em região/UF/DF
+no lugar do município. A prioridade agora é prefixo IBGE 6d (RAIS) >
+`local_id` > `geoloc_id` completo; séries agregadas devem ser passadas
+por `local_id`.
+
 # AEDi 0.6.5 (2026-09-22)
 
 ## Conexão de source-time não vaza mais para o namespace
