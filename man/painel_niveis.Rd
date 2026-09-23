@@ -3,12 +3,16 @@
 \name{painel_niveis}
 \alias{painel_niveis}
 \title{Niveis territoriais disponiveis no DW: apenas os que possuem dados,
-com quantidade de localidades distintas}
+com quantidade de localidades distintas. A largura 7 aparece em duas
+linhas — municipios ("7") e regioes de interesse em PNAD Contínua
+("7p") — para nao somar 5.570 + 146 numa unica entrada}
 \usage{
 painel_niveis(con)
 }
 \description{
 Niveis territoriais disponiveis no DW: apenas os que possuem dados,
-com quantidade de localidades distintas
+com quantidade de localidades distintas. A largura 7 aparece em duas
+linhas — municipios ("7") e regioes de interesse em PNAD Contínua
+("7p") — para nao somar 5.570 + 146 numa unica entrada
 }
 \keyword{internal}

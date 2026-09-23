@@ -38,12 +38,10 @@ mod_panel_globe_server <- function(id,
   moduleServer(id, function(input, output, session) {
 
     # Delimitacoes do nivel corrente; niveis com muitas feicoes
-    # (municipio: 5.7 mil poligonos) usam as UFs como base e a
+    # (municipio: 5.6 mil poligonos) usam as UFs como base e a
     # localidade escolhida vira um destaque sobre o estado
     modo_geo <- shiny::reactive({
-      n <- suppressWarnings(as.integer(nivel()))[1]
-      if (is.na(n)) n <- 2L
-      g <- painel_geo_nivel_cache(n)
+      g <- painel_geo_nivel_cache(nivel())
       if (nrow(g)) list(geo = g, modo = "nivel") else
         list(geo = painel_geo_uf_cache(), modo = "uf")
     })
@@ -57,12 +55,11 @@ mod_panel_globe_server <- function(id,
 
     disponiveis <- shiny::reactive({
       ind <- suppressWarnings(as.integer(indicador()))[1]
-      n <- suppressWarnings(as.integer(nivel()))[1]
-      shiny::req(!is.na(ind), !is.na(n))
+      shiny::req(!is.na(ind))
       if (identical(modo_geo()$modo, "uf"))
-        painel_ufs_com_dados_cache(ind, n)
+        painel_ufs_com_dados_cache(ind, nivel())
       else
-        painel_locais_com_dados_cache(ind, n)
+        painel_locais_com_dados_cache(ind, nivel())
     })
 
     clique <- shiny::reactiveVal(NULL)

@@ -1,3 +1,23 @@
+# AEDi 0.7.0.9000
+
+## Municípios e regiões de interesse PNAD deixam de dividir o mesmo nível
+
+- O seletor de nível territorial não mistura mais os 5.570 municípios com
+  as 146 regiões de interesse em PNAD Contínua (códigos de 7 dígitos, a
+  mesma largura do código IBGE de município, na faixa alta dos `local_id`):
+  a entrada única "Município (5716)" passa a ser "Município (5.570)" e
+  "Região de interesse PNAD (146)" nas abas Região e Baixar. Provado no DW:
+  só `pnadc1`..`7` e `comp_pnadc8`..`14` publicam nessas regiões, e nenhum
+  deles publica em município.
+- A chave do nível ganhou o sufixo "7p" para o subnivel PNAD
+  (`painel_nivel_parse()`), com a fronteira `local_id < 5571` já usada
+  pelo mapa municipal (`painel_geo_mun()`). Localidades, abertura default,
+  disponibilidade do globo e as planilhas da aba Baixar herdam a separação
+  automaticamente.
+- Bônus do globo: com apenas 146 feições, as regiões PNAD agora são
+  desenhadas como base do próprio nível (antes a largura 7 inteira caía
+  na base das UFs).
+
 # AEDi 0.7.0 (2026-09-23)
 
 ## Seletor de indicadores agrupado por eixo/objetivo
