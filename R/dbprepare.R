@@ -61,17 +61,26 @@ dplyr::across(dplyr::matches("dataunit|source|url|name|desc"),as.character))
     )|>dplyr::mutate(dplyr::across(dplyr::contains("_id"),as.integer),
                      dplyr::across(local_name,as.character))
 
+    # Eixos, Objetivos e Estratos PNAD: o catalogo tematico do DW nao vinha de
+    # lugar nenhum do pacote (ver R/grupos_catalogo.R). Os vinculos
+    # indicador<->grupo so existem depois que os indicadores entram no DW, por
+    # isso mdata_group segue vazio aqui e quem o completa e
+    # atualizar_grupos_indicadores().
+    catalogo_grupos <- grupos_catalogo_tribbles()
+
     datagroup <- tibble::tribble(
       ~datagroup_id,~datagroup_name,~datagroup_desc
     )|>
       dplyr::mutate(dplyr::across(dplyr::matches("_id$"),as.integer),
-                    dplyr::across(dplyr::matches("dataunit|source|url|name|desc"),as.character))
+                    dplyr::across(dplyr::matches("dataunit|source|url|name|desc"),as.character))|>
+      rbind(tibble::as_tibble(catalogo_grupos$datagroup))
 
     group_parent <- tibble::tribble(
       ~datagroup_id,~datagroup_parentid
     )|>
       dplyr::mutate(dplyr::across(dplyr::matches("id$"),as.integer),
-                    dplyr::across(dplyr::matches("dataunit|source|url|name"),as.character))
+                    dplyr::across(dplyr::matches("dataunit|source|url|name"),as.character))|>
+      rbind(tibble::as_tibble(catalogo_grupos$group_parent))
 
     mdata_group <- tibble::tribble(
       ~mdata_id,~datagroup_id

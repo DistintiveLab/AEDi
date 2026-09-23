@@ -4,6 +4,21 @@ Painel de indicadores contra a lentidão do DW remoto (handshake ~4s e
 consultas agregadas de segundos, medidas contra o `aedidb` remoto do
 `pndr_dashboard`), mais blindagem de `mdata_id` inválido.
 
+## Catálogo de grupos declarado e reconciliado pelo próprio pacote
+
+- `prepare_db()` passa a declarar o catálogo temático do DW (Eixos, Objetivos,
+  Estratos PNAD, Eixo 1..7 e Objetivo 1..4) em `datagroup`/`group_parent`. Até
+  aqui essas tabelas saíam vazias e as linhas do `aedidb` em produção tinham
+  sido inseridas fora do pacote.
+- Novo `atualizar_grupos_indicadores()` completa, sem apagar nada, os vínculos
+  de `mdata_group` de todo indicador que siga a convenção de `orig_name`
+  (`R/grupos_catalogo.R`); rodado no `aedidb`, levou `mdata_group` de 27 para
+  66 linhas e cobriu os eixos 2, 4, 5, 6 e 7 e o Objetivo 4, que estavam sem
+  vínculo. Vínculos fora da convenção são apenas relatados.
+- `db_datawrite(grp = TRUE)` voltou a funcionar: lia `MAX(mdata_id)` de
+  `datagroup` (coluna inexistente) e um objeto global de `prepare_db`, então
+  abortava sempre; agora reaproveita o grupo do indicador quando ele já existe.
+
 ## Resumo da região pelo catálogo completo (7 eixos, 4 objetivos, PNAD)
 
 - O catálogo da aba Região passa a ser montado pela convenção de

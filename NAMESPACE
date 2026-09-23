@@ -3,6 +3,7 @@
 export(anos_rais)
 export(app_server)
 export(app_ui)
+export(atualizar_grupos_indicadores)
 export(atualizar_indicadores)
 export(atualizar_painel)
 export(body_ui)

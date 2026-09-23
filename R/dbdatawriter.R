@@ -167,19 +167,39 @@ if(!lubridate::is.Date(datadf$periodo)) {
    DBI::dbAppendTable(condw,"data_values",ndv)
 
 
-   if(grp){
-     dgroupnew <- data.frame(
-       datagroup_id= 1+as.numeric(DBI::dbGetQuery(con,"select MAX(mdata_id) from datagroup")),
-       datagroup_name= paste0(mdatanew$orig_name,"_grps"),
-       datagroup_desc= paste0(mdatanew$data_name," (grupos/classificadores)")
-     )
+  if(grp){
+    # grupo de classificadores do SIDRA para este indicador. Antes esta parte
+    # lia MAX(mdata_id) de datagroup (coluna que nao existe) e um objeto global
+    # `datagroup` de prepare_db, entao grp=TRUE sempre abortava; agora reaproveita
+    # o grupo do indicador se ele ja existir (recarga com replace=TRUE) e cria
+    # apenas quando falta.
+    grp_name <- paste0(mdatanew$orig_name,"_grps")
+    existente <- DBI::dbGetQuery(condw, paste0(
+      "select datagroup_id from datagroup where datagroup_name = ",
+      DBI::dbQuoteString(condw, grp_name)))
+    novo_id <- if (nrow(existente)) {
+      as.integer(existente$datagroup_id[1])
+    } else {
+      as.integer(DBI::dbGetQuery(condw,
+        "select coalesce(max(datagroup_id),0) as id from datagroup")$id) + 1L
+    }
 
+    if (!nrow(existente)) {
+      DBI::dbAppendTable(condw,"datagroup",data.frame(
+        datagroup_id= novo_id,
+        datagroup_name= grp_name,
+        datagroup_desc= paste0(mdatanew$data_name," (grupos/classificadores)")
+      ))
+    }
 
-     dgroupingnew <- addmid(datagroup|>dplyr::select(datagroup_id))
-
-     DBI::dbAppendTable(condw,"datagroup",dgroupnew)
-     DBI::dbAppendTable(condw,"mdata_group",dgroupingnew)
-   }
+    ja_ligado <- DBI::dbGetQuery(condw, paste0(
+      "select mdata_id from mdata_group where mdata_id = ", newmdataid,
+      " and datagroup_id = ", novo_id))
+    if (!nrow(ja_ligado)) {
+      DBI::dbAppendTable(condw,"mdata_group",
+                         data.frame(mdata_id= newmdataid, datagroup_id= novo_id))
+    }
+  }
 
    DBI::dbExecute(condw,"refresh materialized view named_datavalues;")
    DBI::dbExecute(condw,"refresh materialized view geonamed_datavalues;")

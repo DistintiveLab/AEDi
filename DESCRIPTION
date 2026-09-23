@@ -84,6 +84,7 @@ Collate:
     'deploy_panel.R'
     'executa_atualizacao.R'
     'gravar_serie_dw.R'
+    'grupos_catalogo.R'
     'header_buttons_module.R'
     'mod_atualizacao.R'
     'mod_panel_globe.R'
