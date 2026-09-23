@@ -1,3 +1,17 @@
+# AEDi 0.6.8.9000
+
+## Slider de ano do Mapa deixa de nascer com 2px
+
+- O `<div>` que o `sliderInput()` cria em volta do slider também carrega a
+  classe `form-group`, então casava com `.painel-toolbar .form-group`
+  (`display: flex`) e o `.irs` virava item flex: o ionRangeSlider media
+  apenas as bordas do `.irs-line` (~2px) e posicionava alça e rótulo a
+  partir dessa largura (`left: -1000%` e `left: -1200%`, fora da tela). A
+  regra anterior de ~40% da barra valia para a caixa, não para o slider
+  dentro dela. Agora o wrapper e o `.irs` crescem como itens flex
+  (`flex: 1 1 auto; min-width: 0`), mantendo o botão de animação à
+  direita e a largura integral no mobile.
+
 # AEDi 0.6.8 (2026-09-23)
 
 ## Painel admin somente leitura por projeto
