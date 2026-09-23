@@ -1,7 +1,8 @@
 # Aba "Sobre" do painel de indicadores — pagina editorial minimalista,
 # adaptada do padrao about do labourvaluesdatapanel: hero com acoes de
-# navegacao, cartao pessoal e apoio institucional. UI estatica (sem server);
-# os botoes usam ids globais tratados no server do panel_app().
+# navegacao, cartoes da equipe (painel_equipe) e boxes de apoio
+# (painel_apoios), ambos multiplos via variaveis de ambiente. UI estatica
+# (sem server); os botoes usam ids globais tratados no server do panel_app().
 
 #' UI da aba Sobre do painel
 #' @keywords internal
@@ -25,24 +26,10 @@ panel_sobre_ui <- function() {
                             icon = shiny::icon("map-location-dot")))),
     tags$section(class = "painel-sobre-secao", `aria-labelledby` = "painel_quem_titulo",
       tags$h2(id = "painel_quem_titulo", "Quem faz"),
-      tags$div(class = "painel-pessoa",
-        tags$div(class = "painel-pessoa-card",
-          tags$h3("Rodrigo Emmanuel Santana Borges"),
-          tags$p(class = "painel-pessoa-papel",
-            "Desenvolvedor e cientista de dados"),
-          tags$p(tags$strong("Contato: "),
-            tags$a(href = "mailto:rodrigo@borges.net.br",
-                   "rodrigo@borges.net.br"))))),
+      tags$div(class = "painel-pessoa", painel_brand_equipe())),
     tags$section(class = "painel-sobre-secao", `aria-labelledby` = "painel_apoio_titulo",
       tags$h2(id = "painel_apoio_titulo", "Apoio"),
-      tags$div(class = "painel-apoio",
-        tags$a(class = "painel-apoio-logo", href = "https://www.distintive.com.br",
-               target = "_blank", rel = "noopener",
-               `aria-label` = "Distintive (distintive.com.br)",
-               tags$img(src = painel_logo_src(),
-                        alt = "Logotipo da Distintive")),
-        tags$div(class = "painel-apoio-texto",
-          painel_brand_apoio())))
+      tags$div(class = "painel-apoios", painel_brand_apoios()))
   )
 }
 
