@@ -28,3 +28,10 @@ _consolidacao/
 
 # Microdados RAIS brutos (volumosos, ~99 MB; ficam só na máquina local)
 data-raw/testdata/**/*.7z
+
+# Rascunhos e backups locais (não são fonte do pacote)
+AGENTSbckp.md
+coleta/diagnostico_objetivo2_3_dw.R.ignore
+coleta/governativas4_aedi_copia.R
+coleta/sust2_sem_microdados_so_planilhas.R
+data/sidrameta_bckp.rda
