@@ -37,6 +37,20 @@ painel_logo_src <- function(assets_dir = NULL) {
   file.path("aedi_marca", basename(logo))
 }
 
+#' Opcoes das caixas de selecao do painel: selectize com pesquisa por parte
+#' do nome e sem truncar listas longas
+#'
+#' O selectize.js renderiza no maximo `max_options` itens (default 1000):
+#' sem elevar o limite, a lista de localidades (5,7 mil municipios no DW)
+#' termina antes do fim e o resto so aparece para quem digita o nome.
+#'
+#' @param placeholder texto de ajuda dentro da caixa
+#' @param max_options numero maximo de itens renderizados de uma vez
+#' @keywords internal
+painel_opcoes_select <- function(placeholder, max_options = 10000L) {
+  list(placeholder = placeholder, maxOptions = max_options)
+}
+
 #' Recursos de cabecalho (meta, CSS/JS do painel, Gov.br) e div raiz da paleta
 #' @keywords internal
 painel_recursos <- function(assets_dir, paleta = c("govbr", "pb")) {

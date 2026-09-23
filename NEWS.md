@@ -4,6 +4,27 @@ Painel de indicadores contra a lentidão do DW remoto (handshake ~4s e
 consultas agregadas de segundos, medidas contra o `aedidb` remoto do
 `pndr_dashboard`), mais blindagem de `mdata_id` inválido.
 
+## Resumo da região pelo catálogo completo (7 eixos, 4 objetivos, PNAD)
+
+- O catálogo da aba Região passa a ser montado pela convenção de
+  `orig_name` (`painel_grupo_indicador()`/`painel_grupo_raiz()`) em vez da
+  tabela `mdata_group`: ela existe no DW mas está populada só em parte
+  (verificado: 7 dos 35 indicadores dos eixos), o que sumia com os eixos
+  2, 4, 5, 6 e 7 e com o Objetivo 4 do resumo e do accordeon.
+- A hierarquia agora traz as três raízes — Eixos (7 grupos × 4
+  indicadores + composto), Objetivos (4 × 3 + composto) e Estratos PNAD
+  (7 `pnadc` + 7 compostos) — com `data_class_id` marcando os compostos.
+  Variações de trabalho (`*_via_aedi`, `*_v0`) e séries de apoio ficam
+  fora do que o painel publica.
+- O card passou a se chamar "Resumo da região" e mostra o nível
+  territorial corrente e a localidade escolhida; os chips vêm de
+  `painel_resumo_grupos()`, uma função pura que pega o valor mais recente
+  de cada composto do catálogo na localidade.
+- As caixas de indicador, nível e localidade viraram `selectizeInput`
+  pesquisável (`painel_opcoes_select()`): o selectize renderiza no máximo
+  1000 itens por padrão e a lista de municípios (5.716 com dados) era
+  cortada antes do fim — a busca por parte do nome continua funcionando.
+
 ## Globo com as delimitações do IBGE do nível territorial
 
 - As camadas do globo passam a seguir o nível escolhido na aba Região:

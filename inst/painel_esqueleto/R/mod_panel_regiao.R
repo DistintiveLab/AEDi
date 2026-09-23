@@ -1,8 +1,9 @@
 #' panel_regiao UI Function
 #'
-#' @description Resumo da localidade (valores recentes dos indicadores
-#'   compostos por objetivo) com botao "mostrar mais" expandindo um
-#'   accordeon por eixo e por objetivo com mini-graficos, alem da serie
+#' @description Resumo da região (valores recentes dos indicadores
+#'   compostos dos 7 eixos, dos 4 objetivos e dos estratos PNAD) com botao
+#'   "mostrar mais" expandindo um accordeon por raiz (Eixos, Objetivos,
+#'   Estratos PNAD), grupo e indicador com mini-graficos, alem da serie
 #'   temporal de um indicador do banco de dados do painel para a
 #'   localidade escolhida dentro de um nivel territorial (regiao, UF,
 #'   regiao intermediaria, microrregiao, regiao imediata, municipio).
@@ -19,19 +20,21 @@ mod_panel_regiao_ui <- function(id) {
       tags$div(class = "form-group",
         tags$label(`for` = ns("indicador"), "Indicador"),
         shiny::selectizeInput(ns("indicador"), NULL, choices = NULL,
-                              width = "100%", options = list(
-                                placeholder = "Escolha um indicador"))),
+                              width = "100%", options = painel_opcoes_select(
+                                "Escolha um indicador"))),
       tags$div(class = "form-group",
         tags$label(`for` = ns("nivel"), "Nível territorial"),
-        shiny::selectInput(ns("nivel"), NULL, choices = NULL,
-                           selectize = FALSE, width = "auto")),
+        shiny::selectizeInput(ns("nivel"), NULL, choices = NULL,
+                              width = "auto", options = painel_opcoes_select(
+                                "Escolha o nível", max_options = 100L))),
       tags$div(class = "form-group",
         tags$label(`for` = ns("localidade"), "Localidade"),
         shiny::selectizeInput(ns("localidade"), NULL, choices = NULL,
-                              width = "100%", options = list(
-                                placeholder = "Escolha uma localidade")))),
+                              width = "100%", options = painel_opcoes_select(
+                                "Digite parte do nome")))),
     tags$div(class = "painel-card",
-      tags$h3("Resumo da localidade"),
+      tags$h3("Resumo da região"),
+      tags$p(class = "painel-nota", shiny::textOutput(ns("resumo_local"))),
       shiny::uiOutput(ns("resumo")),
       shiny::uiOutput(ns("detalhes"))),
     tags$div(class = "painel-regiao-grade",
@@ -70,7 +73,7 @@ mod_panel_regiao_server <- function(id,
                                 choices = setNames(md$mdata_id, md$rotulo),
                                 selected = if (nrow(md)) md$mdata_id[1] else NULL,
                                 server = TRUE)
-    shiny::updateSelectInput(session, "nivel",
+    shiny::updateSelectizeInput(session, "nivel",
       choices = setNames(niveis$nivel_id,
                          paste0(niveis$rotulo, " (", niveis$n_locais, ")")),
       selected = painel_nivel_default(niveis))
@@ -114,7 +117,7 @@ mod_panel_regiao_server <- function(id,
           painel_local_top_uf_cache(indicador, input$nivel, escolha$code) else NULL
         if (is.null(destino)) {
           uf_pendente(escolha$code)
-          shiny::updateSelectInput(session, "nivel", selected = "2")
+          shiny::updateSelectizeInput(session, "nivel", selected = "2")
         } else {
           shiny::updateSelectizeInput(session, "localidade",
             choices = locais(), selected = destino, server = TRUE)
@@ -152,15 +155,34 @@ mod_panel_regiao_server <- function(id,
       painel_valores_local_cache(input$indicador, input$localidade)
     })
 
+    # Rotulo da localidade corrente: sai dos proprios rotulos das escolhas
+    # do selectize (nome + sigla da UF no nivel municipal)
+    rotulo_local <- shiny::reactive({
+      rotulos <- locais()
+      i <- match(as.integer(input$localidade), rotulos)
+      if (!length(i) || is.na(i)) NULL else names(rotulos)[i]
+    })
+
+    # Nome do nivel territorial corrente (Município, Região, UF...)
+    rotulo_nivel <- shiny::reactive({
+      rotulo <- niveis$rotulo[as.character(niveis$nivel_id) ==
+                                as.character(input$nivel)]
+      if (length(rotulo) && !is.na(rotulo[1])) rotulo[1] else "Localidade"
+    })
+
     titulo <- shiny::reactive({
       shiny::validate(shiny::need(nrow(md) > 0,
         "Banco de dados do painel sem indicadores (tabela mdata vazia): confira as variáveis user, password, host e dbname e reinicie a sessão R antes de relançar o app."))
-      shiny::req(input$indicador, input$localidade)
-      nome <- md$data_name[md$mdata_id == input$indicador]
-      if (is.na(nome)) nome <- md$orig_name[md$mdata_id == input$indicador]
-      rotulos <- locais()
-      local <- names(rotulos)[match(as.integer(input$localidade), rotulos)]
-      paste0(nome, " — ", local)
+      shiny::req(input$indicador, rotulo_local())
+      indice <- match(as.integer(input$indicador), md$mdata_id)
+      nome <- md$data_name[indice]
+      if (is.na(nome)) nome <- md$orig_name[indice]
+      paste0(nome, " — ", rotulo_local())
+    })
+
+    output$resumo_local <- shiny::renderText({
+      shiny::req(rotulo_local())
+      paste0(rotulo_nivel(), ": ", rotulo_local())
     })
 
     cor <- shiny::reactive({
@@ -192,6 +214,12 @@ mod_panel_regiao_server <- function(id,
 
     expandido <- shiny::reactiveVal(FALSE)
 
+    # Chips do resumo: um por indicador composto do catalogo (7 eixos, 4
+    # objetivos e os estratos PNAD), com o valor mais recente na localidade
+    resumo <- shiny::reactive({
+      painel_resumo_grupos(hierarquia, compostos, resumo_vals())
+    })
+
     output$resumo <- shiny::renderUI({
       shiny::validate(shiny::need(nrow(md) > 0,
         "Banco de dados do painel sem indicadores (tabela mdata vazia): confira as variáveis user, password, host e dbname e reinicie a sessão R antes de relançar o app."))
@@ -201,26 +229,14 @@ mod_panel_regiao_server <- function(id,
           "Sem agrupamentos por objetivo e indicadores compostos no catálogo",
           " do banco de dados do painel."))
       }
-      obj <- hierarquia[hierarquia$raiz_nome == "Objetivos" &
-                          !is.na(hierarquia$mdata_id), ]
-      chips <- list()
-      for (gid in unique(obj$datagroup_id)) {
-        g <- obj[obj$datagroup_id == gid, ]
-        for (mid in unique(g$mdata_id)) {
-          if (!(mid %in% compostos$mdata_id)) next
-          v <- resumo_vals()[resumo_vals()$mdata_id == mid &
-                               is.finite(resumo_vals()$value), ]
-          if (!nrow(v)) next
-          nome <- compostos$data_name[compostos$mdata_id == mid]
-          if (is.na(nome)) nome <- compostos$orig_name[compostos$mdata_id == mid]
-          chips[[length(chips) + 1]] <- tags$div(class = "painel-resumo-chip",
-            tags$div(class = "painel-resumo-chip-rotulo",
-              paste0(nome, " — ", g$datagroup_name[1])),
-            tags$div(class = "painel-resumo-chip-valor",
-              painel_num(v$value[nrow(v)]),
-              tags$small(paste0(" (", format(v$refdate[nrow(v)], "%Y"), ")"))))
-        }
-      }
+      r <- resumo()
+      chips <- lapply(seq_len(nrow(r)), function(i) {
+        tags$div(class = "painel-resumo-chip",
+          tags$div(class = "painel-resumo-chip-rotulo", r$rotulo[i]),
+          tags$div(class = "painel-resumo-chip-valor",
+            painel_num(r$valor[i]),
+            tags$small(paste0(" (", format(r$refdate[i], "%Y"), ")"))))
+      })
       tagList(
         if (length(chips)) {
           tags$div(class = "painel-resumo-grade", chips)
@@ -240,11 +256,15 @@ mod_panel_regiao_server <- function(id,
     # Accordeon do "mostrar mais": raizes (Eixos, Objetivos) > grupo >
     # indicador com mini-grafico da serie na localidade corrente
     indicador_bloco <- function(mid) {
-      nome <- md$data_name[md$mdata_id == mid]
-      if (is.na(nome)) nome <- md$orig_name[md$mdata_id == mid]
+      linha <- hierarquia[match(mid, hierarquia$mdata_id), ]
+      nome <- linha$data_name[1]
+      if (is.na(nome) || !nzchar(nome)) nome <- linha$orig_name[1]
+      composto <- !is.na(linha$data_class_id[1]) &&
+        linha$data_class_id[1] == 4
       tags$div(class = "painel-grupo-indicador",
         tags$strong(nome),
-        tags$small(paste0(" (", md$orig_name[md$mdata_id == mid], ")")),
+        if (isTRUE(composto)) tags$small(" · indicador composto"),
+        tags$small(paste0(" (", linha$orig_name[1], ")")),
         shiny::plotOutput(session$ns(paste0("mini_", mid)), height = "110px"))
     }
 
@@ -259,13 +279,14 @@ mod_panel_regiao_server <- function(id,
           lapply(ids, indicador_bloco)))
     }
 
-    raiz_bloco <- function(rnome) {
+    raiz_bloco <- function(rnome, aberta = FALSE) {
       filhos <- hierarquia[hierarquia$raiz_nome == rnome,
                            c("datagroup_id", "datagroup_name")]
       filhos <- unique(filhos)
+      filhos <- filhos[order(filhos$datagroup_id), ]
       ids <- unique(hierarquia$mdata_id[hierarquia$raiz_nome == rnome &
                                           !is.na(hierarquia$mdata_id)])
-      tags$details(class = "painel-grupo", open = TRUE,
+      tags$details(class = "painel-grupo", open = aberta,
         tags$summary(rnome,
           tags$small(paste0(" · ", length(ids), " indicadores"))),
         tags$div(class = "painel-grupo-corpo",
@@ -275,8 +296,11 @@ mod_panel_regiao_server <- function(id,
     output$detalhes <- shiny::renderUI({
       shiny::req(expandido())
       if (!nrow(hierarquia)) return(NULL)
-      raizes <- intersect(c("Eixos", "Objetivos"), unique(hierarquia$raiz_nome))
-      lapply(raizes, raiz_bloco)
+      raizes <- c("Eixos", "Objetivos", "Estratos PNAD")
+      raizes <- raizes[raizes %in% unique(hierarquia$raiz_nome)]
+      raizes <- c(raizes, setdiff(unique(hierarquia$raiz_nome), raizes))
+      lapply(seq_along(raizes), function(i)
+        raiz_bloco(raizes[i], aberta = i == 1))
     })
 
     # Mini-graficos: outputs registrados uma unica vez para os indicadores

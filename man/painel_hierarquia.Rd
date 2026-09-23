@@ -2,15 +2,15 @@
 % Please edit documentation in R/painel_dw.R
 \name{painel_hierarquia}
 \alias{painel_hierarquia}
-\title{Hierarquia de agrupamentos de indicadores: filhos diretos das raizes
-"Eixos" e "Objetivos" com os indicadores vinculados (mdata_group) —
-estrutura do resumo e do accordeon da aba Regiao}
+\title{Hierarquia do catalogo de indicadores: raiz (Eixos, Objetivos, Estratos
+PNAD) > grupo (Eixo 1..7, Objetivo 1..4) > indicador, com a classe do
+dado (data_class_id) — estrutura do resumo e do accordeon da aba Regiao}
 \usage{
 painel_hierarquia(con)
 }
 \description{
-Hierarquia de agrupamentos de indicadores: filhos diretos das raizes
-"Eixos" e "Objetivos" com os indicadores vinculados (mdata_group) —
-estrutura do resumo e do accordeon da aba Regiao
+Os ids e nomes de grupo vem da tabela datagroup do DW; o vinculo de cada
+indicador ao grupo vem da convencao de orig_name (ver
+\code{\link[=painel_grupo_indicador]{painel_grupo_indicador()}}). Indicador sem grupo conhecido fica de fora.
 }
 \keyword{internal}
