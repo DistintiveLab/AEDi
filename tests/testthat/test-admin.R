@@ -25,7 +25,7 @@ test_that("deploy_admin grava launcher fina e idempotente com sobrescrever", {
 
 test_that(".tabela_status_lote devolve colunas em portugues mesmo sem lote", {
   tmp <- tempfile()
-  dir.create(file.path(tmp, "coleta"))
+  dir.create(file.path(tmp, "coleta"), recursive = TRUE)
   d <- AEDi:::.tabela_status_lote(tmp, projeto = "projeto_inexistente")
   expect_s3_class(d, "data.frame")
   expect_identical(colnames(d), c("Script", "Etapa", "Última execução",

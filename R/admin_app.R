@@ -101,8 +101,13 @@
   vazio <- data.frame(script = character(), serie = character(),
                       regua = character(), acao = character(),
                       series_proprias = character())
-  if (is.null(con)) { con <- controle_con(); on.exit(DBI::dbDisconnect(con)) }
-  linhas <- tryCatch(
+  # Banco fora do ar nao pode derrubar o painel admin: sem conexao, o CSV
+  # semente (coleta/dependencias.csv) ainda mostra o grafo do projeto.
+  if (is.null(con)) {
+    con <- tryCatch(controle_con(), error = function(e) NULL)
+    if (!is.null(con)) on.exit(DBI::dbDisconnect(con), add = TRUE)
+  }
+  linhas <- if (is.null(con)) NULL else tryCatch(
     DBI::dbGetQuery(con, "
       SELECT nome_script, dependencias_json
         FROM controle_execucao
