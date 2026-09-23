@@ -115,6 +115,95 @@ painel_valores_ano <- function(con, mdata_id, ano) {
     mdata_id, ano, ano + 1L))
 }
 
+#' Ranking vazio (localidade nao municipal, sem dado no ano ou sem par)
+#' @keywords internal
+painel_ranking_vazio <- function() {
+  data.frame(rank_uf = NA_integer_, n_uf = NA_integer_,
+             rank_br = NA_integer_, n_br = NA_integer_)
+}
+
+#' Posicao de uma localidade num indicador e ano: quantos municipios do
+#' pais e da propria UF tem valor MAIOR naquele ano
+#'
+#' Os dois universos sao municipais (largura 7 do geoloc_id): o pais inteiro
+#' e a UF de origem, pelo prefixo de 2 digitos do geoloc_id. A posicao conta
+#' os valores estritamente maiores, entao empates dividem a mesma posicao; o
+#' total (`n_uf`, `n_br`) e quantos municipios tem dado no ano para o
+#' indicador. Vale a regra de ano de [painel_valores_ano()] (ultimo refdate
+#' de cada localidade dentro do ano, `DISTINCT ON` + faixa `make_date`), e o
+#' valor da propria localidade e o do mesmo ano.
+#'
+#' Contar de cima para baixo assume "maior e melhor", o sentido dos
+#' indicadores compostos do catalogo do painel: o resumo nao guarda direcao
+#' do indicador (a tabela mdata nao tem essa coluna).
+#' @keywords internal
+painel_ranking_local <- function(con, mdata_id, local_id, ano) {
+  mdata_id <- suppressWarnings(as.integer(mdata_id))[1]
+  local_id <- suppressWarnings(as.integer(local_id))[1]
+  ano <- suppressWarnings(as.integer(ano))[1]
+  if (is.na(mdata_id) || is.na(local_id) || is.na(ano)) {
+    return(painel_ranking_vazio())
+  }
+  q <- DBI::dbGetQuery(con, sprintf(paste(
+    "WITH alvo AS (",
+    "  SELECT left(g.geoloc_id::text, 2) AS uf, v.value",
+    "  FROM local l",
+    "  JOIN geoloc g USING (geoloc_id)",
+    "  JOIN data_values v ON v.local_id = l.local_id",
+    "  WHERE l.local_id = %d AND length(g.geoloc_id::text) = 7",
+    "  AND v.mdata_id = %d",
+    "  AND v.refdate >= make_date(%d, 1, 1) AND v.refdate < make_date(%d, 1, 1)",
+    "  AND v.value <> 'NaN'::float8",
+    "  ORDER BY v.refdate DESC LIMIT 1",
+    "), vals AS (",
+    "  SELECT DISTINCT ON (v.local_id) left(g.geoloc_id::text, 2) AS uf, v.value",
+    "  FROM data_values v",
+    "  JOIN local l USING (local_id)",
+    "  JOIN geoloc g USING (geoloc_id)",
+    "  WHERE v.mdata_id = %d",
+    "  AND v.refdate >= make_date(%d, 1, 1) AND v.refdate < make_date(%d, 1, 1)",
+    "  AND v.value <> 'NaN'::float8",
+    "  AND length(g.geoloc_id::text) = 7",
+    "  ORDER BY v.local_id, v.refdate DESC",
+    ")",
+    "SELECT",
+    "  count(*) FILTER (WHERE v.value > a.value) + 1 AS rank_uf,",
+    "  count(*) AS n_uf,",
+    "  (SELECT count(*) + 1 FROM vals, alvo WHERE vals.value > alvo.value)",
+    "  AS rank_br,",
+    "  (SELECT count(*) FROM vals, alvo) AS n_br",
+    "FROM vals v, alvo a WHERE v.uf = a.uf"),
+    local_id, mdata_id, ano, ano + 1L,
+    mdata_id, ano, ano + 1L))
+  if (!NROW(q)) return(painel_ranking_vazio())
+  r <- vapply(q, function(x) suppressWarnings(as.numeric(x))[1], numeric(1))
+  # alvo vazio (localidade nao municipal ou sem dado no ano) devolve a
+  # agregacao degenerada 1 / 0 / 1 / 0: sem universo, sem posicao
+  if (!is.finite(r[["n_br"]]) || r[["n_br"]] < 1) return(painel_ranking_vazio())
+  data.frame(rank_uf = r[["rank_uf"]], n_uf = r[["n_uf"]],
+             rank_br = r[["rank_br"]], n_br = r[["n_br"]])
+}
+
+#' Anotacao de ranking de um cartao do resumo: "5o melhor na UF e 590o BR"
+#'
+#' `NULL` quando nao ha posicao a mostrar (universo de um so municipio,
+#' localidade sem dado no ano ou UF sem par). `n` e o tamanho do universo.
+#' @keywords internal
+painel_ranking_texto <- function(rank_uf, n_uf, rank_br, n_br) {
+  vale <- function(rank, n) {
+    isTRUE(is.finite(rank) && is.finite(n) && rank >= 1 && n > 1)
+  }
+  partes <- character(0)
+  if (vale(rank_uf, n_uf)) {
+    partes <- c(partes, sprintf("%s\u00ba melhor na UF", painel_num(rank_uf)))
+  }
+  if (vale(rank_br, n_br)) {
+    partes <- c(partes, sprintf("%s\u00ba BR", painel_num(rank_br)))
+  }
+  if (!length(partes)) return(NULL)
+  paste(partes, collapse = " e ")
+}
+
 # Rotulos dos niveis territoriais do DW, pela largura do geoloc_id (IBGE):
 # 1 grande regiao, 2 UF, 4 regiao geografica intermediaria (2017),
 # 5 microrregiao (1990), 6 regiao geografica imediata (2017),
@@ -158,6 +247,24 @@ painel_nivel_default <- function(niveis) {
   if (is.null(niveis) || !nrow(niveis)) return("2")
   alvo <- which(grepl("Munic", niveis$rotulo, fixed = TRUE))
   if (length(alvo)) as.character(niveis$nivel_id[alvo[1]]) else "2"
+}
+
+#' Indicador de abertura do painel, escolhido pelo orig_name
+#'
+#' A variavel de ambiente `aedi_indicador` (ex.: `desprod1`) decide qual
+#' indicador das abas Regiao, Mapa e Baixar nasce selecionado; vazia ou
+#' desconhecida cai no primeiro do catalogo (`md`, de [painel_mdata()]).
+#' Lida a cada chamada, ou seja, a sessao R precisa ser reiniciada para
+#' enxergar uma mudanca (o server roda o `updateSelectizeInput` na abertura).
+#' @keywords internal
+painel_indicador_default <- function(md, padrao = Sys.getenv("aedi_indicador", "")) {
+  if (is.null(md) || !NROW(md) || !"mdata_id" %in% names(md)) return(NA_integer_)
+  alvo <- trimws(as.character(padrao)[1])
+  if (length(alvo) && !is.na(alvo) && nzchar(alvo) && "orig_name" %in% names(md)) {
+    i <- match(alvo, trimws(as.character(md$orig_name)))
+    if (!is.na(i)) return(as.integer(md$mdata_id[i]))
+  }
+  as.integer(md$mdata_id[1])
 }
 
 #' Localidades de um nivel territorial (pela largura do geoloc_id) que
@@ -746,4 +853,20 @@ painel_valores_ano_cache <- function(mdata_id, ano) {
     painel_cache_ttl[["valores"]],
     function() painel_com_con(function(con)
       painel_valores_ano(con, mdata_id, ano)))
+}
+
+#' Ranking de uma localidade num indicador e ano, cacheado
+#' @keywords internal
+painel_ranking_local_cache <- function(mdata_id, local_id, ano) {
+  mdata_id <- suppressWarnings(as.integer(mdata_id))[1]
+  local_id <- suppressWarnings(as.integer(local_id))[1]
+  ano <- suppressWarnings(as.integer(ano))[1]
+  if (is.na(mdata_id) || is.na(local_id) || is.na(ano)) {
+    return(painel_ranking_vazio())
+  }
+  painel_cache_get(
+    painel_cache_chave(sprintf("ranking_%d_%d_%d", mdata_id, local_id, ano)),
+    painel_cache_ttl[["valores"]],
+    function() painel_com_con(function(con)
+      painel_ranking_local(con, mdata_id, local_id, ano)))
 }

@@ -71,7 +71,8 @@ mod_panel_regiao_server <- function(id,
     compostos <- painel_compostos_cache()
     shiny::updateSelectizeInput(session, "indicador",
                                 choices = setNames(md$mdata_id, md$rotulo),
-                                selected = if (nrow(md)) md$mdata_id[1] else NULL,
+                                selected = if (nrow(md))
+                                  painel_indicador_default(md) else NULL,
                                 server = TRUE)
     shiny::updateSelectizeInput(session, "nivel",
       choices = setNames(niveis$nivel_id,
@@ -112,7 +113,7 @@ mod_panel_regiao_server <- function(id,
         }
       } else {
         indicador <- suppressWarnings(as.integer(input$indicador))[1]
-        if (is.na(indicador) && nrow(md)) indicador <- md$mdata_id[1]
+        if (is.na(indicador)) indicador <- painel_indicador_default(md)
         destino <- if (!is.na(indicador))
           painel_local_top_uf_cache(indicador, input$nivel, escolha$code) else NULL
         if (is.null(destino)) {
@@ -139,7 +140,7 @@ mod_panel_regiao_server <- function(id,
         destino <- as.integer(pendente)
       } else {
         indicador <- suppressWarnings(as.integer(input$indicador))[1]
-        if (is.na(indicador) && nrow(md)) indicador <- md$mdata_id[1]
+        if (is.na(indicador)) indicador <- painel_indicador_default(md)
         topo <- painel_local_top_cache(indicador, input$nivel)
         destino <- if (is.null(topo)) as.integer(escolhas[[1]]) else topo
       }
@@ -216,8 +217,19 @@ mod_panel_regiao_server <- function(id,
 
     # Chips do resumo: um por indicador composto do catalogo (7 eixos, 4
     # objetivos e os estratos PNAD), com o valor mais recente na localidade
+    # e a posicao dela entre os municipios da propria UF e do pais naquele
+    # ano (uma leitura cacheada por indicador/ano; NA fora do nivel municipal)
     resumo <- shiny::reactive({
-      painel_resumo_grupos(hierarquia, compostos, resumo_vals())
+      r <- painel_resumo_grupos(hierarquia, compostos, resumo_vals())
+      if (!NROW(r)) return(r)
+      ranks <- lapply(seq_len(nrow(r)), function(i)
+        painel_ranking_local_cache(r$mdata_id[i], input$localidade,
+                                   as.integer(format(r$refdate[i], "%Y"))))
+      r$rank_uf <- vapply(ranks, function(x) x$rank_uf[1], numeric(1))
+      r$n_uf <- vapply(ranks, function(x) x$n_uf[1], numeric(1))
+      r$rank_br <- vapply(ranks, function(x) x$rank_br[1], numeric(1))
+      r$n_br <- vapply(ranks, function(x) x$n_br[1], numeric(1))
+      r
     })
 
     output$resumo <- shiny::renderUI({
@@ -231,11 +243,17 @@ mod_panel_regiao_server <- function(id,
       }
       r <- resumo()
       chips <- lapply(seq_len(nrow(r)), function(i) {
+        ranking <- painel_ranking_texto(r$rank_uf[i], r$n_uf[i],
+                                        r$rank_br[i], r$n_br[i])
         tags$div(class = "painel-resumo-chip",
           tags$div(class = "painel-resumo-chip-rotulo", r$rotulo[i]),
           tags$div(class = "painel-resumo-chip-valor",
             painel_num(r$valor[i]),
-            tags$small(paste0(" (", format(r$refdate[i], "%Y"), ")"))))
+            tags$small(paste0(" (", format(r$refdate[i], "%Y"), ")"))),
+          if (!is.null(ranking)) {
+            tags$div(class = "painel-resumo-chip-ranking",
+                     paste0("(", ranking, ")"))
+          })
       })
       tagList(
         if (length(chips)) {

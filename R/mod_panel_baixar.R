@@ -85,7 +85,8 @@ mod_panel_baixar_server <- function(id) {
                                 selected = default_nivel)
     shiny::updateSelectizeInput(session, "indicador",
       choices = setNames(md$mdata_id, md$rotulo),
-      selected = if (nrow(md)) md$mdata_id[1] else NULL, server = TRUE)
+      selected = if (nrow(md)) painel_indicador_default(md) else NULL,
+      server = TRUE)
 
     # --- recorte 1: todos os indicadores de uma regiao --------------------
     locais_regiao <- shiny::reactive({
