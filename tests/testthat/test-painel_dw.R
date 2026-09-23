@@ -127,3 +127,81 @@ test_that("painel_opcoes_select eleva o maxOptions do selectize", {
   expect_true(o$maxOptions > 1000L)
   expect_identical(AEDi:::painel_opcoes_select("x", 100L)$maxOptions, 100L)
 })
+
+# Indicador de abertura por orig_name (abas Regiao, Mapa e Baixar) -----
+
+md_exemplo <- function() {
+  data.frame(mdata_id = c(10L, 20L, 30L),
+             orig_name = c("educ1", "desprod1", "comp_desprod"),
+             rotulo = c("A", "B", "C"))
+}
+
+test_that("painel_indicador_default acha o orig_name pedido e cai no primeiro", {
+  d <- AEDi:::painel_indicador_default
+  md <- md_exemplo()
+  expect_identical(d(md, "desprod1"), 20L)
+  expect_identical(d(md, " comp_desprod "), 30L)
+  expect_identical(d(md, "educ1"), 10L)
+  expect_identical(d(md, ""), 10L)
+  expect_identical(d(md, "nao_existe"), 10L)
+  expect_identical(d(md, NA_character_), 10L)
+  expect_identical(d(md, NULL), 10L)
+  expect_true(is.na(d(md[0, ], "desprod1")))
+  expect_true(is.na(d(NULL, "desprod1")))
+  # sem orig_name no catalogo nao ha o que casar: fica o primeiro indicador
+  expect_identical(d(md[, "mdata_id", drop = FALSE], "desprod1"), 10L)
+})
+
+test_that("painel_indicador_default le aedi_indicador do ambiente", {
+  antigo <- Sys.getenv("aedi_indicador", unset = NA_character_)
+  on.exit(if (is.na(antigo)) Sys.unsetenv("aedi_indicador") else
+            Sys.setenv(aedi_indicador = antigo), add = TRUE)
+  md <- md_exemplo()
+  Sys.setenv(aedi_indicador = "desprod1")
+  expect_identical(AEDi:::painel_indicador_default(md), 20L)
+  Sys.setenv(aedi_indicador = "")
+  expect_identical(AEDi:::painel_indicador_default(md), 10L)
+})
+
+# Ranking dos cartoes do resumo (aba Regiao) --------------------------
+
+test_that("painel_ranking_texto monta a anotacao do resumo", {
+  t <- AEDi:::painel_ranking_texto
+  expect_identical(t(5, 853, 590, 5570),
+                   "5\u00ba melhor na UF e 590\u00ba BR")
+  expect_identical(t(1, 20, 1, 5570), "1\u00ba melhor na UF e 1\u00ba BR")
+  expect_identical(t(1234, 5570, 1234, 5570),
+                   "1.234\u00ba melhor na UF e 1.234\u00ba BR")
+  expect_identical(t(5, 10, NA_real_, NA_real_), "5\u00ba melhor na UF")
+  expect_identical(t(NA_real_, NA_real_, 7, 20), "7\u00ba BR")
+  # universo de um so municipio, posicao invalida ou ausente: nada a dizer
+  expect_null(t(1, 1, 1, 1))
+  expect_null(t(0, 10, 0, 20))
+  expect_null(t(NA_real_, NA_real_, NA_real_, NA_real_))
+  expect_null(t(NULL, NULL, NULL, NULL))
+})
+
+test_that("guards do ranking devolvem NA sem tocar no cache", {
+  v <- AEDi:::painel_ranking_local_cache(NA, 3550308L, 2020L)
+  expect_identical(names(v), c("rank_uf", "n_uf", "rank_br", "n_br"))
+  expect_true(all(is.na(unlist(v))))
+  expect_true(all(is.na(unlist(
+    AEDi:::painel_ranking_local_cache(1L, NA, 2020L)))))
+  expect_true(all(is.na(unlist(
+    AEDi:::painel_ranking_local_cache(1L, 2L, NA)))))
+  expect_true(all(is.na(unlist(
+    AEDi:::painel_ranking_local_cache("abc", "abc", "abc")))))
+})
+
+test_that("as abas Regiao, Mapa e Baixar usam o indicador de abertura", {
+  skip_if_not(dir.exists(test_path("../../R")), "sem arvore-fonte (check)")
+  for (f in c("mod_panel_regiao.R", "mod_panel_map.R", "mod_panel_baixar.R")) {
+    linhas <- readLines(test_path("../../R", f), encoding = "UTF-8",
+                        warn = FALSE)
+    expect_true(any(grepl("painel_indicador_default", linhas, fixed = TRUE)),
+                info = paste0(f, " nao usa painel_indicador_default"))
+    expect_false(any(grepl("md$mdata_id[1]", linhas, fixed = TRUE)),
+                 info = paste0(f, " ainda abre no primeiro indicador"))
+  }
+})
+

@@ -54,7 +54,8 @@ mod_panel_map_server <- function(id) {
     geo$layer_id <- as.character(geo$local_id)
     shiny::updateSelectizeInput(session, "indicador",
                                 choices = setNames(md$mdata_id, md$rotulo),
-                                selected = if (nrow(md)) md$mdata_id[1] else NULL,
+                                selected = if (nrow(md))
+                                  painel_indicador_default(md) else NULL,
                                 server = TRUE)
 
     # Anos disponiveis do indicador direto do DW (agregacao cacheada), sem

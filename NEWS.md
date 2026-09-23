@@ -1,5 +1,23 @@
 # AEDi 0.6.9.9000
 
+## Indicador de abertura configurável e ranking no resumo da região
+
+- A variável de ambiente `aedi_indicador` escolhe, pelo `orig_name`, qual
+  indicador nasce selecionado nas abas Região, Mapa e Baixar (ex.:
+  `aedi_indicador=desprod1` abre no indicador de complexidade econômica).
+  Vazia ou sem correspondência no catálogo, o painel segue abrindo no
+  primeiro indicador. Como o valor é lido quando o servidor sobe, uma
+  mudança exige reiniciar a sessão R.
+- O "Resumo da região" passa a mostrar, entre parênteses abaixo do valor de
+  cada indicador composto, a posição da localidade entre os municípios do
+  próprio estado e do país no ano daquele valor (ex.: `(5º melhor na UF e
+  590º BR)`). Os dois universos são municipais e a contagem é por valor
+  decrescente — "melhor" é maior valor, o sentido dos indicadores compostos
+  do catálogo; empates dividem a mesma posição. Fora do nível municipal (ou
+  sem dado no ano) a anotação simplesmente não aparece. Leitura nova e
+  cacheada em `painel_dw.R` (`painel_ranking_local()`), uma por indicador e
+  ano, sem consulta por cartão a cada render.
+
 ## Slider de ano do Mapa deixa de nascer com 2px
 
 - O `<div>` que o `sliderInput()` cria em volta do slider também carrega a
