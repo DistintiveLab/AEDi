@@ -207,7 +207,12 @@ painel_ranking_texto <- function(rank_uf, n_uf, rank_br, n_br) {
 # Rotulos dos niveis territoriais do DW, pela largura do geoloc_id (IBGE):
 # 1 grande regiao, 2 UF, 4 regiao geografica intermediaria (2017),
 # 5 microrregiao (1990), 6 regiao geografica imediata (2017),
-# 7 municipio e 8 mesorregiao (1990; sem dados no DW).
+# 7 municipio e 8 mesorregiao (1990; sem dados no DW). A chave "7p" separa
+# as regioes de interesse em PNAD Contínua, que usam codigos de 7 digitos
+# (mesma largura do codigo IBGE de municipio) e vivem na faixa alta dos
+# local_id (6941..7086) — publicadas so pelos indicadores pnadc*/comp_pnadc*
+# (verificado 2026-09-22: nenhum indicador municipal publica nelas, e nenhum
+# pnadc publica em municipio).
 painel_niveis_rotulo <- c(
   "1" = "Região",
   "2" = "Unidade da Federação",
@@ -215,7 +220,44 @@ painel_niveis_rotulo <- c(
   "5" = "Microrregião",
   "6" = "Região geográfica imediata",
   "7" = "Município",
+  "7p" = "Região de interesse PNAD",
   "8" = "Mesorregião")
+
+# Fronteira entre os municipios (local_id 1..5570, Brasilia incluida) e as
+# regioes de interesse em PNAD Contínua (local_id >= 5571) dentro da largura
+# 7 do geoloc_id — mesma convencao ja adotada por painel_geo_mun()
+painel_municipio_limite_id <- 5571L
+
+#' Decodifica a chave de nivel territorial do painel
+#'
+#' A chave e a largura do geoloc_id como texto ("1".."8") ou "7p" para as
+#' regioes de interesse em PNAD Contínua, que dividem a largura 7 com os
+#' municipios. Devolve o nivel numerico, se e o subnivel PNAD e o fragmento
+#' SQL que seleciona os locais do nivel (pressupoe aliases `l` e `g` no
+#' chamador).
+#' @keywords internal
+painel_nivel_parse <- function(nivel_id) {
+  chave <- suppressWarnings(trimws(as.character(nivel_id)[1]))
+  if (is.na(chave)) chave <- ""
+  pnad <- nzchar(chave) && tolower(chave) == "7p"
+  nivel <- if (pnad) 7L else suppressWarnings(as.integer(chave))[1]
+  if (!is.na(nivel) && nivel < 1L) nivel <- NA_integer_
+  filtro <- if (is.na(nivel)) {
+    "1 = 0"
+  } else if (pnad) {
+    sprintf("length(g.geoloc_id::text) = 7 AND l.local_id >= %d",
+            painel_municipio_limite_id)
+  } else if (identical(nivel, 7L)) {
+    sprintf("length(g.geoloc_id::text) = 7 AND l.local_id < %d",
+            painel_municipio_limite_id)
+  } else {
+    sprintf("length(g.geoloc_id::text) = %d", nivel)
+  }
+  list(nivel = nivel, pnad = pnad,
+       chave = if (is.na(nivel)) NA_character_ else
+         if (pnad) "7p" else as.character(nivel),
+       filtro = filtro)
+}
 
 # Siglas por codigo de UF (para desambiguar nomes de municipios repetidos)
 painel_uf_sigla <- c(
@@ -226,17 +268,21 @@ painel_uf_sigla <- c(
   "51" = "MT", "52" = "GO", "53" = "DF")
 
 #' Niveis territoriais disponiveis no DW: apenas os que possuem dados,
-#' com quantidade de localidades distintas
+#' com quantidade de localidades distintas. A largura 7 aparece em duas
+#' linhas — municipios ("7") e regioes de interesse em PNAD Contínua
+#' ("7p") — para nao somar 5.570 + 146 numa unica entrada
 #' @keywords internal
 painel_niveis <- function(con) {
   q <- DBI::dbGetQuery(con, paste(
-    "SELECT length(g.geoloc_id::text) AS nivel_id,",
+    "SELECT CASE WHEN length(g.geoloc_id::text) = 7",
+    sprintf("AND l.local_id >= %d THEN '7p'", painel_municipio_limite_id),
+    "ELSE length(g.geoloc_id::text)::text END AS nivel_id,",
     "count(DISTINCT v.local_id) AS n_locais",
     "FROM data_values v",
     "JOIN local l USING (local_id)",
     "JOIN geoloc g USING (geoloc_id)",
     "GROUP BY 1 ORDER BY 1"))
-  q$rotulo <- unname(painel_niveis_rotulo[as.character(q$nivel_id)])
+  q$rotulo <- unname(painel_niveis_rotulo[q$nivel_id])
   q[!is.na(q$rotulo), ]
 }
 
@@ -267,22 +313,23 @@ painel_indicador_default <- function(md, padrao = Sys.getenv("aedi_indicador", "
   as.integer(md$mdata_id[1])
 }
 
-#' Localidades de um nivel territorial (pela largura do geoloc_id) que
-#' possuem dados, rotuladas por nome (municipios ganham sigla da UF)
+#' Localidades de um nivel territorial (pela chave de [painel_nivel_parse()] )
+#' que possuem dados, rotuladas por nome (municipios ganham sigla da UF;
+#' regioes PNAD ja trazem o contexto no proprio nome)
 #' @keywords internal
 painel_locais_nivel <- function(con, nivel_id) {
-  nivel_id <- suppressWarnings(as.integer(nivel_id))[1]
-  if (is.na(nivel_id)) return(integer(0))
+  p <- painel_nivel_parse(nivel_id)
+  if (is.na(p$nivel)) return(integer(0))
   q <- DBI::dbGetQuery(con, sprintf(paste(
     "SELECT DISTINCT l.local_id, l.local_name,",
     "substring(g.geoloc_id::text, 1, 2) AS uf",
     "FROM data_values v",
     "JOIN local l USING (local_id)",
     "JOIN geoloc g USING (geoloc_id)",
-    "WHERE length(g.geoloc_id::text) = %d",
+    "WHERE %s",
     "ORDER BY l.local_name, l.local_id"),
-    nivel_id))
-  rotulo <- if (nivel_id == 7L) {
+    p$filtro))
+  rotulo <- if (identical(p$nivel, 7L) && !p$pnad) {
     sigla <- unname(painel_uf_sigla[q$uf])
     ifelse(is.na(sigla), q$local_name, paste0(q$local_name, " (", sigla, ")"))
   } else {
@@ -296,14 +343,14 @@ painel_locais_nivel <- function(con, nivel_id) {
 #' @keywords internal
 painel_local_top <- function(con, mdata_id, nivel_id) {
   mdata_id <- suppressWarnings(as.integer(mdata_id))[1]
-  nivel_id <- suppressWarnings(as.integer(nivel_id))[1]
-  if (is.na(mdata_id) || is.na(nivel_id)) return(NULL)
+  p <- painel_nivel_parse(nivel_id)
+  if (is.na(mdata_id) || is.na(p$nivel)) return(NULL)
   q <- DBI::dbGetQuery(con, sprintf(paste(
     "SELECT v.local_id FROM data_values v",
     "JOIN local l USING (local_id) JOIN geoloc g USING (geoloc_id)",
-    "WHERE v.mdata_id = %d AND length(g.geoloc_id::text) = %d",
+    "WHERE v.mdata_id = %d AND %s",
     "GROUP BY v.local_id ORDER BY count(*) DESC, v.local_id LIMIT 1"),
-    mdata_id, nivel_id))
+    mdata_id, p$filtro))
   if (nrow(q)) as.integer(q$local_id[1]) else NULL
 }
 
@@ -331,26 +378,28 @@ painel_geo_uf <- function(con) {
 
 #' Geometrias de um nivel territorial do DW para o globo, simplificadas
 #' no SQL (0.01 grau ~ 1 km) para o geojson ficar leve; niveis acima do
-#' limite de feicoes (municipio: 5.7 mil poligonos) voltam vazio e o
-#' chamador cai nas UFs como base do desenho
+#' limite de feicoes (municipio: 5.6 mil poligonos) voltam vazio e o
+#' chamador cai nas UFs como base do desenho — as regioes PNAD (146
+#' feicoes) sao desenhadas normalmente
 #' @keywords internal
 painel_geo_nivel <- function(con, nivel_id, max_feicoes = 700L) {
-  nivel_id <- suppressWarnings(as.integer(nivel_id))[1]
-  if (is.na(nivel_id)) return(painel_geo_vazio())
-  n_geo <- DBI::dbGetQuery(con, sprintf(
-    "SELECT count(*) AS n FROM geoloc WHERE length(geoloc_id::text) = %d",
-    nivel_id))$n
+  p <- painel_nivel_parse(nivel_id)
+  if (is.na(p$nivel)) return(painel_geo_vazio())
+  n_geo <- DBI::dbGetQuery(con, sprintf(paste(
+    "SELECT count(*) AS n FROM local l",
+    "JOIN geoloc g USING (geoloc_id) WHERE %s"),
+    p$filtro))$n
   if (!length(n_geo) || is.na(n_geo) || n_geo > max_feicoes) {
     return(painel_geo_vazio())
   }
-  geometria <- if (nivel_id <= 2L) "g.geometry" else
+  geometria <- if (p$nivel <= 2L) "g.geometry" else
     "ST_SimplifyPreserveTopology(g.geometry, 0.01) AS geometry"
   geo <- sf::st_read(con, query = sprintf(paste(
     "SELECT l.local_id, l.local_name,", geometria,
     "FROM local l JOIN geoloc g USING (geoloc_id)",
-    "WHERE length(g.geoloc_id::text) = %d",
+    "WHERE %s",
     "ORDER BY l.local_id"),
-    nivel_id), quiet = TRUE)
+    p$filtro), quiet = TRUE)
   geo$code <- as.character(geo$local_id)
   geo$label <- geo$local_name
   geo[, c("code", "label", "geometry")]
@@ -397,8 +446,8 @@ painel_geo_pai_uf <- function(con, local_id) {
 #' @keywords internal
 painel_ufs_com_dados <- function(con, mdata_id, nivel_id) {
   mdata_id <- suppressWarnings(as.integer(mdata_id))[1]
-  nivel_id <- suppressWarnings(as.integer(nivel_id))[1]
-  if (is.na(mdata_id) || is.na(nivel_id)) return(character(0))
+  p <- painel_nivel_parse(nivel_id)
+  if (is.na(mdata_id) || is.na(p$nivel)) return(character(0))
   q <- DBI::dbGetQuery(con, sprintf(paste(
     "SELECT DISTINCT luf.local_id",
     "FROM data_values v",
@@ -407,8 +456,8 @@ painel_ufs_com_dados <- function(con, mdata_id, nivel_id) {
     "JOIN geoloc guf ON length(guf.geoloc_id::text) = 2",
     "AND left(guf.geoloc_id::text, 2) = left(g.geoloc_id::text, 2)",
     "JOIN local luf ON luf.geoloc_id = guf.geoloc_id",
-    "WHERE v.mdata_id = %d AND length(g.geoloc_id::text) = %d"),
-    mdata_id, nivel_id))
+    "WHERE v.mdata_id = %d AND %s"),
+    mdata_id, p$filtro))
   as.character(q$local_id)
 }
 
@@ -417,9 +466,9 @@ painel_ufs_com_dados <- function(con, mdata_id, nivel_id) {
 #' @keywords internal
 painel_local_top_uf <- function(con, mdata_id, nivel_id, uf_local_id) {
   mdata_id <- suppressWarnings(as.integer(mdata_id))[1]
-  nivel_id <- suppressWarnings(as.integer(nivel_id))[1]
+  p <- painel_nivel_parse(nivel_id)
   uf_local_id <- suppressWarnings(as.integer(uf_local_id))[1]
-  if (is.na(mdata_id) || is.na(nivel_id) || is.na(uf_local_id)) return(NULL)
+  if (is.na(mdata_id) || is.na(p$nivel) || is.na(uf_local_id)) return(NULL)
   q <- DBI::dbGetQuery(con, sprintf(paste(
     "SELECT v.local_id FROM data_values v",
     "JOIN local l ON l.local_id = v.local_id",
@@ -427,10 +476,10 @@ painel_local_top_uf <- function(con, mdata_id, nivel_id, uf_local_id) {
     "JOIN geoloc guf ON length(guf.geoloc_id::text) = 2",
     "AND left(guf.geoloc_id::text, 2) = left(g.geoloc_id::text, 2)",
     "JOIN local luf ON luf.geoloc_id = guf.geoloc_id",
-    "WHERE v.mdata_id = %d AND length(g.geoloc_id::text) = %d",
+    "WHERE v.mdata_id = %d AND %s",
     "AND luf.local_id = %d",
     "GROUP BY v.local_id ORDER BY count(*) DESC, v.local_id LIMIT 1"),
-    mdata_id, nivel_id, uf_local_id))
+    mdata_id, p$filtro, uf_local_id))
   if (nrow(q)) as.integer(q$local_id[1]) else NULL
 }
 
@@ -439,14 +488,14 @@ painel_local_top_uf <- function(con, mdata_id, nivel_id, uf_local_id) {
 #' @keywords internal
 painel_locais_com_dados <- function(con, mdata_id, nivel_id) {
   mdata_id <- suppressWarnings(as.integer(mdata_id))[1]
-  nivel_id <- suppressWarnings(as.integer(nivel_id))[1]
-  if (is.na(mdata_id) || is.na(nivel_id)) return(character(0))
+  p <- painel_nivel_parse(nivel_id)
+  if (is.na(mdata_id) || is.na(p$nivel)) return(character(0))
   q <- DBI::dbGetQuery(con, sprintf(paste(
     "SELECT DISTINCT v.local_id",
     "FROM data_values v",
     "JOIN local l USING (local_id) JOIN geoloc g USING (geoloc_id)",
-    "WHERE v.mdata_id = %d AND length(g.geoloc_id::text) = %d"),
-    mdata_id, nivel_id))
+    "WHERE v.mdata_id = %d AND %s"),
+    mdata_id, p$filtro))
   as.character(q$local_id)
 }
 
@@ -756,10 +805,10 @@ painel_geo_uf_cache <- function() {
 #' Geometrias de um nivel territorial, cacheado
 #' @keywords internal
 painel_geo_nivel_cache <- function(nivel_id) {
-  nivel_id <- suppressWarnings(as.integer(nivel_id))[1]
-  if (is.na(nivel_id)) return(painel_geo_vazio())
+  p <- painel_nivel_parse(nivel_id)
+  if (is.na(p$nivel)) return(painel_geo_vazio())
   painel_cache_get(
-    painel_cache_chave(sprintf("geo_nivel_%d", nivel_id)),
+    painel_cache_chave(sprintf("geo_nivel_%s", p$chave)),
     painel_cache_ttl[["geo"]],
     function() painel_com_con(function(con) painel_geo_nivel(con, nivel_id)))
 }
@@ -790,10 +839,10 @@ painel_geo_pai_uf_cache <- function(local_id) {
 #' @keywords internal
 painel_ufs_com_dados_cache <- function(mdata_id, nivel_id) {
   mdata_id <- suppressWarnings(as.integer(mdata_id))[1]
-  nivel_id <- suppressWarnings(as.integer(nivel_id))[1]
-  if (is.na(mdata_id) || is.na(nivel_id)) return(character(0))
+  p <- painel_nivel_parse(nivel_id)
+  if (is.na(mdata_id) || is.na(p$nivel)) return(character(0))
   painel_cache_get(
-    painel_cache_chave(sprintf("ufs_com_dados_%d_%d", mdata_id, nivel_id)),
+    painel_cache_chave(sprintf("ufs_com_dados_%d_%s", mdata_id, p$chave)),
     painel_cache_ttl[["catalogo"]],
     function() painel_com_con(function(con)
       painel_ufs_com_dados(con, mdata_id, nivel_id)))
@@ -817,10 +866,10 @@ painel_local_top_uf_cache <- function(mdata_id, nivel_id, uf_local_id) {
 #' Localidades de um nivel territorial, cacheado
 #' @keywords internal
 painel_locais_nivel_cache <- function(nivel_id) {
-  nivel_id <- suppressWarnings(as.integer(nivel_id))[1]
-  if (is.na(nivel_id)) return(integer(0))
+  p <- painel_nivel_parse(nivel_id)
+  if (is.na(p$nivel)) return(integer(0))
   painel_cache_get(
-    painel_cache_chave(sprintf("locais_nivel_%d", nivel_id)),
+    painel_cache_chave(sprintf("locais_nivel_%s", p$chave)),
     painel_cache_ttl[["catalogo"]],
     function() painel_com_con(function(con) painel_locais_nivel(con, nivel_id)))
 }
@@ -829,10 +878,10 @@ painel_locais_nivel_cache <- function(nivel_id) {
 #' @keywords internal
 painel_local_top_cache <- function(mdata_id, nivel_id) {
   mdata_id <- suppressWarnings(as.integer(mdata_id))[1]
-  nivel_id <- suppressWarnings(as.integer(nivel_id))[1]
-  if (is.na(mdata_id) || is.na(nivel_id)) return(NULL)
+  p <- painel_nivel_parse(nivel_id)
+  if (is.na(mdata_id) || is.na(p$nivel)) return(NULL)
   painel_cache_get(
-    painel_cache_chave(sprintf("local_top_%d_%d", mdata_id, nivel_id)),
+    painel_cache_chave(sprintf("local_top_%d_%s", mdata_id, p$chave)),
     painel_cache_ttl[["catalogo"]],
     function() painel_com_con(function(con)
       painel_local_top(con, mdata_id, nivel_id)))
@@ -842,10 +891,10 @@ painel_local_top_cache <- function(mdata_id, nivel_id) {
 #' @keywords internal
 painel_locais_com_dados_cache <- function(mdata_id, nivel_id) {
   mdata_id <- suppressWarnings(as.integer(mdata_id))[1]
-  nivel_id <- suppressWarnings(as.integer(nivel_id))[1]
-  if (is.na(mdata_id) || is.na(nivel_id)) return(character(0))
+  p <- painel_nivel_parse(nivel_id)
+  if (is.na(mdata_id) || is.na(p$nivel)) return(character(0))
   painel_cache_get(
-    painel_cache_chave(sprintf("locais_com_dados_%d_%d", mdata_id, nivel_id)),
+    painel_cache_chave(sprintf("locais_com_dados_%d_%s", mdata_id, p$chave)),
     painel_cache_ttl[["catalogo"]],
     function() painel_com_con(function(con)
       painel_locais_com_dados(con, mdata_id, nivel_id)))

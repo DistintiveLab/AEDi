@@ -2,13 +2,15 @@
 % Please edit documentation in R/painel_dw.R
 \name{painel_locais_nivel}
 \alias{painel_locais_nivel}
-\title{Localidades de um nivel territorial (pela largura do geoloc_id) que
-possuem dados, rotuladas por nome (municipios ganham sigla da UF)}
+\title{Localidades de um nivel territorial (pela chave de \code{\link[=painel_nivel_parse]{painel_nivel_parse()}} )
+que possuem dados, rotuladas por nome (municipios ganham sigla da UF;
+regioes PNAD ja trazem o contexto no proprio nome)}
 \usage{
 painel_locais_nivel(con, nivel_id)
 }
 \description{
-Localidades de um nivel territorial (pela largura do geoloc_id) que
-possuem dados, rotuladas por nome (municipios ganham sigla da UF)
+Localidades de um nivel territorial (pela chave de \code{\link[=painel_nivel_parse]{painel_nivel_parse()}} )
+que possuem dados, rotuladas por nome (municipios ganham sigla da UF;
+regioes PNAD ja trazem o contexto no proprio nome)
 }
 \keyword{internal}
