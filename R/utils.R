@@ -6,11 +6,13 @@ ajam <- \(col){
 
 somasna <- \(x){sum(x,na.rm=T)}
 
-maxsna <- \(x){max(x,na.rm=T)}
+# max/min/mean sobre grupo todo-NA devolvem -Inf/Inf/NaN, que envenenam contas
+# a jusante (0 ou Inf silencioso). Retornar NA torna a falta de dado visivel.
+maxsna <- \(x){m <- suppressWarnings(max(x,na.rm=T)); if (is.infinite(m)||is.na(m)) NA_real_ else m}
 
-minsna <- \(x){min(x,na.rm=T)}
+minsna <- \(x){m <- suppressWarnings(min(x,na.rm=T)); if (is.infinite(m)||is.na(m)) NA_real_ else m}
 
-mediasna <- \(x){mean(x,na.rm=T)}
+mediasna <- \(x){m <- suppressWarnings(mean(x,na.rm=T)); if (is.nan(m)||is.na(m)) NA_real_ else m}
 
 percentvar_sna <- \(x){
   valbase <- dplyr::lag(x)
