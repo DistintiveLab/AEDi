@@ -163,7 +163,7 @@ h3 { font-size: 19px; }
 .painel-sobre-secao { border-top: 1px solid var(--p-linha); padding: 34px 0; }
 .painel-sobre-secao:first-of-type { border-top: 0; padding-top: 0; }
 .painel-pessoa {
-  display: grid; grid-template-columns: minmax(0, 340px); gap: 22px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(0, 340px)); gap: 22px;
   align-items: start; max-width: 780px;
 }
 .painel-pessoa-card {
@@ -172,6 +172,7 @@ h3 { font-size: 19px; }
 }
 .painel-pessoa-card h3 { margin-bottom: 4px; }
 .painel-pessoa-papel { color: var(--p-mudo); font-size: 14px; margin-bottom: 12px; }
+.painel-apoios { display: grid; gap: 18px; }
 .painel-apoio {
   display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 40px;
   align-items: center; max-width: 900px; padding: 30px;

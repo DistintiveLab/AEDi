@@ -22,6 +22,14 @@
   editar código: a env var `painel_apoio` aceita
   "texto antes|nome|url|texto depois" (nome vira link da url) ou uma
   frase simples sem link.
+- A aba Sobre aceita múltiplas entradas nas duas seções: `painel_equipe`
+  monta N cartões em "Quem faz" (entradas por ";", campos
+  "nome|papel|email", email opcional) e `painel_apoios` monta N boxes em
+  "Apoio" (entradas por ";", campos "logo|url|frase|nome"; logo é arquivo
+  do `www/` ou URL, nome opcional cai no domínio da url). Sem as env
+  vars o painel fica exatamente como hoje (um cartão e o box Distintive,
+  cuja frase segue `painel_apoio`); a resolução de logos sai da nova
+  `painel_marca_src()`, generalização de `painel_logo_src()`.
 
 # AEDi 0.7.0 (2026-09-23)
 

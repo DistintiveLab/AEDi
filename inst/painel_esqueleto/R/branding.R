@@ -17,6 +17,14 @@
 #                     "texto antes|nome|url|texto depois" separados por
 #                     "|" (nome vira link da url); sem "|" a linha inteira
 #                     vira texto puro; vazio mantem o credito a Distintive
+#   painel_equipe     cartoes da equipe ("Quem faz") da aba Sobre, entradas
+#                     separadas por ";" e campos "nome|papel|email" por
+#                     "|" (email opcional); vazio mantem o cartao do autor
+#   painel_apoios     boxes de apoio da aba Sobre, entradas separadas por
+#                     ";" e campos "logo|url|frase|nome" por "|" (logo =
+#                     arquivo do www/ ou URL; nome opcional, default do
+#                     dominio da url); vazio mantem o box padrao Distintive
+#                     (com a frase de painel_apoio)
 
 #' Titulo do painel (usa painel_titulo)
 #' @keywords internal
@@ -77,4 +85,68 @@ painel_brand_apoio <- function(
       else nome
     },
     campos[4])
+}
+
+#' Cartoes da equipe da aba Sobre (usa painel_equipe): entradas separadas
+#' por ";", campos "nome|papel|email" por "|" (email opcional); vazio
+#' mantem o cartao unico do autor
+#' @keywords internal
+painel_brand_equipe <- function(
+  default = paste("Rodrigo Emmanuel Santana Borges|",
+                  "Desenvolvedor e cientista de dados|",
+                  "rodrigo@borges.net.br", sep = "")) {
+  valor <- trimws(Sys.getenv("painel_equipe", ""))
+  if (!nzchar(valor)) valor <- default
+  entradas <- trimws(strsplit(valor, ";", fixed = TRUE)[[1]])
+  lapply(entradas[nzchar(entradas)], function(entrada) {
+    campos <- strsplit(entrada, "|", fixed = TRUE)[[1]]
+    length(campos) <- 3
+    campos[is.na(campos)] <- ""
+    campos <- trimws(campos)
+    shiny::tags$div(class = "painel-pessoa-card",
+      shiny::tags$h3(campos[1]),
+      if (nzchar(campos[2]))
+        shiny::tags$p(class = "painel-pessoa-papel", campos[2]),
+      if (nzchar(campos[3]))
+        shiny::tags$p(shiny::tags$strong("Contato: "),
+          shiny::tags$a(href = paste0("mailto:", campos[3]), campos[3])))
+  })
+}
+
+#' Um box de apoio da aba Sobre: logo clicavel ao lado da frase
+#' @keywords internal
+painel_brand_apoio_box <- function(logo, url, frase, nome) {
+  src <- if (nzchar(logo)) painel_marca_src(logo) else painel_logo_src()
+  dominio <- gsub("^https?://(www\\.)?", "", url)
+  if (!nzchar(nome)) nome <- dominio
+  rotulo <- if (nzchar(dominio) && !identical(nome, dominio))
+    paste0(nome, " (", dominio, ")") else nome
+  shiny::tags$div(class = "painel-apoio",
+    shiny::tags$a(class = "painel-apoio-logo", href = url,
+      target = "_blank", rel = "noopener", `aria-label` = rotulo,
+      shiny::tags$img(src = src, alt = paste("Logotipo da", nome))),
+    shiny::tags$div(class = "painel-apoio-texto", frase))
+}
+
+#' Boxes de apoio da aba Sobre (usa painel_apoios): entradas separadas por
+#' ";", campos "logo|url|frase|nome" por "|" (nome opcional, default do
+#' dominio da url); vazio mantem o box padrao Distintive, cuja frase segue
+#' a variavel painel_apoio
+#' @keywords internal
+painel_brand_apoios <- function() {
+  valor <- trimws(Sys.getenv("painel_apoios", ""))
+  if (!nzchar(valor)) {
+    return(list(painel_brand_apoio_box(
+      logo = "", url = "https://www.distintive.com.br",
+      frase = painel_brand_apoio(), nome = "Distintive")))
+  }
+  entradas <- trimws(strsplit(valor, ";", fixed = TRUE)[[1]])
+  lapply(entradas[nzchar(entradas)], function(entrada) {
+    campos <- strsplit(entrada, "|", fixed = TRUE)[[1]]
+    length(campos) <- 4
+    campos[is.na(campos)] <- ""
+    campos <- trimws(campos)
+    painel_brand_apoio_box(logo = campos[1], url = campos[2],
+      frase = shiny::tags$p(campos[3]), nome = campos[4])
+  })
 }

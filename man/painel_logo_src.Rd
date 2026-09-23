@@ -2,7 +2,7 @@
 % Please edit documentation in R/painel_ui.R
 \name{painel_logo_src}
 \alias{painel_logo_src}
-\title{Resolve o src do logo para o painel (funciona fora do app completo)}
+\title{Resolve o src do logo para o painel (variavel \code{aedi_logo})}
 \usage{
 painel_logo_src(assets_dir = NULL)
 }
@@ -11,9 +11,6 @@ painel_logo_src(assets_dir = NULL)
 no diretorio corrente e cai para o embutido no pacote}
 }
 \description{
-Procura o logo (variavel \code{aedi_logo}, default do pacote) no diretorio
-de assets informado — no esqueleto gerado por \code{\link[=deploy_panel]{deploy_panel()}} e o
-proprio \verb{www/} local — com fallback para o \verb{www/} embutido no pacote
-(inst/app/www) via resource path.
+Resolve o src do logo para o painel (variavel \code{aedi_logo})
 }
 \keyword{internal}

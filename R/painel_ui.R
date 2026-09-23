@@ -5,18 +5,19 @@
 # deploy_panel(esqueleto = TRUE) as copia para o esqueleto do projeto,
 # onde viram base de adaptacao (soltar/adicionar abas, trocar rodape etc).
 
-#' Resolve o src do logo para o painel (funciona fora do app completo)
+#' Resolve o src de uma marca (logo) do painel (funciona fora do app)
 #'
-#' Procura o logo (variavel `aedi_logo`, default do pacote) no diretorio
-#' de assets informado — no esqueleto gerado por [deploy_panel()] e o
-#' proprio `www/` local — com fallback para o `www/` embutido no pacote
-#' (inst/app/www) via resource path.
+#' Procura o arquivo informado no diretorio de assets — no esqueleto gerado
+#' por [deploy_panel()] e o proprio `www/` local — com fallback para o `www/`
+#' embutido no pacote (inst/app/www) via resource path; URLs http(s) passam
+#' direto. [painel_logo_src()] e o caso particular da marca do topbar
+#' (variavel `aedi_logo`); a aba Sobre reutiliza para logos de apoio.
 #'
+#' @param logo nome do arquivo da marca (ou URL http/https)
 #' @param assets_dir diretorio de assets do painel; default tenta "www"
 #'   no diretorio corrente e cai para o embutido no pacote
 #' @keywords internal
-painel_logo_src <- function(assets_dir = NULL) {
-  logo <- Sys.getenv("aedi_logo", "aedi-Wide.png")
+painel_marca_src <- function(logo, assets_dir = NULL) {
   if (grepl("^https?://", logo)) return(logo)
   candidatos <- if (is.null(assets_dir))
     c("www", system.file("app", "www", package = "AEDi"))
@@ -35,6 +36,13 @@ painel_logo_src <- function(assets_dir = NULL) {
     system.file("app", "www", package = "AEDi") else assets_dir
   shiny::addResourcePath("aedi_marca", d)
   file.path("aedi_marca", basename(logo))
+}
+
+#' Resolve o src do logo para o painel (variavel `aedi_logo`)
+#' @inheritParams painel_marca_src
+#' @keywords internal
+painel_logo_src <- function(assets_dir = NULL) {
+  painel_marca_src(Sys.getenv("aedi_logo", "aedi-Wide.png"), assets_dir)
 }
 
 #' Opcoes das caixas de selecao do painel: selectize com pesquisa por parte
