@@ -91,7 +91,7 @@ da série histórica.
 ## Dependências
 
 - Pacotes do CRAN usados pelos módulos (shiny, leaflet, plotly, DBI,
-  RPostgres, dplyr, ...);
+  RPostgres, dplyr, openxlsx — planilhas da aba "Baixar", ...);
 - `shinyGovBRstyle` (GitHub):
   `remotes::install_github("DistintiveLab/shinyGovBRstyle")`.
 
