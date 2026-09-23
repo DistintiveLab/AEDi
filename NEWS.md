@@ -1,4 +1,4 @@
-# AEDi 0.6.9.9000
+# AEDi 0.7.0 (2026-09-23)
 
 ## Seletor de indicadores agrupado por eixo/objetivo
 
