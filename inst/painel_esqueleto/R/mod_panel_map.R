@@ -20,8 +20,8 @@ mod_panel_map_ui <- function(id) {
         tags$label(`for` = ns("indicador"), "Indicador"),
         tags$div(class = "painel-mapa-indicador-linha",
           shiny::selectizeInput(ns("indicador"), NULL, choices = NULL,
-                                width = "100%", options = list(
-                                  placeholder = "Escolha um indicador")),
+                                width = "100%", options = painel_opcoes_select(
+                                  "Escolha um indicador")),
           shiny::actionButton(ns("info"), NULL,
             icon = shiny::icon("circle-info"),
             class = "painel-info-btn",

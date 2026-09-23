@@ -343,20 +343,71 @@ painel_locais_com_dados <- function(con, mdata_id, nivel_id) {
   as.character(q$local_id)
 }
 
-#' Hierarquia de agrupamentos de indicadores: filhos diretos das raizes
-#' "Eixos" e "Objetivos" com os indicadores vinculados (mdata_group) —
-#' estrutura do resumo e do accordeon da aba Regiao
+# Familia de indicadores de cada eixo do catalogo: o prefixo de orig_name
+# (convencao do pacote: orig_name == nome do script de coleta) identifica a
+# familia do indicador, e o "comp_" na frente identifica o composto do eixo.
+painel_familias_eixo <- c(
+  educ = "Eixo 1", citec = "Eixo 2", desprod = "Eixo 3", infra = "Eixo 4",
+  dessoc = "Eixo 5", sust = "Eixo 6", governativas = "Eixo 7")
+
+#' Grupo de um indicador do catalogo (Eixo N, Objetivo N ou Estratos PNAD)
+#' pela convencao de orig_name; NA para os indicadores de apoio
+#'
+#' O catalogo do DW e montado por convencao de nome (educ1..4 + comp_educ no
+#' Eixo 1, objetivo2_1..3 + comp_objetivo2 no Objetivo 2, pnadc1..7 +
+#' comp_pnadc8..14 nos Estratos PNAD): a tabela mdata_group existe, mas esta
+#' populada so parcialmente (verificado 2026-09-22: 7 dos 35 indicadores dos
+#' eixos), entao nao serve de fonte da hierarquia. Variacoes de trabalho
+#' (`_via_aedi`, `_v0`) ficam fora do catalogo, que e o que o painel publica.
+#' @keywords internal
+painel_grupo_indicador <- function(orig_name) {
+  x <- trimws(as.character(orig_name))
+  x <- sub("^comp_", "", x)
+  x[grepl("_v[0-9]+$", x)] <- NA_character_
+  grupo <- rep(NA_character_, length(x))
+  for (familia in names(painel_familias_eixo)) {
+    alvo <- grepl(sprintf("^%s[0-9]*$", familia), x)
+    grupo[alvo] <- unname(painel_familias_eixo[[familia]])
+  }
+  alvo <- grepl("^objetivo[0-9]+(_[0-9]+)?$", x)
+  grupo[alvo] <- paste0("Objetivo ", sub("^objetivo([0-9]+).*$", "\\1", x[alvo]))
+  grupo[grepl("^pnadc[0-9]+$", x)] <- "Estratos PNAD"
+  grupo
+}
+
+#' Raiz de um grupo do catalogo (Eixos, Objetivos ou o proprio grupo)
+#' @keywords internal
+painel_grupo_raiz <- function(grupo) {
+  ifelse(grepl("^Eixo", grupo), "Eixos",
+         ifelse(grepl("^Objetivo", grupo), "Objetivos", grupo))
+}
+
+#' Hierarquia do catalogo de indicadores: raiz (Eixos, Objetivos, Estratos
+#' PNAD) > grupo (Eixo 1..7, Objetivo 1..4) > indicador, com a classe do
+#' dado (data_class_id) — estrutura do resumo e do accordeon da aba Regiao
+#'
+#' Os ids e nomes de grupo vem da tabela datagroup do DW; o vinculo de cada
+#' indicador ao grupo vem da convencao de orig_name (ver
+#' [painel_grupo_indicador()]). Indicador sem grupo conhecido fica de fora.
 #' @keywords internal
 painel_hierarquia <- function(con) {
-  DBI::dbGetQuery(con, paste(
-    "SELECT p.datagroup_parentid AS raiz_id, r.datagroup_name AS raiz_nome,",
-    "g.datagroup_id, g.datagroup_name, mg.mdata_id",
-    "FROM group_parent p",
-    "JOIN datagroup r ON r.datagroup_id = p.datagroup_parentid",
-    "AND r.datagroup_name IN ('Eixos', 'Objetivos')",
-    "JOIN datagroup g ON g.datagroup_id = p.datagroup_id",
-    "LEFT JOIN mdata_group mg ON mg.datagroup_id = g.datagroup_id",
-    "ORDER BY 1, 3, mg.mdata_id"))
+  md <- DBI::dbGetQuery(con, paste(
+    "SELECT m.mdata_id, m.orig_name, m.data_name, e.data_class_id",
+    "FROM mdata m LEFT JOIN mdata_exts e USING (mdata_id)",
+    "ORDER BY m.mdata_id"))
+  md$datagroup_name <- painel_grupo_indicador(md$orig_name)
+  md <- md[!is.na(md$datagroup_name), ]
+  grupos <- DBI::dbGetQuery(con,
+    "SELECT datagroup_id, datagroup_name FROM datagroup")
+  md$raiz_nome <- painel_grupo_raiz(md$datagroup_name)
+  md$datagroup_id <- grupos$datagroup_id[match(md$datagroup_name,
+                                               grupos$datagroup_name)]
+  md$raiz_id <- grupos$datagroup_id[match(md$raiz_nome, grupos$datagroup_name)]
+  md <- md[order(md$raiz_nome, md$datagroup_id, md$mdata_id),
+           c("raiz_id", "raiz_nome", "datagroup_id", "datagroup_name",
+             "mdata_id", "data_class_id", "orig_name", "data_name")]
+  rownames(md) <- NULL
+  md
 }
 
 #' Indicadores compostos do catalogo (data_class_id = 4 no mdata_exts)
@@ -367,6 +418,40 @@ painel_compostos <- function(con) {
     "FROM mdata m",
     "JOIN mdata_exts e ON e.mdata_id = m.mdata_id AND e.data_class_id = 4",
     "ORDER BY m.orig_name"))
+}
+
+#' Resumo por grupo do catalogo: um cartao por indicador composto com o
+#' valor mais recente na localidade (rotulo, valor e ano) — conteudo do
+#' "Resumo da regiao" na aba Regiao
+#'
+#' @param hierarquia tabela de [painel_hierarquia()]
+#' @param compostos tabela de [painel_compostos()]
+#' @param valores tabela de [painel_valores_local_todos()]
+#' @keywords internal
+painel_resumo_grupos <- function(hierarquia, compostos, valores) {
+  vazio <- data.frame(grupo = character(0), raiz = character(0),
+                      mdata_id = integer(0), rotulo = character(0),
+                      valor = numeric(0), refdate = as.Date(character(0)))
+  if (!NROW(hierarquia) || !NROW(compostos) || !NROW(valores)) return(vazio)
+  h <- hierarquia[hierarquia$mdata_id %in% compostos$mdata_id, ]
+  if (!nrow(h)) return(vazio)
+  linhas <- lapply(seq_len(nrow(h)), function(i) {
+    v <- valores[valores$mdata_id == h$mdata_id[i] &
+                   is.finite(valores$value), ]
+    if (!nrow(v)) return(NULL)
+    ultimo <- which.max(v$refdate)
+    nome <- h$data_name[i]
+    if (is.na(nome) || !nzchar(nome)) nome <- h$orig_name[i]
+    data.frame(grupo = h$datagroup_name[i], raiz = h$raiz_nome[i],
+               mdata_id = h$mdata_id[i],
+               rotulo = paste0(trimws(nome), " — ", h$datagroup_name[i]),
+               valor = v$value[ultimo], refdate = v$refdate[ultimo])
+  })
+  linhas <- linhas[!vapply(linhas, is.null, logical(1))]
+  if (!length(linhas)) return(vazio)
+  resumo <- do.call(rbind, linhas)
+  rownames(resumo) <- NULL
+  resumo
 }
 
 #' Valores de TODOS os indicadores em uma localidade — alimenta o resumo
