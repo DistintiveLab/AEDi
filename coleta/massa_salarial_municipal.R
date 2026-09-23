@@ -51,7 +51,7 @@ dbdbase <- DBI::dbGetQuery(con,"SELECT * from geonamed_datavalues WHERE orig_nam
 dbdbase <- dbdbase|>
   dplyr::mutate(data_freq_id=max(data_freq_id))|>
 
-  tidyr::pivot_wider(names_from='orig_name',values_from = 'value', id_cols = c(local_id,refdate),values_fill = 0,unused_fn=dplyr::first)
+  tidyr::pivot_wider(names_from='orig_name',values_from = 'value', id_cols = c(local_id,refdate),unused_fn=dplyr::first)
 
 
 massalmun <- massalmun|>
@@ -62,26 +62,49 @@ massalmun <- massalmun|>
   dplyr::left_join(dbdbase|>dplyr::select(refdate,local_id,datasus_popmun))
 
 
+# maxsna guardado: sem ele max(x, na.rm = TRUE) devolve -Inf quando a coluna
+# inteira e NA (ex.: ano sem populacao no DW), e value = massa/-Inf = 0 -- foi
+# o que zerou objetivo2_3 em 2025.
+maxsna <- \(x) { m <- suppressWarnings(max(x, na.rm = TRUE)); if (is.infinite(m) || is.na(m)) NA_real_ else m }
+
 massalmun <-
   massalmun|>
   dplyr::mutate(uf=trunc(local/10000))|>
-  dplyr::group_by(ano,uf)|>
   dplyr::filter(uf!=99)|>
-  dplyr::mutate(pop_max = max(datasus_popmun),
-                massa_salarial_uf = ifelse(datasus_popmun == pop_max, massa_salarial, NA),
-                massa_salarial_uf = max(massa_salarial_uf, na.rm = TRUE),
-                value = massa_salarial/massa_salarial_uf)
+  dplyr::group_by(ano,uf)|>
+  dplyr::mutate(
+    pop_max = maxsna(datasus_popmun),
+    # denominador: massa do municipio mais populoso do estado (proxy da capital)
+    massa_salarial_uf = maxsna(ifelse(!is.na(pop_max) & !is.na(datasus_popmun) &
+                                        datasus_popmun == pop_max,
+                                      massa_salarial, NA)),
+    # ano sem populacao: cai no maximo da massa do estado (mesma grandeza)
+    massa_salarial_uf = ifelse(is.na(massa_salarial_uf),
+                               maxsna(massa_salarial), massa_salarial_uf),
+    value = ifelse(is.finite(massa_salarial_uf),
+                   massa_salarial/massa_salarial_uf, NA_real_))|>
+  dplyr::ungroup()
 
-massalmun <-
-  massalmun|>dplyr::mutate(
-    value=massa_salarial/massa_salarial_uf
-  )
+# diagnostico: sem isto o ano sem populacao zerava em silencio
+sem_pop <- massalmun|>dplyr::filter(is.na(datasus_popmun))|>dplyr::distinct(ano)|>dplyr::pull(ano)
+if (length(sem_pop))
+  warning("massa_salarial_municipal: sem datasus_popmun em ",
+          paste(sem_pop, collapse = ", "),
+          " -- denominador caiu no maximo da massa do estado")
+sem_valor <- massalmun|>dplyr::filter(is.na(value))|>dplyr::distinct(ano)|>dplyr::pull(ano)
+if (length(sem_valor))
+  warning("massa_salarial_municipal: ", paste(sem_valor, collapse = ", "),
+          " ficaram sem valor (NA, nao zero)")
 
 obj2_3_aedi_recalc <- massalmun|>
   dplyr::transmute(
     refdate=as.Date(paste0(ano,"-12-31")),
     local_id,
     obj2_3_aedi = value)
+
+# cache para o upsert.R ler (o upsert roda em sessao manual, sem o objeto)
+dir.create("coleta/cache/objetivo2_3_via_aedi", recursive = TRUE, showWarnings = FALSE)
+saveRDS(obj2_3_aedi_recalc, "coleta/cache/objetivo2_3_via_aedi/obj2_3_aedi.rds")
 
 AEDi:::gravar_serie_dw("objetivo2_3_via_aedi",
   data.frame(local = obj2_3_aedi_recalc$local_id,

@@ -2,7 +2,7 @@
 # (datasus_popmun) por refdate — recorte usado como denominador/referencia.
 # Recalculo completo (replace) a partir do DW. Padrao A5b.
 
-maxsna <- \(x) { m <- max(x, na.rm = TRUE); if (is.infinite(m)) NA else m }
+maxsna <- \(x) { m <- suppressWarnings(max(x, na.rm = TRUE)); if (is.infinite(m) || is.na(m)) NA_real_ else m }
 
 # conexao LOCAL incondicional: nunca herdar con de sessao (pode apontar
 # para o painelpndr remoto, onde as matviews tem outros dados)

@@ -11,7 +11,17 @@ p <- xml2::read_html("http://tabnet.datasus.gov.br/cgi/deftohtm.exe?ibge/cnv/pop
 ano_ref <- max(p |> rvest::html_nodes("#A option") |> rvest::html_text() |>
                  trimws() |> as.numeric(), na.rm = TRUE)
 
-d <- datasus::ibge_popt2024br_mun(periodo = "last", municipio = "all")
+# aviso: enquanto a origem nao publica o ano corrente, todo indicador que usa
+# populacao como denominador (objetivo2_2, objetivo2_3, primazia populacional)
+# fica sem base no ano corrente -- falha visivel, em vez de zero silencioso.
+ano_atual <- as.numeric(format(Sys.Date(), "%Y"))
+if (ano_ref < ano_atual)
+  warning("datasus_popmun: TABNET ainda nao publica ", ano_atual,
+          " (ultimo periodo disponivel: ", ano_ref, ")")
+
+# periodo explicito (o ano que sera gravado): evita depender da ordem do
+# seletor em `periodo = "last"` e do rotulo ano_ref divergir do dado trazido
+d <- datasus::ibge_popt2024br_mun(periodo = as.character(ano_ref), municipio = "all")
 d <- d[d$Município != "TOTAL", ]
 
 serie <- data.frame(
