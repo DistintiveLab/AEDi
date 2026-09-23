@@ -1,7 +1,7 @@
 Package: AEDi
 Title: Pacote de inclusão de fontes de dados, indicadores, e filtros de variáveis
-Version: 0.6.2.9000
-Date: 2026-09-21
+Version: 0.6.7.9000
+Date: 2026-09-22
 Authors@R: 
     c(person(given = "Rodrigo",
              family = "Borges",
@@ -81,6 +81,7 @@ Collate:
     'data_summary.R'
     'dbdatawriter.R'
     'dbprepare.R'
+    'dependencias.R'
     'deploy_panel.R'
     'executa_atualizacao.R'
     'gravar_serie_dw.R'

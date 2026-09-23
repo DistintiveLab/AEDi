@@ -24,6 +24,6 @@ Idempotente e nao destrutivo: cria os \code{datagroup}/\code{group_parent} que f
 (Eixos, Objetivos, Estratos PNAD e os grupos Eixo 1..7 / Objetivo 1..4),
 completa os vinculos de \code{mdata_group} de todos os indicadores que seguem a
 convencao de \code{orig_name} e relata os vinculos que fogem dela — sem apagar
-nenhuma linha. Rode depois de ETLs que adicionem indicadores; sem
-indicadores cadastrados (DW recem criado) apenas declara os grupos.
+nenhuma linha. Rode depois de ETLs que adicionem indicadores; num DW recem
+criado (sem indicadores) apenas declara os grupos.
 }

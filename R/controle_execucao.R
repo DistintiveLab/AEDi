@@ -72,6 +72,12 @@ controle_preparar <- function() {
   DBI::dbExecute(con, "
     ALTER TABLE versoes_carga ADD COLUMN IF NOT EXISTS fingerprint TEXT")
 
+  # grafo de dependencias (fase 1, ver R/dependencias.R): coluna dormante
+  # desde a criacao da tabela; garante a coluna em bancos mais antigos
+  DBI::dbExecute(con, "
+    ALTER TABLE controle_execucao
+      ADD COLUMN IF NOT EXISTS dependencias_json JSONB")
+
   # migracao multi-projeto (0.4.1): backfill 'AEDi' e PK composta
   DBI::dbExecute(con, "
     ALTER TABLE controle_execucao
