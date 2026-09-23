@@ -22,6 +22,7 @@ log_messages <- list(
   script_erro   = "ERRO no script %s: %s",
   script_ignorado = "Script ignorado (.ignore): %s",
   script_pulado   = "Script pulado (sem novidades): %s (%s)",
+  script_pulado_dep = "Script pulado (dependencia desatualizada): %s (%s)",
   nenhum        = "Nenhum script de coleta encontrado em %s"
 )
 
@@ -276,6 +277,24 @@ executar_script_coleta <- function(arquivo, raiz = .aedi_raiz(),
       return(invisible(TRUE))
     }
   }
+  # fase 1 do roadmap_dependencias_orquestrador.md: grafo de dependencias
+  # no DW (controle_execucao.dependencias_json; fallback CSV-semente).
+  # Mesmo fail-safe do C5: verificacao indisponivel NAO bloqueia o lote.
+  dep <- tryCatch(AEDi:::verificar_dependencias(nome, raiz),
+                  error = function(e) list(
+                    pular = FALSE,
+                    motivo = paste("verificacao indisponivel:",
+                                   conditionMessage(e))))
+  if (isTRUE(dep$pular)) {
+    hist_id <- AEDi:::controle_inicio(nome, projeto = projeto)
+    AEDi:::controle_fim(nome, hist_id, TRUE, mensagem = dep$motivo,
+                        linhas = NA_integer_,
+                        projeto = projeto, hash_estado = NA_character_)
+    flog.info(log_messages$script_pulado_dep, nome, dep$motivo)
+    return(invisible(TRUE))
+  }
+  if (length(dep$motivo) && nzchar(dep$motivo))
+    flog.warn("dependencias de %s: %s", nome, dep$motivo)
   hist_id <- AEDi:::controle_inicio(nome, projeto = projeto)
   t0 <- Sys.time()
   res <- tryCatch({

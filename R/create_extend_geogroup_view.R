@@ -1,24 +1,31 @@
 ###CRIAR/ EXTENDER APENAS CONSULTA - recortes geograficos
 
 
-con <-
+# Conexao sob demanda: o `con` top-level anterior vazava para o namespace
+# em load_all() e era encontrado por guards `if (!exists("con"))` de
+# scripts A5b, que passavam a ler o banco remoto (tdbname) sem perceber
+# (descoberto na cura do bug de cobertura municipal, 2026-09-22).
+.con_recortes <- function() {
   tryCatch(
     DBI::dbConnect(
       RPostgres::Postgres(),
-      dbname=Sys.getenv('tdbname'),
+      dbname = Sys.getenv('tdbname'),
       user = Sys.getenv('userdb'),
       password = Sys.getenv('passwddbdev'),
-      host=Sys.getenv('hostdbdev')),
+      host = Sys.getenv('hostdbdev')),
     error = function(e) {
       warning("create_extend_geogroup_view: banco indisponivel (",
-              conditionMessage(e), ") - con=NULL; ",
+              conditionMessage(e), ") - retorne NULL; ",
               "chame criar_recortes_geograficos() com o banco acessivel")
       NULL
     })
+}
 ###Criar a VIEW so com municipios
 
 #  consulta
 criar_recortes_geograficos <- \() {
+con <- .con_recortes()
+if (is.null(con)) return(invisible(NULL))
 numero_municipios <- 5570
 
 consulta_inicial <- paste('(SELECT geoloc.geoloc_id codigo_ibge,',
@@ -141,6 +148,8 @@ DBI::dbExecute(con,
                       public.recortes_geograficos USING btree
                       (codigo_ibge ASC NULLS LAST) WITH (FILLFACTOR=90)
                       TABLESPACE pg_default;"))
+
+DBI::dbDisconnect(con)
 
 
 }

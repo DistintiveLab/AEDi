@@ -1,8 +1,4 @@
-# AEDi 0.6.2.9000 (2026-09-20)
-
-Painel de indicadores contra a lentidão do DW remoto (handshake ~4s e
-consultas agregadas de segundos, medidas contra o `aedidb` remoto do
-`pndr_dashboard`), mais blindagem de `mdata_id` inválido.
+# AEDi 0.6.7.9000 (2026-09-22)
 
 ## Catálogo de grupos declarado e reconciliado pelo próprio pacote
 
@@ -39,6 +35,118 @@ consultas agregadas de segundos, medidas contra o `aedidb` remoto do
   pesquisável (`painel_opcoes_select()`): o selectize renderiza no máximo
   1000 itens por padrão e a lista de municípios (5.716 com dados) era
   cortada antes do fim — a busca por parte do nome continua funcionando.
+
+# AEDi 0.6.7 (2026-09-22)
+
+## Grafo de dependências no orquestrador (fase 1)
+
+Scripts que derivam séries de outras (DW→DW: compostos, sincronizações
+`_via_aedi`→builder, diferenciais) agora podem ser bloqueados quando o
+insumo está menos fresco que a série própria — o cenário que zerou o
+objetivo2_3 em 2025 (`massa_salarial_municipal` rodado com o popmun sem
+2025-07-01; ver `pndr_coord/bug_obj23_zeros_2025_2026-09-22.md`).
+
+- O grafo vive no DW: coluna `controle_execucao.dependencias_json`
+  (JSONB, dormante desde a criação da tabela), no formato
+  `{"series_proprias": [...], "deps": [{"serie","regua","acao"}]}`.
+  `definir_dependencias()` grava via UPSERT; `carregar_dependencias()`
+  carrega a semente versionada `<raiz>/coleta/dependencias.csv`, que
+  segue como fallback do runtime quando a linha do DW não tem grafo.
+- `executar_script_coleta()` verifica as dependências logo após a
+  novidade de fonte (C5): dependência em ano anterior ao da série própria
+  (régua por ANO, nunca data completa — popmun é -07-01) com
+  `acao="pular"` registra skip ok no controle e pula o script;
+  `acao="avisar"` apenas loga em warn e executa (lags crônicos legítimos:
+  sust4/citec4/infra1 em 2024). Em dúvida (grafo ausente, DW fora, série
+  própria ausente = primeira carga), executa — mesma política do C5.
+- Séries próprias detectadas do texto do script (literais de
+  `gravar_serie_dw()`), com override por `serie_propria` no manifesto
+  (compostos gravam via variável e não são detectados pelo parse).
+- Na fase 1 as réguas "proprio" e "fonte" coincidem (comparam com o ano
+  da série própria); a régua "fonte" plena (ano-alvo da fonte primária,
+  que pegaria o bug original) depende de reconhecer RAIS em
+  `verificar_novidade_fonte()` e fica para a fase 1.5.
+- Semente inicial do `pndr_dashboard` em `coleta/dependencias.csv`
+  (compostos_recalc_dw, massa_salarial_municipal,
+  objetivo1_diferenciais_recalc, objetivo4_1_via_aedi_recalc,
+  primazia_populacional_estadual, sincroniza_via_aedi_local).
+- `controle_preparar()` agora garante a coluna `dependencias_json` em
+  bancos criados antes dela (`ALTER ... ADD COLUMN IF NOT EXISTS`).
+
+# AEDi 0.6.6 (2026-09-22)
+
+## Correção do bug de cobertura municipal, segunda ordem (local_id sombreado por geoloc de agregado)
+
+Em `gravar_serie_dw()`, o lookup ainda priorizava o `geoloc_id` como
+texto antes do próprio `local_id`. Derivações DW→DW (padrão A5b: séries
+derivadas, compostos) repassam `local_id` — e os ids pequenos dos
+municípios collidem com geoloc_ids de agregados (1 = Alta Floresta
+D'oeste vs 1 = Norte; 2 = Ariquemes vs 2 = Nordeste; 53 = Acrelândia
+vs 53 = DF etc.), de modo que essas séries eram gravadas em região/UF/DF
+no lugar do município. A prioridade agora é prefixo IBGE 6d (RAIS) >
+`local_id` > `geoloc_id` completo; séries agregadas devem ser passadas
+por `local_id`.
+
+# AEDi 0.6.5 (2026-09-22)
+
+## Conexão de source-time não vaza mais para o namespace
+
+- `R/create_extend_geogroup_view.R` conectava ao banco remoto (`tdbname`)
+  em source-time e deixava o objeto `con` no namespace; sob
+  `pkgload::load_all()` (desenvolvimento), scripts A5b com guard
+  `if (!exists("con"))` herdavam essa conexão remota e liam o banco
+  errado sem qualquer erro. A conexão agora é criada sob demanda dentro
+  de `criar_recortes_geograficos()` e desconectada ao final.
+
+# AEDi 0.6.4 (2026-09-22)
+
+## Correção do bug de cobertura municipal (lookup 6d sombreado por RGINT)
+
+Em `gravar_serie_dw()`, o lookup de códigos de local priorizava o
+`geoloc_id` como texto antes do prefixo IBGE de 6 dígitos. Como o
+`geoloc_id` das Regiões Imediatas também tem 6 dígitos, 63 municípios
+(cujo código 6d coincide com o geoloc de uma RGINT) tinham suas séries
+municipais gravadas no local da RGINT — eram exatamente os municípios
+"primeiros no sequencial por UF" que faltavam na cobertura do painel.
+
+- O prefixo 6d (RAIS) agora tem prioridade sobre o `geoloc_id` como
+  texto; geoloc 7d e o próprio `local_id` continuam resolvendo como
+  antes (verificado contra o DW: exatamente 63 entradas mudam).
+- O lookup foi extraído para `montar_lookup_locais()` (interna), com
+  teste de regressão (`test-montar_lookup_locais.R`).
+- Séries já gravadas nos locais errados **não** são corrigidas
+  automaticamente: os scripts vivos se autocuram no próximo run
+  (`replace = TRUE`); o remapeamento das demais é documentado em
+  `pndr_coord/bug_RGINT_2026-09-22.md`.
+
+# AEDi 0.6.3 (2026-09-21)
+
+Marco do orquestrador em produção: primeiro lote completo do
+`pndr_dashboard` encerrado com a família era-RAIS resolvida de ponta a
+ponta (contrato de eras centralizado no pacote **raisqlr** 0.1.0) e 13
+scripts aposentados via `.R.ignore`. Sem mudanças de código no AEDi por
+parte desta entrada — ela marca o ponto em que o pipeline externo
+consumidor estabilizou sobre o AEDi 0.6.2; a versão também embute o
+trabalho do painel registrado na entrada 0.6.2.9000 abaixo.
+
+- **Placar do lote (44 scripts): 27 ✓ / 17 ✗**, encerrado com a família
+  era-RAIS (7 scripts) resolvida via `raisqlr` 0.1.0 (7/7 ✓ no re-run)
+  e 13 marcadores `.R.ignore` (no-ops, rascunhos, utilitários legados,
+  insumo manual pendente e `gastos_tributarios_municipio`, que
+  downdata sem `AEDI_SCRIPT_ARGS`); `listar_scripts_coleta()` devolve
+  34 ativos.
+- **Séries RAIS estendidas a 2000-2025** nos indicadores do
+  `pndr_dashboard`: os 7 scripts era-RAIS passaram a montar o SQL por
+  era com `raisqlr::cnae_equivalentes()`, `raisqlr::rais_coluna()` e
+  `raisqlr::rais_divisor()`, absorvendo as mudanças de esquema do
+  `mte_rais` (CNAE 95→2.0, porte/tamanho, CBO-94) sem lógica de era
+  nos próprios scripts.
+
+# AEDi 0.6.2.9000 (2026-09-20)
+
+Painel de indicadores contra a lentidão do DW remoto (handshake ~4s e
+consultas agregadas de segundos, medidas contra o `aedidb` remoto do
+`pndr_dashboard`), mais blindagem de `mdata_id` inválido.
 
 ## Globo com as delimitações do IBGE do nível territorial
 

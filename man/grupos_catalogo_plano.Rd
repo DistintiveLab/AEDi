@@ -2,7 +2,7 @@
 % Please edit documentation in R/grupos_catalogo.R
 \name{grupos_catalogo_plano}
 \alias{grupos_catalogo_plano}
-\title{Diferencas entre o catalogo declarado e o estado do DW}
+\title{Plano de atualizacao do catalogo: o que falta no DW}
 \usage{
 grupos_catalogo_plano(mdata, grupos, vinculos, pais)
 }
@@ -15,10 +15,16 @@ grupos_catalogo_plano(mdata, grupos, vinculos, pais)
 
 \item{pais}{data.frame com \code{datagroup_id} e \code{datagroup_parentid}}
 }
+\value{
+lista com \code{grupos}, \code{pais} e \code{vinculos} (linhas a inserir) e
+\code{divergentes} (vinculos existentes que fogem da convencao; so relatorio)
+}
 \description{
-Funcao pura: recebe o conteudo atual das tabelas e devolve o que falta, sem
-tocar no banco. Os pais sao comparados por nome (o id dos grupos novos so
-existe depois da insercao) e os vinculos sao conferidos pelo par
-(mdata_id, datagroup_id).
+Funcao pura: recebe o conteudo atual das tabelas e devolve as linhas que
+seriam inseridas, sem tocar no banco. Os grupos que faltam ja saem com
+\code{datagroup_id} atribuido (continuando a numeracao existente), de modo que os
+pais e os vinculos possam ser resolvidos no mesmo passo e o plano seja
+exatamente o que \code{\link[=atualizar_grupos_indicadores]{atualizar_grupos_indicadores()}} aplica. Os pais sao
+comparados por nome e os vinculos pelo par (mdata_id, datagroup_id).
 }
 \keyword{internal}
