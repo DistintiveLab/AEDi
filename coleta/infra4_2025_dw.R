@@ -19,7 +19,8 @@ calc_2025 <- \(f) {
          .(codmun = as.numeric(cod_ibge), valor, populacao)]
   if (nrow(d) == 0) return(NULL)
   d[, .(value = sum(valor, na.rm = TRUE),
-        populacao = suppressWarnings(max(populacao, na.rm = TRUE))),
+        populacao = { m <- suppressWarnings(max(populacao, na.rm = TRUE))
+                      if (is.infinite(m) || is.na(m)) NA_real_ else m }),
     by = codmun]
 }
 

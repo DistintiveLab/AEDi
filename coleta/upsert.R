@@ -159,7 +159,11 @@ maxpopestadualid <- recupmdata_id('maxpopestadual')
 maxpopestadual <- data.table::setDT(locgeoloc)[,local:=trunc(geoloc_id/10)][popmunicipal,on=c("local"="local")]
 maxpopestadual <- maxpopestadual[!is.na(local_id),]
 maxpopestadual[,uf:=trunc(local/10000)]
-maxpopestadual[,value:=max(populacao,na.rm=TRUE),by= .(uf,refdate)]
+# guarda contra grupo (uf,refdate) todo NA: max(na.rm=TRUE) devolveria -Inf
+maxpopestadual[,value:={
+  m <- suppressWarnings(max(populacao,na.rm=TRUE))
+  if (is.infinite(m)||is.na(m)) NA_real_ else m
+},by= .(uf,refdate)]
 maxpopestadual[,mdata_id:=maxpopestadualid]
 maxpopestadual <- maxpopestadual[,.(mdata_id,refdate,local_id,value)]
 
@@ -250,15 +254,13 @@ dbx::dbxUpsert(pndrupsert,'data_values',
                obj2_2,where_cols=c('mdata_id','refdate','local_id'))
 
 
-#objetivo2_3 no db pndr
+#objetivo2_3 no db pndr (serie multianual: o refdate ja vem por linha do
+#massa_salarial_municipal.R, nao de um 'ano' unico)
 obj2_3idpndr <- recupmdata_id('objetivo2_3',mdr)
-obj2_3 <- readRDS("coleta/cache/objetivo2_3_via_aedi/obj2_3_massa_salarial_e_indicador.rds")
-
-obj2_3 <- data.table::setDT(obj2_3)[,`:=` (
-  mdata_id=obj2_3idpndr,
-  refdate=as.Date(paste0(ano,"-12-31")))]
-
-obj2_3 <- obj2_3[,.(mdata_id,refdate,local_id,value)]
+if (!exists("obj2_3_aedi_recalc"))
+  obj2_3_aedi_recalc <- readRDS("coleta/cache/objetivo2_3_via_aedi/obj2_3_aedi.rds")
+obj2_3 <- data.table::as.data.table(obj2_3_aedi_recalc)[,mdata_id:=obj2_3idpndr]
+obj2_3 <- obj2_3[,.(mdata_id,refdate,local_id,value=obj2_3_aedi)]
 
 dbx::dbxUpsert(pndrupsert,'data_values',
                obj2_3,where_cols=c('mdata_id','refdate','local_id'))
@@ -879,7 +881,7 @@ e7_4 <-
 
 e7_4 <- e7_4|>
   dplyr::group_by(mdata_id,refdate,local_id)|>
-  dplyr::summarise(value=max(value,na.rm=TRUE))
+  dplyr::summarise(value=AEDi:::maxsna(value))
 
 dbx::dbxUpsert(pndrupsert,'data_values',
                e7_4,where_cols=c('mdata_id','refdate','local_id'))

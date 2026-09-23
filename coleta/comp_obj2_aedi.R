@@ -18,4 +18,4 @@ cor(cobj2_compara$value,cobj2_compara$normalizado,use='complete.obs')
 summary(cobj2_compara)
 
 readr::write_csv(obj2_composto|>dplyr::filter(lubridate::month(refdate)==12)|>
-                   dplyr::transmute(refdate,local_id,value=normalizado),'coleta/cache/objetivo2_composto_aedi/obj2_c_aedi24.csv')
+                   dplyr::transmute(refdate,local_id,value=normalizado),'coleta/cache/objetivo2_composto_aedi/obj2_c_aedi.csv')

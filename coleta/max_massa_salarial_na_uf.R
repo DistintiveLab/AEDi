@@ -2,7 +2,7 @@
 # municipal por refdate (cada municipio recebe o maximo do seu estado).
 # Padrao A5b.
 
-maxsna <- \(x) { m <- max(x, na.rm = TRUE); if (is.infinite(m)) NA else m }
+maxsna <- \(x) { m <- suppressWarnings(max(x, na.rm = TRUE)); if (is.infinite(m) || is.na(m)) NA_real_ else m }
 
 con <- DBI::dbConnect(RPostgres::Postgres(),
                       user = Sys.getenv("user", "aedi"),
