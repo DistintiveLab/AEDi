@@ -99,6 +99,8 @@ painel_abas <- function() {
                     mod_panel_regiao_ui("panel_regiao_1")),
     shiny::tabPanel("Mapa", value = "mapa",
                     mod_panel_map_ui("panel_map_1")),
+    shiny::tabPanel("Baixar", value = "baixar",
+                    mod_panel_baixar_ui("panel_baixar_1")),
     shiny::tabPanel("Sobre", value = "sobre",
                     panel_sobre_ui()))
 }

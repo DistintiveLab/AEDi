@@ -7,5 +7,6 @@ app_server <- function(input, output, session) {
   })
   mod_panel_regiao_server("panel_regiao_1", paleta = paleta_ativa)
   mod_panel_map_server("panel_map_1")
+  mod_panel_baixar_server("panel_baixar_1")
   panel_sobre_server(input, session)
 }

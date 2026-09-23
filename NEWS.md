@@ -1,3 +1,23 @@
+# AEDi 0.6.9 (2026-09-23)
+
+## Aba "Baixar": planilhas do painel por região e por indicador
+
+- Nova aba "Baixar" do painel de indicadores (entre Mapa e Sobre), com dois
+  recortes independentes: **todos os indicadores de uma região** (matriz
+  indicador × ano, colunas Código/Indicador + uma por ano, aba
+  "metadados" com a ficha de cada indicador incluído) e **um indicador,
+  uma aba por ano** (cada aba com todas as localidades disponíveis do
+  nível territorial escolhido: Código/Localidade/Valor). Ambos escolhem o
+  nível territorial; a régua de valor é a mesma do mapa — última
+  observação finita de cada ano.
+- Downloads lazy (nada roda antes do clique) e fail-visible: combinação
+  sem dados entrega um arquivo com aba de aviso em vez de erro na tela.
+- Construtores puros em `R/painel_xlsx.R` (sem banco/Shiny, testáveis
+  isoladamente; `openxlsx` entra nos Imports); o módulo `mod_panel_baixar`
+  só compõe com as leituras já cacheadas de `painel_dw.R`. Launcher
+  (`panel_app()`) e esqueletos de `deploy_panel()` seguem com fonte
+  única — os dois arquivos novos entram na lista de cópias exatas.
+
 # AEDi 0.6.8 (2026-09-23)
 
 ## Painel admin somente leitura por projeto
