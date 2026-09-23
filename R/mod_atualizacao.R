@@ -50,74 +50,11 @@ mod_atualizacao_server <- function(id, raiz = NULL) {
       versao = 0L               # contador para recarregar a tabela
     )
 
-    # "matiza" scripts nunca executados: desatualizado quando hoje supera a
-    # última versão dos metadados em BD (mdata_timetable.last_update) OU
-    # 3 meses após o max(refdate) gravado em data_values (regra OU = pmax)
-    situacao_nunca <- function(meta_update, max_refdate) {
-      prazo <- lubridate::`%m+%`(as.Date(max_refdate),
-                                 lubridate::period(3, "months"))
-      limite <- as.Date(meta_update)
-      ambos <- !is.na(prazo) & !is.na(limite)
-      limite[ambos] <- pmax(limite[ambos], prazo[ambos])
-      so_prazo <- is.na(limite) & !is.na(prazo)
-      limite[so_prazo] <- prazo[so_prazo]
-      desat <- !is.na(limite) & Sys.Date() > limite
-      ifelse(desat, "nunca executado (desatualizado)", "nunca executado")
-    }
-
+    # tabela de status compartilhada com o painel admin (admin_app.R):
+    # fonte unica da regra de "desatualizado"
     status_df <- function() {
-      ctl <- tryCatch(AEDi:::ler_controle(projeto = AEDi:::.nome_projeto(raiz)),
-                      error = function(e) NULL)
-      dw <- tryCatch(AEDi:::resumo_indicadores_dw(), error = function(e) NULL)
-      scripts <- AEDi:::listar_scripts_coleta(raiz)
-      if (is.null(ctl)) ctl <- data.frame(
-        nome_script = character(), etapa = character(),
-        ultima_atualizacao = structure(list(), class = c("POSIXct", "POSIXt")),
-        status = character(), detalhe = character())
-      # nomes sem extensao (convencao do controle_execucao; o merge com
-      # scripts ".R" jamais casaria)
-      d <- data.frame(nome_script = sub("\\.R$", "", scripts,
-                                        ignore.case = TRUE),
-                      stringsAsFactors = FALSE)
-      d <- merge(d, ctl[, c("nome_script", "etapa", "ultima_atualizacao",
-                            "status", "detalhe")],
-                 by = "nome_script", all.x = TRUE)
-      if (!is.null(dw) && nrow(dw)) {
-        d <- merge(d, dw, by.x = "nome_script", by.y = "orig_name",
-                   all.x = TRUE)
-      } else {
-        d$meta_update <- as.Date(NA)
-        d$max_refdate <- as.Date(NA)
-      }
-      d$meta_update <- as.Date(d$meta_update)
-      d$max_refdate <- as.Date(d$max_refdate)
-      d$status[is.na(d$status)] <- "nunca executado"
-      d$situacao <- d$status
-      nunca <- d$status == "nunca executado"
-      d$situacao[nunca] <- situacao_nunca(d$meta_update[nunca],
-                                          d$max_refdate[nunca])
-      atrasado <- d$situacao == "nunca executado (desatualizado)"
-      fmt_data <- function(x) {
-        x <- format(x, "%Y-%m-%d"); x[is.na(x)] <- "-"; x
-      }
-      d$meta_update <- fmt_data(d$meta_update)
-      d$max_refdate <- fmt_data(d$max_refdate)
-      d$ultima_atualizacao <- format(d$ultima_atualizacao, "%Y-%m-%d %H:%M")
-      d$ultima_atualizacao[is.na(d$ultima_atualizacao)] <- "-"
-      d$acao <- sprintf(
-        paste0('<button class="btn btn-default btn-xs action-button" ',
-               'data-script="%s" onclick="Shiny.setInputValue(\'%s\', ',
-               'this.dataset.script, {priority: \'event\'})">',
-               'Atualizar</button>'),
-        d$nome_script, ns("atualizar_um"))
-      d <- d[order(!atrasado, d$nome_script),
-             c("nome_script", "etapa", "ultima_atualizacao", "meta_update",
-               "max_refdate", "situacao", "detalhe", "acao")]
-      colnames(d) <- c("Script", "Etapa", "Última execução",
-                       "Metadados (BD)", "Máx. refdate", "Situação",
-                       "Detalhe", "Ação")
-      rownames(d) <- NULL
-      d
+      .tabela_status_lote(raiz, projeto = AEDi:::.nome_projeto(raiz),
+                          com_acao = TRUE, id_acao = ns("atualizar_um"))
     }
 
     output$tabela_controle <- DT::renderDT({
