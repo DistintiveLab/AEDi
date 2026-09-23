@@ -74,6 +74,7 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Collate: 
     'AEDi-package.R'
+    'admin_app.R'
     'app_config.R'
     'branding.R'
     'controle_execucao.R'
@@ -82,6 +83,7 @@ Collate:
     'dbdatawriter.R'
     'dbprepare.R'
     'dependencias.R'
+    'deploy_admin.R'
     'deploy_panel.R'
     'executa_atualizacao.R'
     'gravar_serie_dw.R'
