@@ -6,9 +6,11 @@ compartilhados <- c(
   "R/painel_ui.R"         = "painel_ui.R",
   "R/painel_cache.R"      = "painel_cache.R",
   "R/painel_dw.R"         = "painel_dw.R",
+  "R/painel_xlsx.R"      = "painel_xlsx.R",
   "R/mod_panel_globe.R"   = "mod_panel_globe.R",
   "R/mod_panel_map.R"     = "mod_panel_map.R",
   "R/mod_panel_regiao.R"  = "mod_panel_regiao.R",
+  "R/mod_panel_baixar.R"  = "mod_panel_baixar.R",
   "R/mod_panel_sobre.R"   = "mod_panel_sobre.R")
 
 test_that("templates do esqueleto sao copias exatas dos fontes do pacote", {
