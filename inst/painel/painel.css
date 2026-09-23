@@ -271,6 +271,12 @@ h3 { font-size: 19px; }
   background: var(--p-superficie); border-color: var(--p-destaque);
 }
 .painel-mapa-ano { flex: 0 0 40%; max-width: 40%; min-width: 240px; }
+/* O wrapper que o sliderInput cria tambem carrega a classe form-group, entao
+ * herdava display:flex de .painel-toolbar .form-group e o .irs passava a ser
+ * item flex: media apenas as bordas do .irs-line (2px) e o ionRangeSlider
+ * posicionava alca e rotulo a partir dessa largura (left: -1000% / -1200%). */
+.painel-mapa-ano .form-group.shiny-input-container { flex: 1 1 auto; min-width: 0; }
+.painel-mapa-ano .irs { flex: 1 1 auto; min-width: 0; }
 .painel-mapa-ano .irs.irs--shiny { margin-top: 0; }
 .irs--shiny .irs-line { border-top: 1px solid var(--p-linha); border-bottom: 1px solid var(--p-linha); background: var(--p-superficie); }
 .irs--shiny .irs-bar { border-top: 1px solid var(--p-destaque); border-bottom: 1px solid var(--p-destaque); background: var(--p-destaque); }
