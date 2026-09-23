@@ -489,6 +489,59 @@ painel_grupo_raiz <- function(grupo) {
          ifelse(grepl("^Objetivo", grupo), "Objetivos", grupo))
 }
 
+#' Ordem canonica dos grupos no seletor de indicadores do painel
+#' @keywords internal
+painel_grupos_selecao <- c(paste("Eixo", 1:7), paste("Objetivo", 1:4),
+                           "Estratos PNAD")
+
+#' Opcoes do seletor de indicadores do painel, agrupadas por eixo/objetivo
+#'
+#' Monta a lista aninhada que o `updateSelectizeInput(server = TRUE)`
+#' transforma em optgroups, os titulos de grupo nao clicaveis do selectize:
+#' "Eixo 1".."Eixo 7", "Objetivo 1".."Objetivo 4", "Estratos PNAD" e, por
+#' fim, "Demais indicadores" (series de apoio e variantes de trabalho).
+#' Dentro de cada eixo/objetivo o composto abre o grupo e os componentes
+#' vem numerados ("Indicador N - Nome (orig_name)"); os Estratos PNAD
+#' seguem o numero do estrato (pnadc1..7 e comp_pnadc8..14); os demais
+#' mantem a ordem alfabetica do `orig_name` de [painel_mdata()].
+#' @keywords internal
+painel_opcoes_indicador <- function(md) {
+  if (is.null(md) || !NROW(md)) return(list())
+  x <- trimws(as.character(md$orig_name))
+  grupo <- painel_grupo_indicador(x)
+  grupo[is.na(grupo)] <- "Demais indicadores"
+  numero <- rep(NA_integer_, length(x))
+  numerado <- grepl("[0-9]+$", x)
+  numero[numerado] <- as.integer(sub("^.*?([0-9]+)$", "\\1", x[numerado]))
+  composto <- grepl("^comp_", x)
+  nome <- if ("data_name" %in% names(md)) trimws(as.character(md$data_name)) else
+    rep(NA_character_, length(x))
+  rotulo <- paste0(ifelse(is.na(nome), x, nome), " (", x, ")")
+  rotulo <- ifelse(is.na(numero) | composto, rotulo,
+                   paste0("Indicador ", numero, " - ", rotulo))
+  ordem <- intersect(painel_grupos_selecao, unique(grupo))
+  ordem <- c(ordem,
+             setdiff(unique(grupo), c(painel_grupos_selecao,
+                                      "Demais indicadores")))
+  if ("Demais indicadores" %in% grupo) ordem <- c(ordem, "Demais indicadores")
+  respostas <- lapply(ordem, function(g) {
+    i <- which(grupo == g)
+    if (g == "Demais indicadores") {
+      i <- i[order(x[i])]
+    } else if (g == "Estratos PNAD") {
+      i <- i[order(numero[i], x[i], na.last = TRUE)]
+    } else {
+      i <- i[order(as.integer(!composto[i]), numero[i], x[i],
+                   na.last = TRUE)]
+    }
+    opcoes <- setNames(as.character(md$mdata_id[i]), rotulo[i])
+    if (length(opcoes) == 1L) opcoes <- as.list(opcoes)
+    opcoes
+  })
+  names(respostas) <- ordem
+  respostas
+}
+
 #' Hierarquia do catalogo de indicadores: raiz (Eixos, Objetivos, Estratos
 #' PNAD) > grupo (Eixo 1..7, Objetivo 1..4) > indicador, com a classe do
 #' dado (data_class_id) — estrutura do resumo e do accordeon da aba Regiao
