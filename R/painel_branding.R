@@ -13,6 +13,10 @@
 #   painel_paleta     paleta inicial: "govbr" ou "pb"
 #   painel_contato    contato do rodape, campos "nome|telefone|email"
 #                     separados por "|"; vazio mantem o credito padrao
+#   painel_apoio      linha de apoio institucional da aba Sobre, campos
+#                     "texto antes|nome|url|texto depois" separados por
+#                     "|" (nome vira link da url); sem "|" a linha inteira
+#                     vira texto puro; vazio mantem o credito a Distintive
 
 #' Titulo do painel (usa painel_titulo)
 #' @keywords internal
@@ -46,4 +50,31 @@ painel_brand_contato <- function() {
     if (nzchar(campos[2])) shiny::tags$span(" · ", campos[2]),
     if (nzchar(campos[3]))
       shiny::tags$a(campos[3], href = paste0("mailto:", campos[3])))
+}
+
+#' Linha de apoio institucional da aba Sobre (usa painel_apoio): campos
+#' "texto antes|nome|url|texto depois" separados por "|" — o nome vira
+#' link da url e os textos de fora aparecem como estao escritos; sem
+#' "|" a linha inteira vira um paragrafo de texto puro
+#' @keywords internal
+painel_brand_apoio <- function(
+  default = paste("Este painel contou com apoio material e financeiro de ",
+                  "|Distintive|https://www.distintive.com.br|.", sep = "")) {
+  valor <- trimws(Sys.getenv("painel_apoio", ""))
+  if (!nzchar(valor)) valor <- default
+  campos <- strsplit(valor, "|", fixed = TRUE)[[1]]
+  if (length(campos) < 2L) return(shiny::tags$p(valor))
+  length(campos) <- 4
+  campos[is.na(campos)] <- ""
+  nome <- trimws(campos[2])
+  url <- trimws(campos[3])
+  shiny::tags$p(
+    campos[1],
+    if (nzchar(nome)) {
+      if (nzchar(url))
+        shiny::tags$a(nome, href = url,
+                      target = "_blank", rel = "noopener")
+      else nome
+    },
+    campos[4])
 }

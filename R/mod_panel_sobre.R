@@ -42,10 +42,7 @@ panel_sobre_ui <- function() {
                tags$img(src = painel_logo_src(),
                         alt = "Logotipo da Distintive")),
         tags$div(class = "painel-apoio-texto",
-          tags$p("Este painel contou com apoio material e financeiro de ",
-            tags$a(href = "https://www.distintive.com.br",
-                   "Distintive", target = "_blank", rel = "noopener"),
-            "."))))
+          painel_brand_apoio())))
   )
 }
 

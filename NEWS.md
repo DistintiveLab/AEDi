@@ -17,6 +17,11 @@
 - Bônus do globo: com apenas 146 feições, as regiões PNAD agora são
   desenhadas como base do próprio nível (antes a largura 7 inteira caía
   na base das UFs).
+- A frase de apoio institucional da aba Sobre ("Este painel contou com
+  apoio material e financeiro de Distintive") também é configurável sem
+  editar código: a env var `painel_apoio` aceita
+  "texto antes|nome|url|texto depois" (nome vira link da url) ou uma
+  frase simples sem link.
 
 # AEDi 0.7.0 (2026-09-23)
 
