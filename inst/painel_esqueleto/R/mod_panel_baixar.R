@@ -84,7 +84,7 @@ mod_panel_baixar_server <- function(id) {
                                 choices = opcoes_niveis,
                                 selected = default_nivel)
     shiny::updateSelectizeInput(session, "indicador",
-      choices = setNames(md$mdata_id, md$rotulo),
+      choices = painel_opcoes_indicador(md),
       selected = if (nrow(md)) painel_indicador_default(md) else NULL,
       server = TRUE)
 

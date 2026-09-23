@@ -1,5 +1,22 @@
 # AEDi 0.6.9.9000
 
+## Seletor de indicadores agrupado por eixo/objetivo
+
+- As caixas de indicador das abas Região, Mapa e Baixar continuam
+  selectize pesquisável, mas agora vêm em optgroups (títulos de grupo
+  não clicáveis): "Eixo 1".."Eixo 7", "Objetivo 1".."Objetivo 4",
+  "Estratos PNAD" e, por fim, "Demais indicadores" (séries de apoio e
+  variantes de trabalho, em ordem alfabética). Dentro de cada
+  eixo/objetivo o composto abre o grupo e os componentes seguem
+  numerados ("Indicador N - Nome (orig_name)"); os estratos PNAD
+  ordenam pelo número do estrato. A hierarquia é a mesma do resumo da
+  aba Região (convenção de `orig_name` em `painel_grupo_indicador()`).
+- A lista aninhada sai de `painel_opcoes_indicador()` (`R/painel_dw.R`),
+  função pura testável; o `updateSelectizeInput(server = TRUE)` do
+  Shiny transforma-a na coluna `optgroup` que o selectize renderiza.
+  Espaços à esquerda de `data_name` no DW não viram mais espaço duplo
+  no rótulo.
+
 ## Indicador de abertura configurável e ranking no resumo da região
 
 - A variável de ambiente `aedi_indicador` escolhe, pelo `orig_name`, qual

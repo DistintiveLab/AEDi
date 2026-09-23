@@ -70,7 +70,7 @@ mod_panel_regiao_server <- function(id,
     hierarquia <- painel_hierarquia_cache()
     compostos <- painel_compostos_cache()
     shiny::updateSelectizeInput(session, "indicador",
-                                choices = setNames(md$mdata_id, md$rotulo),
+                                choices = painel_opcoes_indicador(md),
                                 selected = if (nrow(md))
                                   painel_indicador_default(md) else NULL,
                                 server = TRUE)
