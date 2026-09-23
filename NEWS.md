@@ -1,3 +1,20 @@
+# AEDi 0.6.8 (2026-09-23)
+
+## Painel admin somente leitura por projeto
+
+- `admin_app()`/`deploy_admin()`: monitoramento do orquestrador como app
+  Shiny autonoma na raiz do projeto chamador (launcher fina —
+  atualizações chegam com o reinstall do pacote, sem cópias para
+  divergirem). Abas: status do lote (com o motivo dos pulos, inclusive
+  dependências), grafo de dependências declarado (`dependencias_json`
+  com fallback para o CSV semente), frescor das séries e histórico das
+  execuções. Somente leitura por design: disparar execuções continua
+  via cron ou app AEDi (o gatilho manual exige lock single-flight).
+  Publicar fora de localhost/LAN exige autenticação na frente e alcance
+  do banco — o README da app gerada avisa.
+- A regra de "nunca executado (desatualizado)" saiu de `mod_atualizacao`
+  para `.tabela_status_lote()` (fonte única, compartilhada com o painel
+  admin).
 # AEDi 0.6.7.9000 (2026-09-22)
 
 ## Catálogo de grupos declarado e reconciliado pelo próprio pacote
