@@ -1,3 +1,13 @@
+# AEDi 0.7.2.9000
+
+## Código IBGE nas planilhas da aba Baixar
+
+- Na planilha "um indicador, uma aba por ano", a coluna "Código" das
+  localidades no nível municipal passa a ser o código IBGE de 7 dígitos
+  (`painel_codigo_mun_cache()`: tradução `local_id` → `geoloc_id`,
+  cacheada). Nos demais níveis o código segue o `local_id` (fallback), e
+  a coluna vira texto quando há tradução.
+
 # AEDi 0.7.1.9000
 
 ## Globo desenha a malha municipal da UF em foco

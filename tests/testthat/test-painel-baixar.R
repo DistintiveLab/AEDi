@@ -138,6 +138,31 @@ test_that("painel_xlsx_indicador sem dados gera aba de aviso", {
   expect_true(grepl("Sem observacoes", aviso[[1]][1]))
 })
 
+test_that("painel_xlsx_indicador traduz o codigo para o IBGE quando mapeado", {
+  por_ano <- list("2022" = data.frame(
+    local_id = c(11L, 12L, 99L),
+    refdate = as.Date(rep("2022-12-31", 3)),
+    value = c(1.5, 2.5, 9)))
+  codigos <- c("11" = "1100023", "12" = "1100031")
+  arq <- tempfile(fileext = ".xlsx")
+  on.exit(unlink(arq), add = TRUE)
+  AEDi:::painel_xlsx_indicador(arq, por_ano, c("Alfa" = 11, "Beta" = 12),
+                               "Indicador X", "Município",
+                               codigos = codigos)
+  tab <- openxlsx::read.xlsx(arq, sheet = "2022")
+  # mapeados viram o codigo IBGE; fora do vetor cai no local_id como texto
+  expect_identical(tab$Código, c("1100023", "1100031", "99"))
+  expect_equal(tab$Localidade, c("Alfa", "Beta", "local 99"))
+  expect_equal(tab$Valor, c(1.5, 2.5, 9))
+})
+
+test_that("painel_codigo_mun_cache traz codigo IBGE de 7 digitos por local_id", {
+  codigos <- AEDi:::painel_codigo_mun_cache()
+  expect_length(codigos, 5570L)
+  expect_true(all(grepl("^[0-9]{7}$", codigos)))
+  expect_identical(sum(startsWith(codigos, "31")), 853L)  # MG
+})
+
 test_that("mod_panel_baixar_ui monta os dois cards de download", {
   ui <- AEDi:::mod_panel_baixar_ui("baixar_teste")
   expect_s3_class(ui, c("shiny.tag.list", "list"))

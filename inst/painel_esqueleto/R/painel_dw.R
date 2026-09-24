@@ -56,6 +56,18 @@ painel_locais <- function(con) {
            paste0(loc$local_name, " (id ", loc$local_id, ")"))
 }
 
+#' Codigo IBGE dos municipios (geoloc_id de 7 digitos) indexado pelo
+#' local_id — traduz a coluna "Codigo" das planilhas da aba Baixar
+#' @keywords internal
+painel_codigo_mun <- function(con) {
+  cod <- DBI::dbGetQuery(con, paste(
+    "SELECT l.local_id, g.geoloc_id::text AS codigo",
+    "FROM local l JOIN geoloc g USING (geoloc_id)",
+    "WHERE l.local_id < 5571",
+    "ORDER BY l.local_id"))
+  setNames(cod$codigo, as.character(cod$local_id))
+}
+
 #' Valores de um indicador (todas as localidades e refdates)
 #' @keywords internal
 painel_valores <- function(con, mdata_id) {
@@ -812,6 +824,14 @@ painel_compostos_cache <- function() {
 painel_geo_mun_cache <- function() {
   painel_cache_get(painel_cache_chave("geo_mun"), painel_cache_ttl[["geo"]],
                    function() painel_com_con(painel_geo_mun))
+}
+
+#' Codigo IBGE dos municipios, cacheado
+#' @keywords internal
+painel_codigo_mun_cache <- function() {
+  painel_cache_get(painel_cache_chave("codigo_mun"),
+                   painel_cache_ttl[["catalogo"]],
+                   function() painel_com_con(painel_codigo_mun))
 }
 
 #' Geometrias das UFs, cacheado

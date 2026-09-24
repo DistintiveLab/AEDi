@@ -6,7 +6,8 @@
 #'   com uma linha por indicador e uma coluna por ano; (2) um indicador por
 #'   ano — escolha o indicador e o nivel territorial e receba uma planilha
 #'   com uma aba por ano, cada uma com todas as localidades daquele nivel com
-#'   dados no ano.
+#'   dados no ano (no nivel municipal, o codigo da localidade e o codigo
+#'   IBGE de 7 digitos).
 #'
 #' @param id,input,output,session Internal parameters for {shiny}.
 #'
@@ -56,9 +57,9 @@ mod_panel_baixar_ui <- function(id) {
                               class = "btn-primary"),
         tags$p(class = "painel-nota",
           "Uma aba por ano, cada uma com todas as localidades do nível",
-          "territorial com dados naquele ano (código, nome e valor da",
-          "última observação do ano). Aba “metadados”: contexto da",
-          "planilha.")))
+          "territorial com dados naquele ano (código do IBGE no nível",
+          "municipal, nome e valor da última observação do ano). Aba",
+          "“metadados”: contexto da planilha.")))
   )
 }
 
@@ -66,7 +67,8 @@ mod_panel_baixar_ui <- function(id) {
 #'
 #' O download e preguicoso como no lvdp: a planilha so e composta no clique
 #' (nada roda enquanto o visitante apenas muda a selecao); combinacoes sem
-#' dados geram um arquivo com aba de aviso, nao um erro na tela.
+#' dados geram um arquivo com aba de aviso, nao um erro na tela. No nivel
+#' municipal o codigo das localidades e o do IBGE (painel_codigo_mun_cache()).
 #'
 #' @noRd
 mod_panel_baixar_server <- function(id) {
@@ -167,7 +169,8 @@ mod_panel_baixar_server <- function(id) {
         }
         painel_xlsx_indicador(arquivo, por_ano = por_ano, locais = locais,
                               rotulo_indicador = rotulo_indicador(),
-                              nivel_rotulo = rotulo_nivel_ano())
+                              nivel_rotulo = rotulo_nivel_ano(),
+                              codigos = painel_codigo_mun_cache())
       })
   })
 }
