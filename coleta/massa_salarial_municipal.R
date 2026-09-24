@@ -54,12 +54,24 @@ dbdbase <- dbdbase|>
   tidyr::pivot_wider(names_from='orig_name',values_from = 'value', id_cols = c(local_id,refdate),unused_fn=dplyr::first)
 
 
-massalmun <- massalmun|>
-  dplyr::left_join(locgeoloc|>
-                     dplyr::filter(local_id<5900)|>dplyr::mutate(geoloc_idd=trunc(geoloc_id/10)),
-                   by = c("local"="geoloc_idd"))|>
-  dplyr::mutate(refdate=as.Date(paste0(ano,"-07-01")))|>
-  dplyr::left_join(dbdbase|>dplyr::select(refdate,local_id,datasus_popmun))
+# regra semantica de municipio do DW: bloco historico (1..5570) MAIS os
+# incorporados apos o bloco PNAD (7088+; ver incorporar_municipio_ibge);
+# o filtro antigo (<5900) deixava entrar locais do bloco PNAD (5571..7087)
+mun_semantico <- locgeoloc |>
+  dplyr::filter(local_id < 5571 | local_id > 7087) |>
+  dplyr::mutate(geoloc_idd = trunc(geoloc_id / 10))
+
+# codigos RAIS sem municipio no DW (ex.: criacao ainda nao incorporada)
+# nao podem seguir com local_id NA: dropa e avisa
+sem_match <- sort(setdiff(unique(massalmun$local), mun_semantico$geoloc_idd))
+if (length(sem_match))
+  warning("massa_salarial_municipal: codigos RAIS sem municipio no DW: ",
+          paste(sem_match, collapse = ", "))
+massalmun <- massalmun |>
+  dplyr::filter(local %in% mun_semantico$geoloc_idd) |>
+  dplyr::left_join(mun_semantico, by = c("local" = "geoloc_idd")) |>
+  dplyr::mutate(refdate = as.Date(paste0(ano, "-07-01"))) |>
+  dplyr::left_join(dbdbase |> dplyr::select(refdate, local_id, datasus_popmun))
 
 
 # maxsna guardado: sem ele max(x, na.rm = TRUE) devolve -Inf quando a coluna

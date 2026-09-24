@@ -37,13 +37,14 @@ painel_mdata <- function(con) {
   md
 }
 
-#' Geometrias municipais do DW (local_id < 5571)
+#' Geometrias municipais do DW (bloco historico local_id < 5571 mais os
+#' municipios incorporados apos o bloco PNAD, local_id > 7087)
 #' @keywords internal
 painel_geo_mun <- function(con) {
   sf::st_read(con, query = paste(
     "SELECT l.local_id, l.local_name, g.geometry",
     "FROM local l JOIN geoloc g USING (geoloc_id)",
-    "WHERE l.local_id < 5571"), quiet = TRUE)
+    "WHERE", painel_municipio_filtro()), quiet = TRUE)
 }
 
 #' Localidades do DW rotuladas por nome + id (ha nomes repetidos entre
@@ -63,7 +64,7 @@ painel_codigo_mun <- function(con) {
   cod <- DBI::dbGetQuery(con, paste(
     "SELECT l.local_id, g.geoloc_id::text AS codigo",
     "FROM local l JOIN geoloc g USING (geoloc_id)",
-    "WHERE l.local_id < 5571",
+    "WHERE", painel_municipio_filtro(),
     "ORDER BY l.local_id"))
   setNames(cod$codigo, as.character(cod$local_id))
 }
@@ -235,10 +236,20 @@ painel_niveis_rotulo <- c(
   "7p" = "Região de interesse PNAD",
   "8" = "Mesorregião")
 
-# Fronteira entre os municipios (local_id 1..5570, Brasilia incluida) e as
-# regioes de interesse em PNAD Contínua (local_id >= 5571) dentro da largura
-# 7 do geoloc_id — mesma convencao ja adotada por painel_geo_mun()
+# Fronteira entre os municipios e as regioes de interesse em PNAD Contínua
+# dentro da largura 7 do geoloc_id — mesma convencao ja adotada por
+# painel_geo_mun(). Municipios: bloco historico (local_id 1..5570, Brasilia
+# incluida) mais os criados depois da carga original, incorporados com
+# append APOS o bloco PNAD (local_id 7088, 7089, ...; ver
+# incorporar_municipio_ibge()). PNAD: bloco contiguo 5571..7087.
 painel_municipio_limite_id <- 5571L
+painel_pnad_bloco_fim <- 7087L
+
+#' Fragmento SQL que seleciona apenas municipios (alias `l` no chamador)
+painel_municipio_filtro <- function(alias = "l") {
+  sprintf("(%s.local_id < %d OR %s.local_id > %d)",
+          alias, painel_municipio_limite_id, alias, painel_pnad_bloco_fim)
+}
 
 #' Decodifica a chave de nivel territorial do painel
 #'
@@ -257,11 +268,10 @@ painel_nivel_parse <- function(nivel_id) {
   filtro <- if (is.na(nivel)) {
     "1 = 0"
   } else if (pnad) {
-    sprintf("length(g.geoloc_id::text) = 7 AND l.local_id >= %d",
-            painel_municipio_limite_id)
+    sprintf("length(g.geoloc_id::text) = 7 AND l.local_id >= %d AND l.local_id <= %d",
+            painel_municipio_limite_id, painel_pnad_bloco_fim)
   } else if (identical(nivel, 7L)) {
-    sprintf("length(g.geoloc_id::text) = 7 AND l.local_id < %d",
-            painel_municipio_limite_id)
+    sprintf("length(g.geoloc_id::text) = 7 AND %s", painel_municipio_filtro())
   } else {
     sprintf("length(g.geoloc_id::text) = %d", nivel)
   }
@@ -287,7 +297,8 @@ painel_uf_sigla <- c(
 painel_niveis <- function(con) {
   q <- DBI::dbGetQuery(con, paste(
     "SELECT CASE WHEN length(g.geoloc_id::text) = 7",
-    sprintf("AND l.local_id >= %d THEN '7p'", painel_municipio_limite_id),
+    sprintf("AND l.local_id >= %d AND l.local_id <= %d THEN '7p'",
+            painel_municipio_limite_id, painel_pnad_bloco_fim),
     "ELSE length(g.geoloc_id::text)::text END AS nivel_id,",
     "count(DISTINCT v.local_id) AS n_locais",
     "FROM data_values v",
@@ -464,7 +475,8 @@ painel_geo_mun_uf <- function(con, uf) {
     "SELECT l.local_id, l.local_name,",
     "ST_SimplifyPreserveTopology(g.geometry, 0.01) AS geometry",
     "FROM local l JOIN geoloc g USING (geoloc_id)",
-    "WHERE l.local_id < 5571 AND left(g.geoloc_id::text, 2) = '%s'",
+    sprintf("WHERE %s AND left(g.geoloc_id::text, 2) = '%%s'",
+            painel_municipio_filtro()),
     "ORDER BY l.local_id"),
     uf), quiet = TRUE)
   geo$code <- as.character(geo$local_id)

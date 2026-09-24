@@ -19,5 +19,7 @@ collidem com geoloc_ids de agregados (1=Alta Floresta vs 1=Norte,
 53=Acrelandia vs 53=DF), o que despachava series municipais para
 regiao/UF/DF (bug de cobertura municipal, segunda ordem, corrigido
 2026-09-22). Series agregadas devem ser passadas por local_id.
+Municipios incorporados apos o bloco PNAD (local_id > 7087; ver
+incorporar_municipio_ibge) tambem entram no prefixo 6d.
 }
 \keyword{internal}
