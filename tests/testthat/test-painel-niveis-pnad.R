@@ -13,8 +13,8 @@ test_that("painel_nivel_parse decodifica larguras e o subnivel PNAD", {
   expect_identical(p7$chave, "7")
   expect_identical(
     p7$filtro,
-    sprintf("length(g.geoloc_id::text) = 7 AND l.local_id < %d",
-            AEDi:::painel_municipio_limite_id))
+    sprintf("length(g.geoloc_id::text) = 7 AND (l.local_id < %d OR l.local_id > %d)",
+            AEDi:::painel_municipio_limite_id, AEDi:::painel_pnad_bloco_fim))
 
   pp <- AEDi:::painel_nivel_parse("7p")
   expect_identical(pp$nivel, 7L)
@@ -22,8 +22,8 @@ test_that("painel_nivel_parse decodifica larguras e o subnivel PNAD", {
   expect_identical(pp$chave, "7p")
   expect_identical(
     pp$filtro,
-    sprintf("length(g.geoloc_id::text) = 7 AND l.local_id >= %d",
-            AEDi:::painel_municipio_limite_id))
+    sprintf("length(g.geoloc_id::text) = 7 AND l.local_id >= %d AND l.local_id <= %d",
+            AEDi:::painel_municipio_limite_id, AEDi:::painel_pnad_bloco_fim))
 })
 
 test_that("painel_nivel_parse aceita chave numerica e inteira", {

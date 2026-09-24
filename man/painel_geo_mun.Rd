@@ -2,11 +2,13 @@
 % Please edit documentation in R/painel_dw.R
 \name{painel_geo_mun}
 \alias{painel_geo_mun}
-\title{Geometrias municipais do DW (local_id < 5571)}
+\title{Geometrias municipais do DW (bloco historico local_id < 5571 mais os
+municipios incorporados apos o bloco PNAD, local_id > 7087)}
 \usage{
 painel_geo_mun(con)
 }
 \description{
-Geometrias municipais do DW (local_id < 5571)
+Geometrias municipais do DW (bloco historico local_id < 5571 mais os
+municipios incorporados apos o bloco PNAD, local_id > 7087)
 }
 \keyword{internal}

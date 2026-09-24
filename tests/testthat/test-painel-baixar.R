@@ -158,7 +158,7 @@ test_that("painel_xlsx_indicador traduz o codigo para o IBGE quando mapeado", {
 
 test_that("painel_codigo_mun_cache traz codigo IBGE de 7 digitos por local_id", {
   codigos <- AEDi:::painel_codigo_mun_cache()
-  expect_length(codigos, 5570L)
+  expect_length(codigos, 5571L)
   expect_true(all(grepl("^[0-9]{7}$", codigos)))
   expect_identical(sum(startsWith(codigos, "31")), 853L)  # MG
 })

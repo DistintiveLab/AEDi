@@ -89,7 +89,7 @@ if(sanitize){
   print("sanitizing locals")
   ##PROCESS - PAIR LOC NAME WITH LOCAL ID
   locais <- DBI::dbGetQuery(condw,"select local_id,local_name,geoloc_id from local")
-  locais <- locais|>dplyr::filter(local_id<6000 | local_id==7087)|>
+  locais <- locais|>dplyr::filter(local_id<6000 | local_id==7087 | local_id>7087)|>
     dplyr::mutate(geoloc_idc=as.numeric(substr(`geoloc_id`,1,6)))
   idbrasil <- locais[locais$local_name=="Brasil",]$local_id
 
@@ -98,7 +98,7 @@ if(sanitize){
     tidyr::separate_wider_delim(local,delim=" ",names=c("geoloc_idc","local_nome"),too_many="merge",too_few="align_end") |>
     dplyr::mutate(geoloc_idc=ifelse(local_nome=="Brasil",idbrasil,geoloc_idc))|>
     dplyr::mutate(across(geoloc_idc,as.numeric))|>
-    dplyr::left_join(locais|>dplyr::filter(local_id<5800|local_id==idbrasil),by="geoloc_idc")
+    dplyr::left_join(locais|>dplyr::filter(local_id<5800|local_id==idbrasil|local_id>7087),by="geoloc_idc")
   } else {
     if(unique(nchar(datadf$local)==6)) {
       print("local numérico codigo IBGE 6")

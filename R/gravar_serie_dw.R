@@ -28,13 +28,16 @@ anos_rais <- function(con) {
 #' 53=Acrelandia vs 53=DF), o que despachava series municipais para
 #' regiao/UF/DF (bug de cobertura municipal, segunda ordem, corrigido
 #' 2026-09-22). Series agregadas devem ser passadas por local_id.
+#' Municipios incorporados apos o bloco PNAD (local_id > 7087; ver
+#' incorporar_municipio_ibge) tambem entram no prefixo 6d.
 #'
 #' @param locais data.frame com `local_id` e `geoloc_id` (tabela `local`)
 #' @keywords internal
 montar_lookup_locais <- function(locais) {
+  eh_mun <- locais$local_id < 6000 | locais$local_id > 7087
   lookup <- c(
-    setNames(locais$local_id[locais$local_id < 6000],
-             as.numeric(substr(as.character(locais$geoloc_id[locais$local_id < 6000]), 1, 6))),
+    setNames(locais$local_id[eh_mun],
+             as.numeric(substr(as.character(locais$geoloc_id[eh_mun]), 1, 6))),
     setNames(locais$local_id, as.character(locais$local_id)),
     setNames(locais$local_id, as.character(locais$geoloc_id)))
   lookup[!duplicated(names(lookup))]

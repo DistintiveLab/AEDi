@@ -1,3 +1,25 @@
+# AEDi 0.7.3.9000
+
+## Municípios novos do IBGE no DW: `incorporar_municipio_ibge()`
+
+- Nova função `incorporar_municipio_ibge()`: incorpora ao DW municípios
+  criados após a carga histórica (5570 códigos, `local_id` 1..5570), como
+  Boa Esperança do Norte/MT (5101837, criado 2023). Baixa metadados da API
+  de localidades e malha (API v3 com fallback para o geoftp), insere a
+  geometria simplificada (0,01°, padrão do DW), vincula região imediata e
+  intermediária e copia participações (fronteira, Amazônia Legal,
+  Semiárido, SUDENE) de um município de referência. Regenera
+  `recortes_geograficos` preservando matviews dependentes.
+- Novos municípios entram com `local_id` anexado após o bloco PNAD (7088,
+  7089, ...) — nunca renumerar ids existentes (`data_values` os
+  referencia). A regra semântica de município no ecossistema passa a ser
+  `geoloc_id` de 7 dígitos E (`local_id` < 5571 OU `local_id` > 7087),
+  aplicada em `painel_dw.R` (níveis "7"/"7p"), `gravar_serie_dw.R`,
+  `dbdatawriter.R` e `create_extend_geogroup_view.R`.
+- `criar_recortes_geograficos()` aceita conexão externa (não a desconecta
+  mais), detecta matviews dependentes via `pg_rewrite` e recria
+  `geonamed_datavalues` caso tenha sido derrubada.
+
 # AEDi 0.7.2.9000
 
 ## Código IBGE nas planilhas da aba Baixar

@@ -23,10 +23,18 @@
 ###Criar a VIEW so com municipios
 
 #  consulta
-criar_recortes_geograficos <- \() {
-con <- .con_recortes()
+# `con` opcional: incorporar_municipio_ibge() regenera a matview na mesma
+# conexao/transacao; sem conexao, cai no .con_recortes() via env (tdbname)
+criar_recortes_geograficos <- \(con = NULL) {
+con_propria <- is.null(con)
+if (con_propria) con <- .con_recortes()
 if (is.null(con)) return(invisible(NULL))
 numero_municipios <- 5570
+# municipios = bloco historico (1..5570) MAIS os incorporados com append
+# apos o bloco PNAD (7088, 7089, ...; ver incorporar_municipio_ibge)
+pnad_bloco_fim <- 7087
+municipios_filtro <- sprintf("(local.local_id < %d OR local.local_id > %d)",
+                             numero_municipios + 1, pnad_bloco_fim)
 
 consulta_inicial <- paste('(SELECT geoloc.geoloc_id codigo_ibge,',
                           "ST_X(ST_Centroid(geoloc.geometry)) longitude,",
@@ -35,7 +43,7 @@ consulta_inicial <- paste('(SELECT geoloc.geoloc_id codigo_ibge,',
                           "geoloc.geometry FROM ",
                           "local LEFT JOIN geoloc ON ",
                           "local.geoloc_id = geoloc.geoloc_id WHERE",
-                          'local_id < ',numero_municipios+1,") As viewbase")
+                          municipios_filtro,") As viewbase")
 
 previos_recortes_nmcol <- c(
   'faixa_de_fronteira',
@@ -97,7 +105,7 @@ adiciona_recorte <- \(novorecorte = 'regiao_imediata',baseq = consulta_inicial,v
           "LEFT JOIN local_group ON local.local_Id = local_group.local_id",
           'LEFT JOIN datagroup ON local_group.datagroup_id = datagroup.datagroup_id',
           "LEFT JOIN group_parent ON local_group.datagroup_id = group_parent.datagroup_id",
-          "WHERE local.local_id <",numero_municipios+1,
+          "WHERE", municipios_filtro,
           "AND group_parent.datagroup_parentid = ",
           novo_grupo,") As", newcolname)
 
@@ -142,14 +150,66 @@ colselect <- paste(
 )
 
 
+# Matviews que dependem de recortes_geograficos (ex.: geonamed_datavalues):
+# salvar definicao + indexes, dropar com CASCADE e recriar sobre a nova
+# definicao — sem isso o CREATE falha por dependencia
+.salvar_dependentes_recortes <- function(con) {
+  # matviews dependem de recortes via regra de rewrite (pg_rewrite),
+  # nao diretamente em pg_class; deptype 'n' exclui a regra interna da
+  # propria recortes (deptype 'i')
+  deps <- DBI::dbGetQuery(con, paste(
+    "SELECT DISTINCT v.matviewname, pg_get_viewdef(c.oid, true) AS def",
+    "FROM pg_depend d",
+    "JOIN pg_rewrite r ON r.oid = d.objid",
+    "AND d.classid = 'pg_rewrite'::regclass",
+    "JOIN pg_class c ON c.oid = r.ev_class AND c.relkind = 'm'",
+    "JOIN pg_matviews v ON v.matviewname = c.relname",
+    "AND v.schemaname = c.relnamespace::regnamespace::text",
+    "WHERE d.refclassid = 'pg_class'::regclass",
+    "AND d.refobjid = 'recortes_geograficos'::regclass",
+    "AND d.deptype = 'n'"))
+  idx <- if (nrow(deps)) {
+    DBI::dbGetQuery(con, sprintf(paste(
+      "SELECT indexdef FROM pg_indexes",
+      "WHERE schemaname = 'public' AND tablename IN (%s)"),
+      paste(sprintf("'%s'", deps$matviewname), collapse = ", ")))
+  } else data.frame(indexdef = character(0))
+  list(deps = deps, idx = idx)
+}
+
+.recriar_dependentes_recortes <- function(con, salvos) {
+  for (nm in salvos$deps$matviewname) {
+    DBI::dbExecute(con, sprintf(
+      "DROP MATERIALIZED VIEW IF EXISTS %s CASCADE", nm))
+    DBI::dbExecute(con, sprintf(
+      "CREATE MATERIALIZED VIEW %s AS %s", nm,
+      salvos$deps$def[salvos$deps$matviewname == nm]))
+  }
+  for (d in salvos$idx$indexdef) DBI::dbExecute(con, d)
+}
+
+dependentes_salvos <- .salvar_dependentes_recortes(con)
+DBI::dbExecute(con,"DROP MATERIALIZED VIEW IF EXISTS recortes_geograficos CASCADE")
 DBI::dbExecute(con,paste0("CREATE MATERIALIZED VIEW recortes_geograficos AS ",paste(colselect,centro_query,uf_regiao)))
 DBI::dbExecute(con,
                paste0("CREATE UNIQUE INDEX IF NOT EXISTS codibge_index ON
                       public.recortes_geograficos USING btree
                       (codigo_ibge ASC NULLS LAST) WITH (FILLFACTOR=90)
                       TABLESPACE pg_default;"))
+.recriar_dependentes_recortes(con, dependentes_salvos)
 
-DBI::dbDisconnect(con)
+# geonamed_datavalues (definicao canonica de dbprepare.R) e central para os
+# scripts de coleta: se nao foi capturada como dependente (ex.: regen apos
+# queda que a derrubou), garante a existencia
+DBI::dbExecute(con, paste(
+  "CREATE MATERIALIZED VIEW IF NOT EXISTS geonamed_datavalues AS",
+  "SELECT named_datavalues.*, recortes_geograficos.*",
+  "FROM named_datavalues",
+  "LEFT JOIN local ON named_datavalues.local_id = local.local_id",
+  "LEFT JOIN recortes_geograficos",
+  "ON local.geoloc_id = recortes_geograficos.codigo_ibge"))
+
+if (con_propria) DBI::dbDisconnect(con)
 
 
 }
