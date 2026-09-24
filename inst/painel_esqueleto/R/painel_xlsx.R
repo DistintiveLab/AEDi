@@ -159,10 +159,15 @@ painel_xlsx_regiao <- function(arquivo, valores, mdata, local_rotulo,
 #' @param rotulo_indicador,nivel_rotulo rotulos do indicador e do nivel
 #'   territorial escolhidos (cabecalho e nome do arquivo)
 #' @param titulo titulo do painel (cabecalho)
+#' @param codigos vetor nomeado local_id (texto) -> codigo de exibicao da
+#'   localidade (ex.: codigo IBGE dos municipios,
+#'   [painel_codigo_mun_cache()]); localidades fora do vetor mantem o
+#'   local_id, e a coluna inteira vira texto
 #' @keywords internal
 painel_xlsx_indicador <- function(arquivo, por_ano, locais,
                                   rotulo_indicador, nivel_rotulo,
-                                  titulo = "Painel de Indicadores") {
+                                  titulo = "Painel de Indicadores",
+                                  codigos = NULL) {
   wb <- openxlsx::createWorkbook()
   anos <- names(por_ano)[vapply(por_ano, nrow, integer(1)) > 0]
   if (!length(anos)) {
@@ -187,9 +192,13 @@ painel_xlsx_indicador <- function(arquivo, por_ano, locais,
     sem_rotulo <- is.na(rotulo)
     if (any(sem_rotulo)) rotulo[sem_rotulo] <- paste0("local ", v$local_id[sem_rotulo])
     aba <- as.character(ano)
+    codigo <- if (is.null(codigos)) v$local_id else {
+      traduz <- unname(codigos[as.character(v$local_id)])
+      ifelse(is.na(traduz), as.character(v$local_id), traduz)
+    }
     openxlsx::addWorksheet(wb, aba)
     openxlsx::writeData(wb, aba, data.frame(
-      Código = v$local_id, Localidade = rotulo, Valor = v$value,
+      Código = codigo, Localidade = rotulo, Valor = v$value,
       check.names = FALSE))
     .painel_xlsx_estilo_tabela(wb, aba, 3L, 1L, congelar_col = 0L)
     abas <- c(abas, aba)

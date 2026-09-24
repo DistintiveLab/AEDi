@@ -12,7 +12,8 @@ painel_xlsx_indicador(
   locais,
   rotulo_indicador,
   nivel_rotulo,
-  titulo = "Painel de Indicadores"
+  titulo = "Painel de Indicadores",
+  codigos = NULL
 )
 }
 \arguments{
@@ -29,6 +30,11 @@ na regua de ultima observacao do ano (\code{\link[=painel_valores_ano]{painel_va
 territorial escolhidos (cabecalho e nome do arquivo)}
 
 \item{titulo}{titulo do painel (cabecalho)}
+
+\item{codigos}{vetor nomeado local_id (texto) -> codigo de exibicao da
+localidade (ex.: codigo IBGE dos municipios,
+\code{\link[=painel_codigo_mun_cache]{painel_codigo_mun_cache()}}); localidades fora do vetor mantem o
+local_id, e a coluna inteira vira texto}
 }
 \description{
 Planilha "um indicador por ano": uma aba por ano, cada uma com todas as
