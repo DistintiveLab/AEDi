@@ -28,6 +28,30 @@ test_that("painel_brand_equipe aceita varias entradas separadas por ;", {
   expect_match(as.character(cards[[3]]), "Carla Dias", fixed = TRUE)
 })
 
+test_that("painel_brand_equipe aceita foto (4o campo) como avatar do cartao", {
+  Sys.setenv(painel_equipe = paste(
+    "Ana Silva|Pesquisadora|ana@exemplo.br|foto-ana.png",
+    "Bruno Souza|Cientista de dados|", sep = ";"))
+  on.exit(Sys.unsetenv("painel_equipe"), add = TRUE)
+  cards <- AEDi:::painel_brand_equipe()
+  expect_length(cards, 2)
+  html1 <- as.character(cards[[1]])
+  expect_match(html1, "painel-pessoa-foto", fixed = TRUE)
+  expect_match(html1, "aedi_marca/foto-ana.png", fixed = TRUE)
+  expect_match(html1, "Foto de Ana Silva", fixed = TRUE)
+  expect_identical(grepl("painel-pessoa-foto", as.character(cards[[2]]),
+                         fixed = TRUE), FALSE)
+})
+
+test_that("a foto da equipe tambem aceita URL http(s) direta", {
+  Sys.setenv(painel_equipe =
+               "Ana Silva|Pesquisadora|ana@exemplo.br|https://cdn.exemplo.br/ana.jpg")
+  on.exit(Sys.unsetenv("painel_equipe"), add = TRUE)
+  html <- as.character(AEDi:::painel_brand_equipe()[[1]])
+  expect_match(html, "src=\"https://cdn.exemplo.br/ana.jpg\"", fixed = TRUE)
+  expect_match(html, "painel-pessoa-foto", fixed = TRUE)
+})
+
 test_that("painel_brand_apoios default mantem o box Distintive", {
   Sys.unsetenv("painel_apoios")
   Sys.unsetenv("painel_apoio")

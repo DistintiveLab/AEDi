@@ -3,8 +3,10 @@
 \name{painel_brand_equipe}
 \alias{painel_brand_equipe}
 \title{Cartoes da equipe da aba Sobre (usa painel_equipe): entradas separadas
-por ";", campos "nome|papel|email" por "|" (email opcional); vazio
-mantem o cartao unico do autor}
+por ";", campos "nome|papel|email|foto" por "|" (email e foto
+opcionais; foto = arquivo do www/ ou URL, resolvida por
+\code{\link[=painel_marca_src]{painel_marca_src()}} como avatar redondo do cartao); vazio mantem o
+cartao unico do autor}
 \usage{
 painel_brand_equipe(
   default = paste("Rodrigo Emmanuel Santana Borges|",
@@ -13,7 +15,9 @@ painel_brand_equipe(
 }
 \description{
 Cartoes da equipe da aba Sobre (usa painel_equipe): entradas separadas
-por ";", campos "nome|papel|email" por "|" (email opcional); vazio
-mantem o cartao unico do autor
+por ";", campos "nome|papel|email|foto" por "|" (email e foto
+opcionais; foto = arquivo do www/ ou URL, resolvida por
+\code{\link[=painel_marca_src]{painel_marca_src()}} como avatar redondo do cartao); vazio mantem o
+cartao unico do autor
 }
 \keyword{internal}

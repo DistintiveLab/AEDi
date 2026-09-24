@@ -11,6 +11,13 @@
   0,1–0,7 MB por estado; o município em destaque sai da malha fora do
   cache).
 
+## Foto de quem faz
+
+- O cartão de equipe da aba Sobre aceita um quarto campo em `painel_equipe`
+  ("nome|papel|email|foto"): a foto, um arquivo do `www/` (resolvida como
+  o logo) ou URL, aparece como avatar redondo no topo do cartão, com o
+  texto alternativo "Foto de <nome>".
+
 # AEDi 0.7.0.9000
 
 ## Municípios e regiões de interesse PNAD deixam de dividir o mesmo nível
