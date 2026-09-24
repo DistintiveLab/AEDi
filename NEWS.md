@@ -1,3 +1,16 @@
+# AEDi 0.7.1.9000
+
+## Globo desenha a malha municipal da UF em foco
+
+- Quando um município está selecionado (nível municipal, base das UFs), o
+  globo desenha também as bordas dos demais municípios do estado — traço
+  fino na cor `--p-linha` (branca nas duas paletas), sem preenchimento,
+  entre a base e o destaque. A malha viaja na mesma mensagem do contexto
+  da UF e o cliente a guarda até a seleção mudar de estado
+  (`painel_geo_mun_uf()` simplificada a 0.01 grau e cacheada por UF:
+  0,1–0,7 MB por estado; o município em destaque sai da malha fora do
+  cache).
+
 # AEDi 0.7.0.9000
 
 ## Municípios e regiões de interesse PNAD deixam de dividir o mesmo nível

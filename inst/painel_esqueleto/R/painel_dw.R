@@ -441,6 +441,25 @@ painel_geo_pai_uf <- function(con, local_id) {
   geo[, c("code", "label", "geometry")]
 }
 
+#' Malha municipal de uma UF (prefixo de 2 digitos do geoloc_id),
+#' simplificada no SQL (0.01 grau ~ 1 km) — so as bordas dos vizinhos
+#' desenhadas no globo ao redor do municipio em destaque
+#' @keywords internal
+painel_geo_mun_uf <- function(con, uf) {
+  uf <- as.character(uf)[1]
+  if (is.na(uf) || !grepl("^[0-9]{2}$", uf)) return(painel_geo_vazio())
+  geo <- sf::st_read(con, query = sprintf(paste(
+    "SELECT l.local_id, l.local_name,",
+    "ST_SimplifyPreserveTopology(g.geometry, 0.01) AS geometry",
+    "FROM local l JOIN geoloc g USING (geoloc_id)",
+    "WHERE l.local_id < 5571 AND left(g.geoloc_id::text, 2) = '%s'",
+    "ORDER BY l.local_id"),
+    uf), quiet = TRUE)
+  geo$code <- as.character(geo$local_id)
+  geo$label <- geo$local_name
+  geo[, c("code", "label", "geometry")]
+}
+
 #' UFs que contem localidades de um nivel com dados de um indicador —
 #' pintura do globo quando a base e a das UFs (nivel municipal)
 #' @keywords internal
@@ -833,6 +852,27 @@ painel_geo_pai_uf_cache <- function(local_id) {
     painel_cache_chave(sprintf("geo_pai_uf_%d", local_id)),
     painel_cache_ttl[["geo"]],
     function() painel_com_con(function(con) painel_geo_pai_uf(con, local_id)))
+}
+
+#' Malha municipal da UF de uma localidade, cacheada POR UF (a malha
+#' inteira entra no cache; o municipio em destaque sai dela fora do cache,
+#' senao a entrada serviria outra selecao do mesmo estado)
+#' @keywords internal
+painel_geo_mun_uf_cache <- function(local_id) {
+  local_id <- suppressWarnings(as.integer(local_id))[1]
+  if (is.na(local_id)) return(painel_geo_vazio())
+  uf <- painel_com_con(function(con) DBI::dbGetQuery(con, sprintf(paste(
+    "SELECT left(g.geoloc_id::text, 2) AS uf",
+    "FROM local l JOIN geoloc g USING (geoloc_id)",
+    "WHERE l.local_id = %d"),
+    local_id))$uf)
+  uf <- as.character(uf)[1]
+  if (is.na(uf) || !grepl("^[0-9]{2}$", uf)) return(painel_geo_vazio())
+  malha <- painel_cache_get(
+    painel_cache_chave(sprintf("geo_mun_uf_%s", uf)),
+    painel_cache_ttl[["geo"]],
+    function() painel_com_con(function(con) painel_geo_mun_uf(con, uf)))
+  malha[malha$code != as.character(local_id), , drop = FALSE]
 }
 
 #' UFs com dados num nivel, cacheado

@@ -4,8 +4,9 @@
  * mundo, a roda do mouse e os botoes aproximam e afastam (estilo Google
  * Earth) e clicar numa area com dados atualiza a aba Regiao via
  * setInputValue. No nivel municipal a base sao as UFs com o municipio
- * escolhido destacado e a UF inteira em foco (a mensagem traz o geojson
- * do destaque e do contexto). Requer painel-geo.js. A geometria do nivel
+ * escolhido destacado, a UF inteira em foco e a malha de bordas dos
+ * demais municipios do estado (a mensagem traz o geojson do destaque, do
+ * contexto e da malha). Requer painel-geo.js. A geometria do nivel
  * chega pela mensagem Shiny "painel-globe" (string GeoJSON do banco de
  * dados); o contorno mundial vem do asset local painel-mundo.geojson por
  * fetch (o globo tambem funciona sem ele). Cores acompanham a paleta do
@@ -62,7 +63,8 @@
       markerStroke: "#5F7285",
       oceanFrom: "#EAF2F8", oceanTo: "#D8E4EE", oceanStroke: "#A9BCCE",
       graticule: "rgba(125,145,168,0.35)",
-      land: "#EFECE4", landStroke: "rgba(125,145,168,0.45)"
+      land: "#EFECE4", landStroke: "rgba(125,145,168,0.45)",
+      malha: cssVar("--p-linha", "#FFFFFF")
     };
   }
 
@@ -95,6 +97,14 @@
     };
   }
 
+  // Feicoes cruas de uma string GeoJSON — a malha municipal decorativa
+  // (so bordas) dispensa code/label/center.
+  function parseGeojsonFeatures(text) {
+    const collection = JSON.parse(text);
+    if (!collection || !Array.isArray(collection.features)) return [];
+    return collection.features.filter(feature => feature && feature.geometry);
+  }
+
   function element(tag, className, parent) {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -114,6 +124,7 @@
       features: [], rotation: [53.5, 10.5, 0], width: 360, radius: 160,
       zoom: 1, world: [], modo: "uf",
       destaque: null, destaqueCode: "", contexto: null, contextoCode: "",
+      malha: [],
       frame: 0, animation: null, pointer: null, hovered: null, error: false,
       disposed: false, loaded: false, received: false
     };
@@ -297,6 +308,16 @@
           hovered && available ? 1.2 : 0.55);
       });
       if (selected) drawFeature(selected, colors.selected, colors.selectedStroke, 0.9);
+
+      // Malha municipal da UF em foco: so as bordas dos vizinhos, num
+      // unico traco fino entre a base e o destaque.
+      if (state.malha.length) {
+        context.beginPath();
+        state.malha.forEach(feature => { path(feature); });
+        context.strokeStyle = colors.malha;
+        context.lineWidth = 0.5;
+        context.stroke();
+      }
 
       // Destaque (localidade fora das feicoes da base): por cima de tudo.
       if (state.destaque) {
@@ -608,6 +629,13 @@
       } else if (!state.contextoCode) state.contexto = null;
       if (state.contexto && state.contextoCode) state.contexto.code = state.contextoCode;
       if (!state.contextoCode) state.contexto = null;
+      // Malha municipal acompanha o contexto: viaja com a UF em foco e
+      // some junto quando nao ha selecao municipal.
+      if (message.malhaGeojson) {
+        try {
+          state.malha = parseGeojsonFeatures(message.malhaGeojson);
+        } catch (error) { /* mantem a malha atual */ }
+      } else if (!state.contextoCode) state.malha = [];
       // A selecao local pode estar varios cliques a frente desta mensagem do
       // servidor; mantem-a quando ainda valida para a disponibilidade recebida.
       const local = state.localClick;

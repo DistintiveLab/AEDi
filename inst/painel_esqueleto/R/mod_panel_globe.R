@@ -5,8 +5,9 @@
 #'   painel): arrastar gira livremente pelo mundo, a roda e os botoes
 #'   aproximam estilo Google Earth e clicar numa area com dados escolhe a
 #'   localidade na aba Regiao. No nivel municipal (sem geometria coletiva
-#'   leve) a base sao as UFs com o municipio escolhido destacado e a UF
-#'   inteira em foco. Port do globo do labourvaluesdatapanel.
+#'   leve) a base sao as UFs com o municipio escolhido destacado, a UF
+#'   inteira em foco e a malha de bordas dos demais municipios do estado.
+#'   Port do globo do labourvaluesdatapanel.
 #'
 #' @param id,input,output,session Internal parameters for {shiny}.
 #'
@@ -67,8 +68,9 @@ mod_panel_globe_server <- function(id,
     # A geometria do nivel viaja na primeira mensagem, apos cada
     # remontagem do host (handshake via input$pronto) e quando o nivel
     # muda; nas demais, apenas disponibilidade e selecao. Destaque (a
-    # localidade fora das feicoes) e contexto (a UF que a contem) so
-    # viajam quando o par muda — o cliente guarda o que ja recebeu.
+    # localidade fora das feicoes) e contexto (a UF que a contem, com a
+    # malha municipal de bordas) so viajam quando o par muda — o cliente
+    # guarda o que ja recebeu.
     instancia <- -1L
     enviado <- list(geo = NULL, destaque = NULL, contexto = NULL)
     shiny::observe({
@@ -108,6 +110,8 @@ mod_panel_globe_server <- function(id,
           msg$contexto <- pai$code[1]
           if (remontou || !identical(enviado$contexto, msg$contexto)) {
             msg$contextoGeojson <- painel_geojson(pai)
+            malha <- painel_geo_mun_uf_cache(atual)
+            if (nrow(malha)) msg$malhaGeojson <- painel_geojson(malha)
             enviado$contexto <<- msg$contexto
           }
         } else enviado$contexto <<- NULL
