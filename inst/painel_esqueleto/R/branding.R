@@ -18,8 +18,10 @@
 #                     "|" (nome vira link da url); sem "|" a linha inteira
 #                     vira texto puro; vazio mantem o credito a Distintive
 #   painel_equipe     cartoes da equipe ("Quem faz") da aba Sobre, entradas
-#                     separadas por ";" e campos "nome|papel|email" por
-#                     "|" (email opcional); vazio mantem o cartao do autor
+#                     separadas por ";" e campos "nome|papel|email|foto"
+#                     por "|" (email e foto opcionais; foto = arquivo do
+#                     www/ ou URL, vira avatar redondo no cartao); vazio
+#                     mantem o cartao do autor
 #   painel_apoios     boxes de apoio da aba Sobre, entradas separadas por
 #                     ";" e campos "logo|url|frase|nome" por "|" (logo =
 #                     arquivo do www/ ou URL; nome opcional, default do
@@ -88,8 +90,10 @@ painel_brand_apoio <- function(
 }
 
 #' Cartoes da equipe da aba Sobre (usa painel_equipe): entradas separadas
-#' por ";", campos "nome|papel|email" por "|" (email opcional); vazio
-#' mantem o cartao unico do autor
+#' por ";", campos "nome|papel|email|foto" por "|" (email e foto
+#' opcionais; foto = arquivo do www/ ou URL, resolvida por
+#' [painel_marca_src()] como avatar redondo do cartao); vazio mantem o
+#' cartao unico do autor
 #' @keywords internal
 painel_brand_equipe <- function(
   default = paste("Rodrigo Emmanuel Santana Borges|",
@@ -100,10 +104,14 @@ painel_brand_equipe <- function(
   entradas <- trimws(strsplit(valor, ";", fixed = TRUE)[[1]])
   lapply(entradas[nzchar(entradas)], function(entrada) {
     campos <- strsplit(entrada, "|", fixed = TRUE)[[1]]
-    length(campos) <- 3
+    length(campos) <- 4
     campos[is.na(campos)] <- ""
     campos <- trimws(campos)
+    foto <- if (nzchar(campos[4])) painel_marca_src(campos[4]) else ""
     shiny::tags$div(class = "painel-pessoa-card",
+      if (nzchar(foto))
+        shiny::tags$img(class = "painel-pessoa-foto", src = foto,
+          alt = paste("Foto de", campos[1])),
       shiny::tags$h3(campos[1]),
       if (nzchar(campos[2]))
         shiny::tags$p(class = "painel-pessoa-papel", campos[2]),
