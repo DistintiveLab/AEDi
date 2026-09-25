@@ -35,11 +35,12 @@ total <- parse_mun(total)
 desnutricao[is.na(desnutricao)] <- 0
 total[is.na(total)] <- 0
 
-serie <- desnutricao |>
+serie <- total |>
   dplyr::select(-"Total") |>
-  tidyr::pivot_longer(-1:-2, names_to = "ano", values_to = "desnut") |>
-  dplyr::left_join(total |> dplyr::select(-"Total") |>
-             tidyr::pivot_longer(-1:-2, names_to = "ano", values_to = "tot")) |>
+  tidyr::pivot_longer(-1:-2, names_to = "ano", values_to = "tot") |>
+  dplyr::left_join(desnutricao |> dplyr::select(-"Total") |>
+             tidyr::pivot_longer(-1:-2, names_to = "ano", values_to = "desnut")) |>
+  dplyr::mutate(desnut = tidyr::replace_na(desnut, 0)) |>
   dplyr::filter(!is.na(cd_mun), tot > 0) |>
   dplyr::transmute(local = cd_mun,
                    periodo = as.Date(paste0(ano, "-12-31")),
