@@ -34,7 +34,50 @@ painel_mdata <- function(con) {
     "ORDER BY orig_name"))
   nome <- ifelse(is.na(md$data_name), md$orig_name, md$data_name)
   md$rotulo <- paste0(nome, " (", md$orig_name, ")")
+  painel_mdata_extras(con, md)
+}
+
+#' Acrescenta ao catalogo as colunas opcionais do painel: periodicidade
+#' (freq_name, de mdata_exts/data_freq), tipo do grafico em destaque
+#' (tipo_grafico, de mdata_grafico) e visibilidade nos seletores
+#' (visivel, de mdata_visivel). Fail-open: DW sem as tabelas auxiliares
+#' segue com defaults (freq ausente, "linha", visivel)
+#' @keywords internal
+painel_mdata_extras <- function(con, md) {
+  md$freq_name <- rep(NA_character_, NROW(md))
+  md$tipo_grafico <- rep(NA_character_, NROW(md))
+  md$visivel <- rep(TRUE, NROW(md))
+  freq <- tryCatch(DBI::dbGetQuery(con, paste(
+    "SELECT e.mdata_id, f.freq_name FROM mdata_exts e",
+    "LEFT JOIN data_freq f ON f.data_freq_id = e.data_freq_id")),
+    error = function(e) NULL)
+  if (NROW(freq))
+    md$freq_name <- freq$freq_name[match(md$mdata_id, freq$mdata_id)]
+  graf <- tryCatch(DBI::dbGetQuery(con,
+    "SELECT mdata_id, tipo_grafico FROM mdata_grafico"),
+    error = function(e) NULL)
+  if (NROW(graf))
+    md$tipo_grafico <- graf$tipo_grafico[match(md$mdata_id, graf$mdata_id)]
+  ocultos <- tryCatch(DBI::dbGetQuery(con,
+    "SELECT mdata_id FROM mdata_visivel WHERE NOT visivel"),
+    error = function(e) NULL)
+  if (NROW(ocultos))
+    md$visivel[md$mdata_id %in% ocultos$mdata_id] <- FALSE
   md
+}
+
+#' Rotulo amigavel do eixo temporal conforme a periodicidade do indicador
+#' (anual -> "Ano", mensal -> "Mês"...) — prepara o painel para series
+#' nao anuais sem trocar as legendas caso a caso
+#' @keywords internal
+painel_rotulo_tempo <- function(freq_name) {
+  f <- tolower(trimws(as.character(freq_name)[1]))
+  rotulos <- c(diaria = "Data", "diària" = "Data", semanal = "Semana",
+               quinzenal = "Quinzena", mensal = "Mês", bimestral = "Bimestre",
+               trimestral = "Trimestre", quadrimestral = "Quadrimestre",
+               semestral = "Semestre", anual = "Ano", bienal = "Ano")
+  if (is.na(f) || !f %in% names(rotulos)) return("Ano")
+  unname(rotulos[[f]])
 }
 
 #' Geometrias municipais do DW (bloco historico local_id < 5571 mais os
@@ -328,6 +371,8 @@ painel_nivel_default <- function(niveis) {
 #' @keywords internal
 painel_indicador_default <- function(md, padrao = Sys.getenv("aedi_indicador", "")) {
   if (is.null(md) || !NROW(md) || !"mdata_id" %in% names(md)) return(NA_integer_)
+  if ("visivel" %in% names(md))
+    md <- md[is.na(md$visivel) | md$visivel, , drop = FALSE]
   alvo <- trimws(as.character(padrao)[1])
   if (length(alvo) && !is.na(alvo) && nzchar(alvo) && "orig_name" %in% names(md)) {
     i <- match(alvo, trimws(as.character(md$orig_name)))
@@ -596,9 +641,13 @@ painel_grupos_selecao <- c(paste("Eixo", 1:7), paste("Objetivo", 1:4),
 #' vem numerados ("Indicador N - Nome (orig_name)"); os Estratos PNAD
 #' seguem o numero do estrato (pnadc1..7 e comp_pnadc8..14); os demais
 #' mantem a ordem alfabetica do `orig_name` de [painel_mdata()].
+#' Indicadores marcados como invisiveis (tabela auxiliar `mdata_visivel`,
+#' coluna `visivel` do catalogo) ficam de fora das opcoes.
 #' @keywords internal
 painel_opcoes_indicador <- function(md) {
   if (is.null(md) || !NROW(md)) return(list())
+  if ("visivel" %in% names(md))
+    md <- md[is.na(md$visivel) | md$visivel, , drop = FALSE]
   x <- trimws(as.character(md$orig_name))
   grupo <- painel_grupo_indicador(x)
   grupo[is.na(grupo)] <- "Demais indicadores"
@@ -680,24 +729,35 @@ painel_compostos <- function(con) {
 #' @param compostos tabela de [painel_compostos()]
 #' @param valores tabela de [painel_valores_local_todos()]
 #' @keywords internal
-painel_resumo_grupos <- function(hierarquia, compostos, valores) {
+painel_resumo_grupos <- function(hierarquia, compostos, valores,
+                               ano = NULL) {
   vazio <- data.frame(grupo = character(0), raiz = character(0),
                       mdata_id = integer(0), rotulo = character(0),
-                      valor = numeric(0), refdate = as.Date(character(0)))
+                      valor = numeric(0), refdate = as.Date(character(0)),
+                      valor_ant = numeric(0),
+                      refdate_ant = as.Date(character(0)))
   if (!NROW(hierarquia) || !NROW(compostos) || !NROW(valores)) return(vazio)
   h <- hierarquia[hierarquia$mdata_id %in% compostos$mdata_id, ]
   if (!nrow(h)) return(vazio)
+  ano <- suppressWarnings(as.integer(ano)[1])
   linhas <- lapply(seq_len(nrow(h)), function(i) {
     v <- valores[valores$mdata_id == h$mdata_id[i] &
                    is.finite(valores$value), ]
     if (!nrow(v)) return(NULL)
+    if (!is.na(ano))
+      v <- v[as.integer(format(v$refdate, "%Y")) <= ano, , drop = FALSE]
+    if (!nrow(v)) return(NULL)
     ultimo <- which.max(v$refdate)
+    anterior <- if (ultimo > 1L) ultimo - 1L else 0L
     nome <- h$data_name[i]
     if (is.na(nome) || !nzchar(nome)) nome <- h$orig_name[i]
     data.frame(grupo = h$datagroup_name[i], raiz = h$raiz_nome[i],
                mdata_id = h$mdata_id[i],
                rotulo = paste0(trimws(nome), " — ", h$datagroup_name[i]),
-               valor = v$value[ultimo], refdate = v$refdate[ultimo])
+               valor = v$value[ultimo], refdate = v$refdate[ultimo],
+               valor_ant = if (anterior) v$value[anterior] else NA_real_,
+               refdate_ant = if (anterior) v$refdate[anterior]
+                            else as.Date(NA))
   })
   linhas <- linhas[!vapply(linhas, is.null, logical(1))]
   if (!length(linhas)) return(vazio)
@@ -786,6 +846,40 @@ painel_paleta <- function(values, invertida = FALSE) {
 painel_num <- function(x) {
   format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE,
          trim = TRUE, digits = 6)
+}
+
+#' Grafico em destaque da serie da aba Regiao, despachando o tipo por
+#' indicador ("linha" default, "barras" ou "lollipop") e renomeando as
+#' colunas para legendas amigaveis no hover do plotly ("Ano"/"valor"
+#' em vez de "as.Date(refdate)"/"value"). Series anuais/bienais usam o
+#' ano inteiro no eixo x; as demais mantem a data
+#' @keywords internal
+painel_plot_indicador <- function(v, titulo = NULL, cor = "#1351B4",
+                                  tipo = "linha", rotulo_x = "Ano") {
+  tipo <- tolower(trimws(as.character(tipo)[1]))
+  if (is.na(tipo) || !tipo %in% c("barras", "lollipop")) tipo <- "linha"
+  rotulo_x <- trimws(as.character(rotulo_x)[1])
+  if (is.na(rotulo_x) || !nzchar(rotulo_x)) rotulo_x <- "Ano"
+  d <- data.frame(
+    x = if (identical(rotulo_x, "Ano"))
+      as.integer(format(as.Date(v$refdate), "%Y")) else as.Date(v$refdate),
+    valor = v$value)
+  names(d)[1] <- rotulo_x
+  p <- ggplot2::ggplot(d, ggplot2::aes(x = .data[[rotulo_x]],
+                                      y = .data[["valor"]]))
+  if (identical(tipo, "barras")) {
+    p <- p + ggplot2::geom_col(fill = cor, width = 0.62)
+  } else if (identical(tipo, "lollipop")) {
+    p <- p + ggplot2::geom_segment(
+      ggplot2::aes(xend = .data[[rotulo_x]], y = 0, yend = .data[["valor"]]),
+      color = "#B5B5B5", linewidth = 0.8, show.legend = FALSE) +
+      ggplot2::geom_point(color = cor, size = 2.6)
+  } else {
+    p <- p + ggplot2::geom_line(color = cor, linewidth = 0.9) +
+      ggplot2::geom_point(color = cor, size = 1.8)
+  }
+  p + ggplot2::labs(title = titulo, x = NULL, y = NULL) +
+    ggplot2::theme_minimal(base_size = 12)
 }
 
 #' Delta de camadas do mapa (port do wlv_map_layer_delta): mantem o par

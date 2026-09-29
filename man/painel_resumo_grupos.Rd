@@ -6,7 +6,7 @@
 valor mais recente na localidade (rotulo, valor e ano) — conteudo do
 "Resumo da regiao" na aba Regiao}
 \usage{
-painel_resumo_grupos(hierarquia, compostos, valores)
+painel_resumo_grupos(hierarquia, compostos, valores, ano = NULL)
 }
 \arguments{
 \item{hierarquia}{tabela de \code{\link[=painel_hierarquia]{painel_hierarquia()}}}

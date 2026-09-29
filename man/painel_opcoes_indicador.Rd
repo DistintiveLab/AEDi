@@ -15,5 +15,7 @@ Dentro de cada eixo/objetivo o composto abre o grupo e os componentes
 vem numerados ("Indicador N - Nome (orig_name)"); os Estratos PNAD
 seguem o numero do estrato (pnadc1..7 e comp_pnadc8..14); os demais
 mantem a ordem alfabetica do \code{orig_name} de \code{\link[=painel_mdata]{painel_mdata()}}.
+Indicadores marcados como invisiveis (tabela auxiliar \code{mdata_visivel},
+coluna \code{visivel} do catalogo) ficam de fora das opcoes.
 }
 \keyword{internal}

@@ -72,7 +72,8 @@ test_that("painel_resumo_grupos vazio devolve tabela tipada", {
   vazio <- AEDi:::painel_resumo_grupos(NULL, NULL, NULL)
   expect_identical(nrow(vazio), 0L)
   expect_identical(names(vazio),
-                   c("grupo", "raiz", "mdata_id", "rotulo", "valor", "refdate"))
+                   c("grupo", "raiz", "mdata_id", "rotulo", "valor", "refdate",
+                     "valor_ant", "refdate_ant"))
   expect_s3_class(vazio$refdate, "Date")
   expect_identical(nrow(AEDi:::painel_resumo_grupos(
     data.frame(), data.frame(), data.frame())), 0L)
