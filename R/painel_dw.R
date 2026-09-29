@@ -257,11 +257,11 @@ painel_ranking_local <- function(con, mdata_id, local_id, ano) {
     "  ORDER BY v.local_id, v.refdate DESC",
     ")",
     "SELECT",
-    "  count(*) FILTER (WHERE v.value > a.value) + 1 AS rank_uf,",
-    "  count(*) AS n_uf,",
-    "  (SELECT count(*) + 1 FROM vals, alvo WHERE vals.value > alvo.value)",
+    "  (count(*) FILTER (WHERE v.value > a.value) + 1)::int AS rank_uf,",
+    "  count(*)::int AS n_uf,",
+    "  (SELECT count(*) + 1 FROM vals, alvo WHERE vals.value > alvo.value)::int",
     "  AS rank_br,",
-    "  (SELECT count(*) FROM vals, alvo) AS n_br",
+    "  (SELECT count(*) FROM vals, alvo)::int AS n_br",
     "FROM vals v, alvo a WHERE v.uf = a.uf"),
     local_id, mdata_id, ano, ano + 1L,
     mdata_id, ano, ano + 1L))
@@ -380,7 +380,7 @@ painel_niveis <- function(con) {
     sprintf("AND l.local_id >= %d AND l.local_id <= %d THEN '7p'",
             painel_municipio_limite_id, painel_pnad_bloco_fim),
     "ELSE length(g.geoloc_id::text)::text END AS nivel_id,",
-    "count(*) AS n_locais",
+    "count(*)::int AS n_locais",
     "FROM local l",
     "JOIN geoloc g USING (geoloc_id)",
     "WHERE EXISTS (SELECT 1 FROM data_values v WHERE v.local_id = l.local_id)",
@@ -493,7 +493,7 @@ painel_geo_nivel <- function(con, nivel_id, max_feicoes = 700L) {
   p <- painel_nivel_parse(nivel_id)
   if (is.na(p$nivel)) return(painel_geo_vazio())
   n_geo <- DBI::dbGetQuery(con, sprintf(paste(
-    "SELECT count(*) AS n FROM local l",
+    "SELECT count(*)::int AS n FROM local l",
     "JOIN geoloc g USING (geoloc_id) WHERE %s"),
     p$filtro))$n
   if (!length(n_geo) || is.na(n_geo) || n_geo > max_feicoes) {

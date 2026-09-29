@@ -84,3 +84,30 @@ test_that("painel_plot_banda mantem datas e sobrevive a contexto vazio", {
   # entrada NULL tambem e valida (cache ainda vazio)
   expect_s3_class(AEDi:::painel_plot_banda(NULL, local_id = 1), "ggplot")
 })
+
+test_that("counts do SQL do painel voltam como inteiro plano", {
+  # RPostgres mapeia count(*) (bigint) para bit64::integer64 quando o bit64
+  # esta disponivel; sem ele no processo consumidor do cache, format()/paste0
+  # mostram os bits crus do double (2.75e-320 em vez de 5571). O cast ::int
+  # na fonte fecha o contrato para qualquer processo
+  sql_niveis <- paste(deparse(body(AEDi:::painel_niveis)), collapse = "")
+  expect_true(grepl("count(*)::int AS n_locais", sql_niveis, fixed = TRUE))
+  sql_geo <- paste(deparse(body(AEDi:::painel_geo_nivel)), collapse = "")
+  expect_true(grepl("count(*)::int AS n", sql_geo, fixed = TRUE))
+  sql_rank <- paste(deparse(body(AEDi:::painel_ranking_local)), collapse = "")
+  expect_true(grepl(")::int AS rank_uf", sql_rank, fixed = TRUE))
+  expect_true(grepl("count(*)::int AS n_uf", sql_rank, fixed = TRUE))
+  expect_true(grepl("alvo.value)::int", sql_rank, fixed = TRUE))
+  expect_true(grepl(")::int AS n_br", sql_rank, fixed = TRUE))
+})
+
+test_that("rotulo de nivel territorial renderiza count como numero inteiro", {
+  niveis <- data.frame(
+    nivel_id = "7",
+    rotulo = "Município",
+    n_locais = 5571L,
+    stringsAsFactors = FALSE)
+  rotulos <- paste0(niveis$rotulo, " (", niveis$n_locais, ")")
+  expect_identical(rotulos, "Município (5571)")
+  expect_match(rotulos, "^Município \\(5[.,]?571\\)$")
+})
