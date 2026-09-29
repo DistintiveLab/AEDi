@@ -171,6 +171,40 @@ painel_valores_ano <- function(con, mdata_id, ano) {
     mdata_id, ano, ano + 1L))
 }
 
+#' Serie completa do indicador ja reduzida a 1 observacao por localidade x
+#' ano (ultimo refdate finito do ano): UMA query por indicador em vez de uma
+#' por (indicador, ano), que o mapa animado e a aba Baixar pagariam a cada
+#' ano do slider. Base do cache achatado [painel_valores_por_ano_cache()] e
+#' da banda transversal [painel_plot_banda()]
+#' @keywords internal
+painel_valores_por_ano <- function(con, mdata_id) {
+  mdata_id <- suppressWarnings(as.integer(mdata_id))[1]
+  if (is.na(mdata_id)) {
+    return(data.frame(local_id = integer(0), refdate = as.Date(character(0)),
+                      value = numeric(0), ano = integer(0)))
+  }
+  DBI::dbGetQuery(con, sprintf(paste(
+    "SELECT DISTINCT ON (local_id, ano) local_id, refdate, value,",
+    "date_part('year', refdate)::int AS ano",
+    "FROM data_values",
+    "WHERE mdata_id = %d AND value <> 'NaN'::float8",
+    "ORDER BY local_id, ano, refdate DESC"),
+    mdata_id))
+}
+
+#' Fatiador puro do cache achatado: devolve as linhas do ano com as colunas
+#' do contrato historico (sem a coluna ano), vazio tipado quando nao ha match
+#' @keywords internal
+painel_filtrar_ano <- function(d, ano) {
+  vazio <- data.frame(local_id = integer(0), refdate = as.Date(character(0)),
+                      value = numeric(0))
+  ano <- suppressWarnings(as.integer(ano)[1])
+  if (is.null(d) || !NROW(d) || is.na(ano) || !"ano" %in% names(d)) return(vazio)
+  res <- d[d$ano == ano, c("local_id", "refdate", "value"), drop = FALSE]
+  rownames(res) <- NULL
+  res
+}
+
 #' Ranking vazio (localidade nao municipal, sem dado no ano ou sem par)
 #' @keywords internal
 painel_ranking_vazio <- function() {
@@ -335,7 +369,10 @@ painel_uf_sigla <- c(
 #' Niveis territoriais disponiveis no DW: apenas os que possuem dados,
 #' com quantidade de localidades distintas. A largura 7 aparece em duas
 #' linhas — municipios ("7") e regioes de interesse em PNAD Contínua
-#' ("7p") — para nao somar 5.570 + 146 numa unica entrada
+#' ("7p") — para nao somar 5.570 + 146 numa unica entrada. O EXISTS varre
+#' o catalogo de locais (milissegundos com o indice
+#' data_values(local_id), ver [garantir_indice_valores()]) em vez de
+#' agregar os ~10 milhoes de pontos do data_values
 #' @keywords internal
 painel_niveis <- function(con) {
   q <- DBI::dbGetQuery(con, paste(
@@ -343,10 +380,10 @@ painel_niveis <- function(con) {
     sprintf("AND l.local_id >= %d AND l.local_id <= %d THEN '7p'",
             painel_municipio_limite_id, painel_pnad_bloco_fim),
     "ELSE length(g.geoloc_id::text)::text END AS nivel_id,",
-    "count(DISTINCT v.local_id) AS n_locais",
-    "FROM data_values v",
-    "JOIN local l USING (local_id)",
+    "count(*) AS n_locais",
+    "FROM local l",
     "JOIN geoloc g USING (geoloc_id)",
+    "WHERE EXISTS (SELECT 1 FROM data_values v WHERE v.local_id = l.local_id)",
     "GROUP BY 1 ORDER BY 1"))
   q$rotulo <- unname(painel_niveis_rotulo[q$nivel_id])
   q[!is.na(q$rotulo), ]
@@ -383,18 +420,20 @@ painel_indicador_default <- function(md, padrao = Sys.getenv("aedi_indicador", "
 
 #' Localidades de um nivel territorial (pela chave de [painel_nivel_parse()] )
 #' que possuem dados, rotuladas por nome (municipios ganham sigla da UF;
-#' regioes PNAD ja trazem o contexto no proprio nome)
+#' regioes PNAD ja trazem o contexto no proprio nome). O EXISTS replace o
+#' DISTINCT sobre data_values e fica milissegundos com o indice
+#' data_values(local_id) (ver [garantir_indice_valores()])
 #' @keywords internal
 painel_locais_nivel <- function(con, nivel_id) {
   p <- painel_nivel_parse(nivel_id)
   if (is.na(p$nivel)) return(integer(0))
   q <- DBI::dbGetQuery(con, sprintf(paste(
-    "SELECT DISTINCT l.local_id, l.local_name,",
+    "SELECT l.local_id, l.local_name,",
     "substring(g.geoloc_id::text, 1, 2) AS uf",
-    "FROM data_values v",
-    "JOIN local l USING (local_id)",
+    "FROM local l",
     "JOIN geoloc g USING (geoloc_id)",
     "WHERE %s",
+    "AND EXISTS (SELECT 1 FROM data_values v WHERE v.local_id = l.local_id)",
     "ORDER BY l.local_name, l.local_id"),
     p$filtro))
   rotulo <- if (identical(p$nivel, 7L) && !p$pnad) {
@@ -882,6 +921,62 @@ painel_plot_indicador <- function(v, titulo = NULL, cor = "#1351B4",
     ggplot2::theme_minimal(base_size = 12)
 }
 
+#' Banda de contexto min/mediana/max do indicador no nivel territorial
+#' aberto, com a serie da localidade selecionada em destaque — porte da
+#' plotabanda_destaque do painel_DAHU, sobre o corte transversal do cache
+#' achatado [painel_valores_por_ano_cache()]. Series anuais/bienais
+#' agregam por ano inteiro no eixo x; as demais mantem a data. Contexto
+#' todo-NA (nenhum valor finito no periodo) devolve banda vazia sem erro.
+#' As camadas de contexto (banda e mediana) saem sem marcadores — e assim
+#' que o mod_panel_regiao identifica, no plotly, quais traces silenciar
+#' @keywords internal
+painel_plot_banda <- function(d, local_id, titulo = NULL, cor = "#1351B4",
+                              rotulo_x = "Ano") {
+  rotulo_x <- trimws(as.character(rotulo_x)[1])
+  if (is.na(rotulo_x) || !nzchar(rotulo_x)) rotulo_x <- "Ano"
+  por_ano <- identical(rotulo_x, "Ano")
+  base <- if (!is.null(d) && NROW(d)) d else
+    data.frame(local_id = integer(0), refdate = as.Date(character(0)),
+               value = numeric(0), ano = integer(0))
+  x <- if (por_ano) as.integer(base$ano) else as.Date(base$refdate)
+  ok <- is.finite(base$value) & !is.na(x)
+  xi <- x[ok]
+  v <- base$value[ok]
+  ux <- sort(unique(xi))
+  ctx <- data.frame(
+    x = ux,
+    `Mínimo` = vapply(as.list(ux), function(k) min(v[xi == k]), numeric(1)),
+    Mediana = vapply(as.list(ux), function(k) stats::median(v[xi == k]), numeric(1)),
+    `Máximo` = vapply(as.list(ux), function(k) max(v[xi == k]), numeric(1)),
+    check.names = FALSE)
+  local_id <- suppressWarnings(as.integer(local_id)[1])
+  sel <- !is.na(local_id) & base$local_id == local_id
+  serie <- data.frame(x = x[sel], valor = base$value[sel], check.names = FALSE)
+  names(ctx)[1] <- rotulo_x
+  names(serie)[1] <- rotulo_x
+  ggplot2::ggplot() +
+    ggplot2::geom_ribbon(
+      data = ctx,
+      ggplot2::aes(x = .data[[rotulo_x]], ymin = .data[["Mínimo"]],
+                   ymax = .data[["Máximo"]]),
+      fill = cor, alpha = 0.10, na.rm = TRUE) +
+    ggplot2::geom_line(
+      data = ctx,
+      ggplot2::aes(x = .data[[rotulo_x]], y = .data[["Mediana"]]),
+      linetype = "dashed", color = "#4A4A4A", linewidth = 0.7,
+      na.rm = TRUE, show.legend = FALSE) +
+    ggplot2::geom_line(
+      data = serie,
+      ggplot2::aes(x = .data[[rotulo_x]], y = .data[["valor"]]),
+      color = cor, linewidth = 0.9, na.rm = TRUE) +
+    ggplot2::geom_point(
+      data = serie,
+      ggplot2::aes(x = .data[[rotulo_x]], y = .data[["valor"]]),
+      color = cor, size = 1.8, na.rm = TRUE) +
+    ggplot2::labs(title = titulo, x = NULL, y = NULL) +
+    ggplot2::theme_minimal(base_size = 12)
+}
+
 #' Delta de camadas do mapa (port do wlv_map_layer_delta): mantem o par
 #' completo cor/tooltip de cada camada alterada, para o cliente fundir por id
 #' @keywords internal
@@ -892,10 +987,11 @@ painel_delta_camadas <- function(anteriores, camadas) {
 }
 
 # Acessores cacheados das leituras do DW (ver painel_cache.R): geometrias
-# quase nao mudam (30 dias), catalogo e listas de localidades mudam por ETL
-# (7 dias) e valores sao atualizados a cada carga (24h). IDs invalidos
+# quase nao mudam (30 dias); catalogo vale 7 dias e valores 30 — o
+# aquecedor pos-ETL ([aquecer_painel()]) regenera o cache a cada carga,
+# entao o TTL longo so segura o usuario entre ETLs. IDs invalidos
 # retornam vazio sem tocar no cache (a chave nunca leva NA).
-painel_cache_ttl <- c(geo = 24 * 30, catalogo = 24 * 7, valores = 24)
+painel_cache_ttl <- c(geo = 24 * 30, catalogo = 24 * 7, valores = 24 * 30)
 
 #' mdata com rotulos, cacheado
 #' @keywords internal
@@ -1107,7 +1203,26 @@ painel_anos_cache <- function(mdata_id) {
     function() painel_com_con(function(con) painel_anos(con, mdata_id)))
 }
 
-#' Valores do ultimo refdate por localidade num ano, cacheado
+#' Serie completa reduzida a 1 observacao por localidade x ano, cacheada
+#' (cache achatado: uma chave por indicador em vez de uma por ano — o mapa
+#' animado e a aba Baixar pagariam a regeneracao a cada ano do slider)
+#' @keywords internal
+painel_valores_por_ano_cache <- function(mdata_id) {
+  mdata_id <- suppressWarnings(as.integer(mdata_id))[1]
+  if (is.na(mdata_id)) {
+    return(data.frame(local_id = integer(0), refdate = as.Date(character(0)),
+                      value = numeric(0), ano = integer(0)))
+  }
+  painel_cache_get(
+    painel_cache_chave(sprintf("valores_por_ano_%d", mdata_id)),
+    painel_cache_ttl[["valores"]],
+    function() painel_com_con(function(con)
+      painel_valores_por_ano(con, mdata_id)))
+}
+
+#' Valores do ultimo refdate por localidade num ano: fatia do cache
+#' achatado [painel_valores_por_ano_cache()] com a assinatura historica
+#' (mapa, baixar e ranking seguem sem mudanca de chamada)
 #' @keywords internal
 painel_valores_ano_cache <- function(mdata_id, ano) {
   mdata_id <- suppressWarnings(as.integer(mdata_id))[1]
@@ -1116,11 +1231,7 @@ painel_valores_ano_cache <- function(mdata_id, ano) {
     return(data.frame(local_id = integer(0), refdate = as.Date(character(0)),
                       value = numeric(0)))
   }
-  painel_cache_get(
-    painel_cache_chave(sprintf("valores_ano_%d_%d", mdata_id, ano)),
-    painel_cache_ttl[["valores"]],
-    function() painel_com_con(function(con)
-      painel_valores_ano(con, mdata_id, ano)))
+  painel_filtrar_ano(painel_valores_por_ano_cache(mdata_id), ano)
 }
 
 #' Ranking de uma localidade num indicador e ano, cacheado

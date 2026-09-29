@@ -201,10 +201,24 @@ mod_panel_regiao_server <- function(id,
       tipo <- if (!is.na(indice)) md$tipo_grafico[indice] else NA_character_
       rotulo_x <- painel_rotulo_tempo(
         if (!is.na(indice)) md$freq_name[indice] else NA_character_)
-      p <- painel_plot_indicador(v, titulo = titulo(), cor = cor(),
-                                 tipo = tipo, rotulo_x = rotulo_x)
-      plotly::ggplotly(p, tooltip = c("x", "y")) |>
-        plotly::config(displayModeBar = FALSE)
+      p <- if (identical(tipo, "banda")) {
+        painel_plot_banda(painel_valores_por_ano_cache(input$indicador),
+                          local_id = input$localidade, titulo = titulo(),
+                          cor = cor(), rotulo_x = rotulo_x)
+      } else {
+        painel_plot_indicador(v, titulo = titulo(), cor = cor(),
+                              tipo = tipo, rotulo_x = rotulo_x)
+      }
+      p <- plotly::ggplotly(p, tooltip = c("x", "y"))
+      if (identical(tipo, "banda")) {
+        # silencia o hover da banda/mediana (contexto): o destaque e a
+        # unica camada com marcadores no painel_plot_banda()
+        modos <- vapply(p$x$data, function(t) paste0(t$mode), character(1))
+        silenciar <- which(!grepl("markers", modos))
+        if (length(silenciar))
+          p <- plotly::style(p, hoverinfo = "skip", traces = silenciar)
+      }
+      plotly::config(p, displayModeBar = FALSE)
     })
 
     # Resumo da localidade (labourvaluesdatapanel-like): todos os valores

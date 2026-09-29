@@ -4,13 +4,17 @@
 \alias{painel_locais_nivel}
 \title{Localidades de um nivel territorial (pela chave de \code{\link[=painel_nivel_parse]{painel_nivel_parse()}} )
 que possuem dados, rotuladas por nome (municipios ganham sigla da UF;
-regioes PNAD ja trazem o contexto no proprio nome)}
+regioes PNAD ja trazem o contexto no proprio nome). O EXISTS replace o
+DISTINCT sobre data_values e fica milissegundos com o indice
+data_values(local_id) (ver \code{\link[=garantir_indice_valores]{garantir_indice_valores()}})}
 \usage{
 painel_locais_nivel(con, nivel_id)
 }
 \description{
 Localidades de um nivel territorial (pela chave de \code{\link[=painel_nivel_parse]{painel_nivel_parse()}} )
 que possuem dados, rotuladas por nome (municipios ganham sigla da UF;
-regioes PNAD ja trazem o contexto no proprio nome)
+regioes PNAD ja trazem o contexto no proprio nome). O EXISTS replace o
+DISTINCT sobre data_values e fica milissegundos com o indice
+data_values(local_id) (ver \code{\link[=garantir_indice_valores]{garantir_indice_valores()}})
 }
 \keyword{internal}

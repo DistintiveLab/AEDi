@@ -2,11 +2,15 @@
 % Please edit documentation in R/painel_dw.R
 \name{painel_valores_ano_cache}
 \alias{painel_valores_ano_cache}
-\title{Valores do ultimo refdate por localidade num ano, cacheado}
+\title{Valores do ultimo refdate por localidade num ano: fatia do cache
+achatado \code{\link[=painel_valores_por_ano_cache]{painel_valores_por_ano_cache()}} com a assinatura historica
+(mapa, baixar e ranking seguem sem mudanca de chamada)}
 \usage{
 painel_valores_ano_cache(mdata_id, ano)
 }
 \description{
-Valores do ultimo refdate por localidade num ano, cacheado
+Valores do ultimo refdate por localidade num ano: fatia do cache
+achatado \code{\link[=painel_valores_por_ano_cache]{painel_valores_por_ano_cache()}} com a assinatura historica
+(mapa, baixar e ranking seguem sem mudanca de chamada)
 }
 \keyword{internal}
