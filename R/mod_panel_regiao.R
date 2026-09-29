@@ -35,6 +35,7 @@ mod_panel_regiao_ui <- function(id) {
     tags$div(class = "painel-card",
       tags$h3("Resumo da região"),
       tags$p(class = "painel-nota", shiny::textOutput(ns("resumo_local"))),
+      shiny::uiOutput(ns("resumo_periodo")),
       shiny::uiOutput(ns("resumo")),
       shiny::uiOutput(ns("detalhes"))),
     tags$div(class = "painel-regiao-grade",
@@ -196,18 +197,19 @@ mod_panel_regiao_server <- function(id,
       v <- serie_loc()
       shiny::validate(shiny::need(nrow(v),
         "Sem dados para esta combinação de indicador e localidade."))
-      p <- ggplot2::ggplot(v, ggplot2::aes(x = as.Date(refdate), y = value)) +
-        ggplot2::geom_line(color = cor(), linewidth = 0.9) +
-        ggplot2::geom_point(color = cor(), size = 1.8) +
-        ggplot2::labs(title = titulo(), x = NULL, y = NULL) +
-        ggplot2::theme_minimal(base_size = 12)
+      indice <- match(as.integer(input$indicador), md$mdata_id)
+      tipo <- if (!is.na(indice)) md$tipo_grafico[indice] else NA_character_
+      rotulo_x <- painel_rotulo_tempo(
+        if (!is.na(indice)) md$freq_name[indice] else NA_character_)
+      p <- painel_plot_indicador(v, titulo = titulo(), cor = cor(),
+                                 tipo = tipo, rotulo_x = rotulo_x)
       plotly::ggplotly(p, tooltip = c("x", "y")) |>
         plotly::config(displayModeBar = FALSE)
     })
 
     # Resumo da localidade (labourvaluesdatapanel-like): todos os valores
-    # da localidade em uma leitura; chips com o ultimo valor de cada
-    # indicador composto por objetivo
+    # da localidade em uma leitura; chips com o valor de cada indicador
+    # composto por objetivo no ano de referencia do slider
     resumo_vals <- shiny::reactive({
       shiny::req(input$localidade)
       painel_valores_local_todos_cache(input$localidade)
@@ -215,12 +217,44 @@ mod_panel_regiao_server <- function(id,
 
     expandido <- shiny::reactiveVal(FALSE)
 
+    # Slider de ano do resumo: recorte temporal dos chips dos compostos
+    # (valor e ranking no ano escolhido; default = ano mais recente com
+    # dados). Os limites vem dos anos disponiveis dos proprios compostos
+    # na localidade corrente
+    anos_resumo <- shiny::reactive({
+      v <- resumo_vals()
+      if (!NROW(v) || !NROW(compostos)) return(integer(0))
+      anos <- as.integer(format(
+        v$refdate[v$mdata_id %in% compostos$mdata_id], "%Y"))
+      sort(unique(anos[!is.na(anos)]))
+    })
+
+    output$resumo_periodo <- shiny::renderUI({
+      anos <- anos_resumo()
+      if (length(anos) < 2L) return(NULL)
+      tags$div(class = "painel-resumo-periodo",
+        shiny::sliderInput(session$ns("resumo_ano"),
+          "Ano de referência dos compostos",
+          min = min(anos), max = max(anos), value = max(anos),
+          step = 1, sep = "", ticks = FALSE, width = "100%"))
+    })
+
+    resumo_ano <- shiny::reactive({
+      anos <- anos_resumo()
+      if (!length(anos)) return(NA_integer_)
+      escolhido <- suppressWarnings(as.integer(input$resumo_ano)[1])
+      if (is.na(escolhido)) return(max(anos))
+      ate <- anos[anos <= escolhido]
+      if (!length(ate)) min(anos) else max(ate)
+    })
+
     # Chips do resumo: um por indicador composto do catalogo (7 eixos, 4
     # objetivos e os estratos PNAD), com o valor mais recente na localidade
     # e a posicao dela entre os municipios da propria UF e do pais naquele
     # ano (uma leitura cacheada por indicador/ano; NA fora do nivel municipal)
     resumo <- shiny::reactive({
-      r <- painel_resumo_grupos(hierarquia, compostos, resumo_vals())
+      r <- painel_resumo_grupos(hierarquia, compostos, resumo_vals(),
+                                resumo_ano())
       if (!NROW(r)) return(r)
       ranks <- lapply(seq_len(nrow(r)), function(i)
         painel_ranking_local_cache(r$mdata_id[i], input$localidade,
@@ -245,11 +279,19 @@ mod_panel_regiao_server <- function(id,
       chips <- lapply(seq_len(nrow(r)), function(i) {
         ranking <- painel_ranking_texto(r$rank_uf[i], r$n_uf[i],
                                         r$rank_br[i], r$n_br[i])
+        delta <- if (is.finite(r$valor_ant[i]) && is.finite(r$valor[i]) &&
+                     !identical(r$refdate[i], r$refdate_ant[i]))
+          paste0("Var. ", format(r$refdate_ant[i], "%Y"), "-",
+                 format(r$refdate[i], "%Y"), ": ",
+                 if (r$valor[i] >= r$valor_ant[i]) "+" else "-",
+                 painel_num(abs(r$valor[i] - r$valor_ant[i]))) else NULL
         tags$div(class = "painel-resumo-chip",
           tags$div(class = "painel-resumo-chip-rotulo", r$rotulo[i]),
           tags$div(class = "painel-resumo-chip-valor",
             painel_num(r$valor[i]),
             tags$small(paste0(" (", format(r$refdate[i], "%Y"), ")"))),
+          if (!is.null(delta))
+            tags$div(class = "painel-resumo-chip-delta", delta),
           if (!is.null(ranking)) {
             tags$div(class = "painel-resumo-chip-ranking",
                      paste0("(", ranking, ")"))
