@@ -365,6 +365,21 @@ atualizar_indicadores <- function(apenas = NULL, dir_dump = "~/backups_aedidb",
   if (!is.na(versao))
     AEDi:::versao_carga_fim(versao, length(resultados), sum(resultados),
                             sum(!resultados))
+  # Gancho pos-ETL do painel DW: quando o projeto tem um painel gerado
+  # (painel/R/painel_dw.R), aquece o cache de disco apos a carga para o
+  # proximo arranque do app sair quente (ver AEDi::aquecer_painel).
+  # Fail-open: aquecimento nunca derruba o lote.
+  if (file.exists(file.path(raiz, "painel", "R", "painel_dw.R"))) {
+    tryCatch({
+      flog.info("aquecendo o cache do painel (%s)",
+                file.path(raiz, "painel"))
+      tempos <- AEDi:::aquecer_painel(diretorio = file.path(raiz, "painel"))
+      flog.info("cache do painel aquecido em %.1f s",
+                sum(tempos$segundos))
+    }, error = function(e)
+      flog.warn("falha ao aquecer o cache do painel: %s",
+                conditionMessage(e)))
+  }
   flog.info(log_messages$fim)
   invisible(resultados)
 }

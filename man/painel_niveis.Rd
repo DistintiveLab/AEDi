@@ -5,7 +5,10 @@
 \title{Niveis territoriais disponiveis no DW: apenas os que possuem dados,
 com quantidade de localidades distintas. A largura 7 aparece em duas
 linhas — municipios ("7") e regioes de interesse em PNAD Contínua
-("7p") — para nao somar 5.570 + 146 numa unica entrada}
+("7p") — para nao somar 5.570 + 146 numa unica entrada. O EXISTS varre
+o catalogo de locais (milissegundos com o indice
+data_values(local_id), ver \code{\link[=garantir_indice_valores]{garantir_indice_valores()}}) em vez de
+agregar os ~10 milhoes de pontos do data_values}
 \usage{
 painel_niveis(con)
 }
@@ -13,6 +16,9 @@ painel_niveis(con)
 Niveis territoriais disponiveis no DW: apenas os que possuem dados,
 com quantidade de localidades distintas. A largura 7 aparece em duas
 linhas — municipios ("7") e regioes de interesse em PNAD Contínua
-("7p") — para nao somar 5.570 + 146 numa unica entrada
+("7p") — para nao somar 5.570 + 146 numa unica entrada. O EXISTS varre
+o catalogo de locais (milissegundos com o indice
+data_values(local_id), ver \code{\link[=garantir_indice_valores]{garantir_indice_valores()}}) em vez de
+agregar os ~10 milhoes de pontos do data_values
 }
 \keyword{internal}

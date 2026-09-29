@@ -4,14 +4,18 @@
 \alias{definir_tipo_grafico}
 \title{Define o tipo do grafico em destaque de um indicador no painel}
 \usage{
-definir_tipo_grafico(con, mdata_id, tipo = c("linha", "barras", "lollipop"))
+definir_tipo_grafico(
+  con,
+  mdata_id,
+  tipo = c("linha", "barras", "lollipop", "banda")
+)
 }
 \arguments{
 \item{con}{conexao DBI (PostgreSQL) com o DW de indicadores}
 
 \item{mdata_id}{id do indicador na tabela mdata}
 
-\item{tipo}{um de "linha", "barras", "lollipop"}
+\item{tipo}{um de "linha", "barras", "lollipop", "banda"}
 }
 \value{
 invisivelmente TRUE
