@@ -240,7 +240,11 @@ mod_panel_regiao_server <- function(id,
       if (!NROW(v) || !NROW(compostos)) return(integer(0))
       anos <- as.integer(format(
         v$refdate[v$mdata_id %in% compostos$mdata_id], "%Y"))
-      sort(unique(anos[!is.na(anos)]))
+      anos <- sort(unique(anos[!is.na(anos)]))
+      ano_piso <- 1995L
+      anos_filtrados <- anos[anos >= ano_piso]
+      if (length(anos_filtrados)) anos <- anos_filtrados
+      anos
     })
 
     output$resumo_periodo <- shiny::renderUI({
