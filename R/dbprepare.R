@@ -110,12 +110,9 @@ dplyr::across(dplyr::matches("dataunit|source|url|name|desc"),as.character))
 
     data_class <- tibble::tribble(
       ~data_class_id,~class_name,
-      1,"Indicador/Dado Bruto",
+      1,"Dado bruto / insumo",
       2,"Indicador direto",
-      3,"Indicador combinado",
-      4,"Indicador composto",
-      5,"Espacial - indicador transformado para ",
-      6,"Temporal - indicador transformado para "
+      4,"Indicador composto"
     )|>dplyr::mutate(dplyr::across(dplyr::contains("_id"),as.integer),
                      dplyr::across(dplyr::contains("name"),as.character))
 
