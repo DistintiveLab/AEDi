@@ -111,3 +111,21 @@ test_that("rotulo de nivel territorial renderiza count como numero inteiro", {
   expect_identical(rotulos, "Município (5571)")
   expect_match(rotulos, "^Município \\(5[.,]?571\\)$")
 })
+
+test_that("tipo de grafico default: composto vira banda, demais linha", {
+  expect_identical(AEDi:::painel_tipo_grafico("ponto", 2L), "ponto")
+  expect_identical(AEDi:::painel_tipo_grafico("linha", 4L), "linha")
+  expect_identical(AEDi:::painel_tipo_grafico(NA_character_, 4L), "banda")
+  expect_identical(AEDi:::painel_tipo_grafico(NA_character_, 2L), "linha")
+  expect_identical(AEDi:::painel_tipo_grafico(NA_character_, 1L), "linha")
+  expect_identical(AEDi:::painel_tipo_grafico(NA_character_, NA_integer_), "linha")
+  expect_identical(AEDi:::painel_tipo_grafico(NA_character_, NULL), "linha")
+  expect_identical(AEDi:::painel_tipo_grafico(NULL, 4L), "banda")
+})
+
+test_that("catalogo e aba Regiao resolvem o default pela classe", {
+  sql_extras <- paste(deparse(body(AEDi:::painel_mdata_extras)), collapse = "")
+  expect_true(grepl("e.data_class_id", sql_extras, fixed = TRUE))
+  mod <- paste(deparse(body(AEDi:::mod_panel_regiao_server)), collapse = "")
+  expect_true(grepl("painel_tipo_grafico(", mod, fixed = TRUE))
+})

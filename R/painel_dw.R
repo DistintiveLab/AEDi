@@ -38,21 +38,26 @@ painel_mdata <- function(con) {
 }
 
 #' Acrescenta ao catalogo as colunas opcionais do painel: periodicidade
-#' (freq_name, de mdata_exts/data_freq), tipo do grafico em destaque
+#' (freq_name, de mdata_exts/data_freq), classe do indicador
+#' (data_class_id, de mdata_exts), tipo do grafico em destaque
 #' (tipo_grafico, de mdata_grafico) e visibilidade nos seletores
 #' (visivel, de mdata_visivel). Fail-open: DW sem as tabelas auxiliares
-#' segue com defaults (freq ausente, "linha", visivel)
+#' segue com defaults (freq/classe ausentes, "linha", visivel)
 #' @keywords internal
 painel_mdata_extras <- function(con, md) {
   md$freq_name <- rep(NA_character_, NROW(md))
+  md$data_class_id <- rep(NA_integer_, NROW(md))
   md$tipo_grafico <- rep(NA_character_, NROW(md))
   md$visivel <- rep(TRUE, NROW(md))
   freq <- tryCatch(DBI::dbGetQuery(con, paste(
-    "SELECT e.mdata_id, f.freq_name FROM mdata_exts e",
+    "SELECT e.mdata_id, f.freq_name, e.data_class_id FROM mdata_exts e",
     "LEFT JOIN data_freq f ON f.data_freq_id = e.data_freq_id")),
     error = function(e) NULL)
-  if (NROW(freq))
+  if (NROW(freq)) {
     md$freq_name <- freq$freq_name[match(md$mdata_id, freq$mdata_id)]
+    md$data_class_id <- as.integer(
+      freq$data_class_id[match(md$mdata_id, freq$mdata_id)])
+  }
   graf <- tryCatch(DBI::dbGetQuery(con,
     "SELECT mdata_id, tipo_grafico FROM mdata_grafico"),
     error = function(e) NULL)
@@ -64,6 +69,20 @@ painel_mdata_extras <- function(con, md) {
   if (NROW(ocultos))
     md$visivel[md$mdata_id %in% ocultos$mdata_id] <- FALSE
   md
+}
+
+#' Resolve o tipo do grafico em destaque do indicador: o override por
+#' indicador (tipo_grafico de mdata_grafico) vence; sem override, o
+#' composto (data_class_id 4) ganha "banda" e os demais "linha"
+#' (inclui as series replicadas/degeneradas, sem contexto seccional)
+#' @keywords internal
+painel_tipo_grafico <- function(tipo_grafico, data_class_id) {
+  if (length(tipo_grafico) == 1L && !is.na(tipo_grafico))
+    return(tipo_grafico)
+  if (length(data_class_id) == 1L && !is.na(data_class_id) &&
+      identical(as.integer(data_class_id), 4L))
+    return("banda")
+  "linha"
 }
 
 #' Rotulo amigavel do eixo temporal conforme a periodicidade do indicador

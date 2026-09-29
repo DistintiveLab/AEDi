@@ -198,7 +198,9 @@ mod_panel_regiao_server <- function(id,
       shiny::validate(shiny::need(nrow(v),
         "Sem dados para esta combinação de indicador e localidade."))
       indice <- match(as.integer(input$indicador), md$mdata_id)
-      tipo <- if (!is.na(indice)) md$tipo_grafico[indice] else NA_character_
+      tipo <- painel_tipo_grafico(
+        if (!is.na(indice)) md$tipo_grafico[indice] else NA_character_,
+        if (!is.na(indice)) md$data_class_id[indice] else NA_integer_)
       rotulo_x <- painel_rotulo_tempo(
         if (!is.na(indice)) md$freq_name[indice] else NA_character_)
       p <- if (identical(tipo, "banda")) {
