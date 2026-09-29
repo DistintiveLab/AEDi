@@ -42,6 +42,16 @@ body_ui <- function() {
       shinydashboard::tabItem(
         tabName = "bivariate",
         mod_explorar_bivar_ui("explorar_bivar")
+      ),
+
+      shinydashboard::tabItem(
+        tabName = "cor_matrix",
+        mod_explorar_matriz_ui("explorar_matriz")
+      ),
+
+      shinydashboard::tabItem(
+        tabName = "predictors",
+        mod_explorar_preditores_ui("explorar_pred")
       )
     )
   )

@@ -106,3 +106,148 @@ explorar_cor <- function(pares) {
   res$spearman <- stats::cor(pares$x, pares$y, method = "spearman")
   res
 }
+
+#' Limiar do badge visual de "n insuficiente" (nada e escondido: o n
+#' aparece sempre junto ao r)
+explorar_n_min <- 30L
+
+#' Texto do badge de n de pares: NA quando o n basta; abaixo do minimo
+#' matematico (3) a correlacao nem existe
+#' @keywords internal
+explorar_badge_n <- function(n, minimo = explorar_n_min) {
+  if (length(n) != 1L || is.na(n)) return(NA_character_)
+  if (n < 3L)
+    return(sprintf("n = %d: sem correlação (mínimo matemático de 3 pares)",
+                   as.integer(n)))
+  if (n < minimo)
+    return(sprintf("n insuficiente: %d < %d", as.integer(n),
+                   as.integer(minimo)))
+  NA_character_
+}
+
+#' Reprojeção dos pares completos conforme a leitura de painel: pooled
+#' (todas as observações), between (média por localidade) ou within
+#' (desvio da média da própria localidade; localidade com um único par
+#' sai, desvio indefinido)
+#' @keywords internal
+explorar_leituras <- function(pares, leitura = "pooled") {
+  if (is.null(pares) || !NROW(pares)) return(pares)
+  leitura <- if (identical(leitura, "between") || identical(leitura, "within"))
+    leitura else "pooled"
+  if (identical(leitura, "pooled")) return(pares)
+  saida <- do.call(rbind, lapply(split(seq_len(nrow(pares)), pares$local_id),
+    function(i) {
+      if (identical(leitura, "between"))
+        data.frame(local_id = pares$local_id[i[1L]], ano = NA_integer_,
+                   x = mean(pares$x[i]), y = mean(pares$y[i]))
+      else if (length(i) >= 2L)
+        data.frame(local_id = pares$local_id[i[1L]], ano = pares$ano[i],
+                   x = pares$x[i] - mean(pares$x[i]),
+                   y = pares$y[i] - mean(pares$y[i]))
+      else NULL
+    }))
+  if (is.null(saida))
+    return(data.frame(local_id = integer(0), ano = integer(0),
+                      x = numeric(0), y = numeric(0)))
+  rownames(saida) <- NULL
+  saida[order(saida$local_id, saida$ano), , drop = FALSE]
+}
+
+#' Empilha séries achatadas (lista nomeada por mdata_id) numa matriz wide
+#' por (local_id, ano): full outer join das colunas, nunca listwise — cada
+#' par de indicadores usa as observações que ambos têm
+#' @keywords internal
+explorar_wide <- function(series) {
+  if (length(series)) {
+    series <- series[names(series) != "" & vapply(
+      series, function(s) !is.null(s) && NROW(s) > 0L, logical(1))]
+  }
+  if (!length(series)) return(NULL)
+  colunas <- lapply(seq_along(series), function(i) {
+    d <- series[[i]][, c("local_id", "ano", "value")]
+    names(d)[3L] <- names(series)[[i]]
+    d
+  })
+  Reduce(function(a, b) merge(a, b, by = c("local_id", "ano"), all = TRUE),
+         colunas)
+}
+
+#' Colunas do wide com dispersão nula (dp ~ 0): correlação indefinida, a
+#' matriz as exclui por default
+#' @keywords internal
+explorar_degeneradas <- function(wide) {
+  if (is.null(wide) || ncol(wide) <= 2L) return(setNames(logical(0),
+                                                        character(0)))
+  m <- as.matrix(wide[, -(1:2), drop = FALSE])
+  stats::setNames(vapply(seq_len(ncol(m)), function(j) {
+    v <- m[, j]
+    v <- v[is.finite(v)]
+    length(v) > 0L && stats::sd(v) < 1e-12
+  }, logical(1)), colnames(m))
+}
+
+#' Matriz N x N de correlações pairwise (Pearson) e de n de pares de um
+#' wide, na leitura pedida: pooled (observações), between (média por
+#' localidade, uma linha por localidade) ou within (desvio da localidade;
+#' localidade com 1 observação na coluna vira NA, desvio indefinido)
+#' @keywords internal
+explorar_matriz <- function(wide, leitura = "pooled") {
+  vazio <- function() list(
+    r = matrix(numeric(0), 0L, 0L,
+               dimnames = list(character(0), character(0))),
+    n = matrix(numeric(0), 0L, 0L,
+               dimnames = list(character(0), character(0))))
+  if (is.null(wide) || ncol(wide) <= 2L) return(vazio())
+  leitura <- if (identical(leitura, "between") || identical(leitura, "within"))
+    leitura else "pooled"
+  cols <- setdiff(names(wide), c("local_id", "ano"))
+  m <- as.matrix(wide[, cols, drop = FALSE])
+  storage.mode(m) <- "double"
+  if (identical(leitura, "between")) {
+    loc <- as.character(wide$local_id)
+    unicos <- sort(unique(loc))
+    m <- do.call(cbind, lapply(cols, function(cl) {
+      v <- m[, cl]
+      ok <- is.finite(v)
+      if (!any(ok)) return(rep(NA_real_, length(unicos)))
+      soma <- tapply(v[ok], loc[ok], sum)
+      cnt <- tapply(v[ok], loc[ok], length)
+      (soma / cnt)[unicos]
+    }))
+    colnames(m) <- cols
+  } else if (identical(leitura, "within")) {
+    loc <- as.character(wide$local_id)
+    for (j in seq_along(cols)) {
+      v <- m[, j]
+      ok <- is.finite(v)
+      soma <- tapply(v[ok], loc[ok], sum)
+      cnt <- tapply(v[ok], loc[ok], length)
+      med <- soma / cnt
+      m[, j] <- ifelse(ok & cnt[match(loc, names(cnt))] >= 2L,
+                       v - med[match(loc, names(med))], NA_real_)
+    }
+  }
+  n <- crossprod(!is.na(m))
+  r <- if (nrow(m) < 2L)
+    matrix(NA_real_, ncol(m), ncol(m),
+           dimnames = list(colnames(m), colnames(m)))
+  else suppressWarnings(stats::cor(m, use = "pairwise.complete.obs"))
+  list(r = r, n = n)
+}
+
+#' Ranking de correlação de um alvo contra todos os demais indicadores da
+#' matriz: |r| decrescente com sinal e n de pares (NA em r = série
+#' degenerada ou sem pares)
+#' @keywords internal
+explorar_preditores <- function(mat, alvo) {
+  vazio <- data.frame(mdata_id = character(0), r = numeric(0),
+                      n = numeric(0))
+  alvo <- as.character(alvo)[1L]
+  if (is.null(mat) || !length(mat$r) || is.na(alvo) ||
+      !alvo %in% colnames(mat$r)) return(vazio)
+  outros <- setdiff(colnames(mat$r), alvo)
+  d <- data.frame(mdata_id = outros,
+                  r = unname(mat$r[alvo, outros]),
+                  n = unname(mat$n[alvo, outros]))
+  d[order(-abs(d$r), -d$n), , drop = FALSE]
+}
