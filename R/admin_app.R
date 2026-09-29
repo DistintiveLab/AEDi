@@ -236,7 +236,20 @@ admin_app <- function(raiz = NULL, projeto = NULL, titulo = NULL) {
       shiny::fluidRow(shiny::column(12,
         shiny::helpText("Últimas 500 execuções registradas em ",
                         "controle_execucao_historico."),
-        DT::DTOutput("tabela_historico")))))
+        DT::DTOutput("tabela_historico")))),
+    shiny::tabPanel(
+      "Dicionário de séries",
+      shiny::fluidRow(shiny::column(12,
+        shiny::helpText("Catálogo de metadados do banco do painel ",
+                        "(classe, frequência, unidades, fonte e URL)."),
+        mod_explorar_dicionario_ui("admin_dic")))),
+    shiny::tabPanel(
+      "Correlação",
+      shiny::fluidRow(shiny::column(12,
+        shiny::helpText("Correlação par a par entre indicadores: pares ",
+                        "completos por (localidade, ano), NAs removidos ",
+                        "por pares; Pearson e Spearman com n de pares."),
+        mod_explorar_bivar_ui("admin_bivar")))))
 
   server <- function(input, output, session) {
     dados <- shiny::reactive({
@@ -288,6 +301,8 @@ admin_app <- function(raiz = NULL, projeto = NULL, titulo = NULL) {
       colnames(d) <- c("Script", "Início", "Fim", "Sucesso", "Linhas", "Mensagem")
       .admin_datatable(d)
     })
+    mod_explorar_dicionario_server("admin_dic")
+    mod_explorar_bivar_server("admin_bivar")
   }
   shiny::shinyApp(ui, server)
 }

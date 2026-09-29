@@ -52,7 +52,7 @@ sidebar_ui <- function() {
          icon = shiny::icon("cogs")
        ),
        shinydashboard::menuItem(
-         "Dicionàrio de Dados",
+         "Dicionário de Dados",
          tabName = "data_dictionary",
          icon = shiny::icon("list")
        ),
@@ -62,17 +62,17 @@ sidebar_ui <- function() {
          icon = shiny::icon("lightbulb"),
          startExpanded = FALSE,
          shinydashboard::menuSubItem(
-           "Distribuiãões",
+           "Distribuições",
            tabName = "distributions",
            icon = shiny::icon("area-chart"),
          ),
          shinydashboard::menuSubItem(
-           "Anàlise Univariada",
+           "Análise Univariada",
            tabName = "univariate",
            icon = shiny::icon("line-chart")
          ),
          shinydashboard::menuSubItem(
-           "Anàlise Bi-Variada",
+           "Análise Bi-Variada",
            tabName = "bivariate",
            icon = shiny::icon("bar-chart")
          )

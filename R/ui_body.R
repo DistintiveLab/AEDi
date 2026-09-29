@@ -22,6 +22,26 @@ body_ui <- function() {
       shinydashboard::tabItem(
         tabName = "atualizacao",
         mod_atualizacao_ui("atualizacao")
+      ),
+
+      shinydashboard::tabItem(
+        tabName = "data_dictionary",
+        mod_explorar_dicionario_ui("explorar_dic")
+      ),
+
+      shinydashboard::tabItem(
+        tabName = "univariate",
+        mod_explorar_univar_ui("explorar_uni")
+      ),
+
+      shinydashboard::tabItem(
+        tabName = "distributions",
+        mod_explorar_dist_ui("explorar_dist")
+      ),
+
+      shinydashboard::tabItem(
+        tabName = "bivariate",
+        mod_explorar_bivar_ui("explorar_bivar")
       )
     )
   )
