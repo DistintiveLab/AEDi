@@ -248,8 +248,25 @@ admin_app <- function(raiz = NULL, projeto = NULL, titulo = NULL) {
       shiny::fluidRow(shiny::column(12,
         shiny::helpText("Correlação par a par entre indicadores: pares ",
                         "completos por (localidade, ano), NAs removidos ",
-                        "por pares; Pearson e Spearman com n de pares."),
-        mod_explorar_bivar_ui("admin_bivar")))))
+                        "por pares; Pearson e Spearman com n de pares ",
+                        "sempre visível (badge quando insuficiente) e ",
+                        "leitura pooled/between/within."),
+        mod_explorar_bivar_ui("admin_bivar")))),
+    shiny::tabPanel(
+      "Matriz de correlação",
+      shiny::fluidRow(shiny::column(12,
+        shiny::helpText("Heatmap N×N seletivo dos indicadores: Pearson ",
+                        "com NAs removidos por pares; células com n de ",
+                        "pares abaixo do mínimo ficam em branco; clique ",
+                        "para abrir o par na correlação par a par."),
+        mod_explorar_matriz_ui("admin_matriz")))),
+    shiny::tabPanel(
+      "Preditores",
+      shiny::fluidRow(shiny::column(12,
+        shiny::helpText("Ranking de |r| de um indicador alvo contra os ",
+                        "demais, com sinal e n de pares; clique numa ",
+                        "linha para abrir o par na correlação par a par."),
+        mod_explorar_preditores_ui("admin_pred")))))
 
   server <- function(input, output, session) {
     dados <- shiny::reactive({
@@ -302,7 +319,15 @@ admin_app <- function(raiz = NULL, projeto = NULL, titulo = NULL) {
       .admin_datatable(d)
     })
     mod_explorar_dicionario_server("admin_dic")
-    mod_explorar_bivar_server("admin_bivar")
+    par_matriz <- mod_explorar_matriz_server("admin_matriz")
+    par_pred <- mod_explorar_preditores_server("admin_pred")
+    ultimo_par <- shiny::reactiveVal(NULL)
+    shiny::observeEvent(par_matriz(), ultimo_par(par_matriz()))
+    shiny::observeEvent(par_pred(), ultimo_par(par_pred()))
+    shiny::observeEvent(ultimo_par(), {
+      shiny::updateNavbarPage(session, "admin_nav", selected = "Correlação")
+    })
+    mod_explorar_bivar_server("admin_bivar", par_inicial = ultimo_par)
   }
   shiny::shinyApp(ui, server)
 }

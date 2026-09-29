@@ -14,7 +14,7 @@ sidebar_ui <- function() {
       shiny::h5(
         Sys.getenv("aedi_organizacao", "Distintive"),
         shiny::br(),
-        "Anàlise Exploratória de Dados e indicadores",
+        "Análise Exploratória de Dados e indicadores",
         shiny::br(),
         "Aplicativo Shiny",
         shiny::br(),
@@ -75,6 +75,11 @@ sidebar_ui <- function() {
            "Análise Bi-Variada",
            tabName = "bivariate",
            icon = shiny::icon("bar-chart")
+         ),
+         shinydashboard::menuSubItem(
+           "Matriz de correlação",
+           tabName = "cor_matrix",
+           icon = shiny::icon("th")
          )
        ),
        shinydashboard::menuItem(
