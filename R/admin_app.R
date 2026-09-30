@@ -30,6 +30,20 @@
   ctl <- tryCatch(ler_controle(projeto = projeto), error = function(e) NULL)
   dw <- tryCatch(resumo_indicadores_dw(), error = function(e) NULL)
   scripts <- listar_scripts_coleta(raiz)
+  scripts <- scripts[!is.na(scripts)]
+  # lote vazio (raiz sem coleta/ ou 100% .ignore): tabela padrao vazia em
+  # vez de linha NA com botao de acao — a raiz consultada aparece no
+  # cabecalho do admin e na aba Atualizacao do app
+  if (!length(scripts)) {
+    d <- data.frame(
+      Script = character(), Etapa = character(),
+      `Última execução` = character(), `Metadados (BD)` = character(),
+      `Máx. refdate` = character(), Situação = character(),
+      Detalhe = character(),
+      check.names = FALSE, stringsAsFactors = FALSE)
+    if (com_acao) d$Ação <- character()
+    return(d)
+  }
   if (is.null(ctl)) ctl <- data.frame(
     nome_script = character(), etapa = character(),
     ultima_atualizacao = structure(list(), class = c("POSIXct", "POSIXt")),

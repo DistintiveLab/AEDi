@@ -28,6 +28,7 @@ mod_atualizacao_ui <- function(id) {
                         "Scripts nunca executados destacam-se em vermelho quando ",
                         "desatualizados: hoje além da última versão dos ",
                         "metadados em BD ou 3 meses após o max(refdate)."),
+        shiny::verbatimTextOutput(ns("lote_raiz")),
         DT::DTOutput(ns("tabela_controle")),
         shiny::uiOutput(ns("processo_atual"))
       )
@@ -42,6 +43,12 @@ mod_atualizacao_server <- function(id, raiz = NULL) {
   shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
     if (is.null(raiz)) raiz <- getwd()
+    # raiz visivel: execucao e lote dependem do working dir do processo
+    # (launcher aedi/app.R faz setwd("..") para operar na raiz do projeto)
+    output$lote_raiz <- shiny::renderText(
+      sprintf("lote: %s/coleta | projeto: %s",
+              normalizePath(raiz, mustWork = FALSE),
+              AEDi:::.nome_projeto(raiz)))
 
     rv <- shiny::reactiveValues(
       processo = NULL,          # processo callr em andamento
