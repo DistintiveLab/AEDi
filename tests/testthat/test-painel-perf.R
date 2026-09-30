@@ -129,3 +129,16 @@ test_that("catalogo e aba Regiao resolvem o default pela classe", {
   mod <- paste(deparse(body(AEDi:::mod_panel_regiao_server)), collapse = "")
   expect_true(grepl("painel_tipo_grafico(", mod, fixed = TRUE))
 })
+
+test_that("seletor de visualizacao da aba Regiao cobre os 4 tipos", {
+  ui <- paste(deparse(body(AEDi:::mod_panel_regiao_ui)), collapse = "")
+  expect_true(grepl('ns("tipo_grafico")', ui, fixed = TRUE))
+  for (tipo in c("linha", "barras", "lollipop", "banda"))
+    expect_true(grepl(paste0('"', tipo, '"'), ui, fixed = TRUE),
+                info = paste("choices sem", tipo))
+  sv <- paste(deparse(body(AEDi:::mod_panel_regiao_server)), collapse = "")
+  # o render obedece ao seletor com fallback para o default do DW
+  expect_true(grepl("input$tipo_grafico", sv, fixed = TRUE))
+  expect_true(grepl("updateSelectInput", sv, fixed = TRUE))
+  expect_true(grepl("tipo_grafico_dw", sv, fixed = TRUE))
+})

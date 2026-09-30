@@ -41,11 +41,20 @@ mod_panel_regiao_ui <- function(id) {
     tags$div(class = "painel-regiao-grade",
       tags$div(class = "painel-card",
         tags$h3(shiny::textOutput(ns("titulo")), class = "sr-only"),
+        tags$div(class = "painel-serie-opcoes",
+          tags$label(`for` = ns("tipo_grafico"), "Visualização"),
+          shiny::selectInput(ns("tipo_grafico"), NULL,
+            choices = c("Linha" = "linha", "Barras" = "barras",
+                        "Lollipop" = "lollipop",
+                        "Banda (mín, máx e mediana)" = "banda"),
+            selected = "linha", width = "auto")),
         plotly::plotlyOutput(ns("serie"), height = "420px"),
         tags$p(class = "painel-nota",
           "Série do banco de dados do painel. Use o seletor de nível",
           "territorial para mudar de recorte (região, UF, divisões",
-          "regionais do IBGE ou município) e escolher a localidade desejada.")),
+          "regionais do IBGE ou município), escolher a localidade desejada",
+          "e o seletor de visualização para alternar entre linha, barras,",
+          "lollipop e a banda de mínimo, máximo e mediana do nível.")),
       tags$div(class = "painel-card painel-globo-card",
         tags$h3("Globo de localidades"),
         mod_panel_globe_ui(ns("panel_globe_1")),
@@ -191,16 +200,34 @@ mod_panel_regiao_server <- function(id,
       if (identical(paleta(), "pb")) "#78529D" else "#1351B4"
     })
 
+    # Tipo padrao do grafico em destaque segundo o DW: override por
+    # indicador (mdata_grafico) ou default por classe (composto -> banda)
+    tipo_grafico_dw <- shiny::reactive({
+      indice <- match(as.integer(input$indicador), md$mdata_id)
+      painel_tipo_grafico(
+        if (!is.na(indice)) md$tipo_grafico[indice] else NA_character_,
+        if (!is.na(indice)) md$data_class_id[indice] else NA_integer_)
+    })
+
+    # Troca de indicador realinha o seletor de visualizacao com o padrao
+    # do DW; a escolha manual do usuario vale ate a proxima troca
+    shiny::observeEvent(input$indicador, {
+      shiny::req(nrow(md))
+      shiny::updateSelectInput(session, "tipo_grafico",
+                               selected = tipo_grafico_dw())
+    })
+
     output$titulo <- shiny::renderText(titulo())
 
     output$serie <- plotly::renderPlotly({
       v <- serie_loc()
       shiny::validate(shiny::need(nrow(v),
         "Sem dados para esta combinação de indicador e localidade."))
+      tipo <- input$tipo_grafico
+      if (length(tipo) != 1L || is.na(tipo) ||
+          !tipo %in% c("linha", "barras", "lollipop", "banda"))
+        tipo <- tipo_grafico_dw()
       indice <- match(as.integer(input$indicador), md$mdata_id)
-      tipo <- painel_tipo_grafico(
-        if (!is.na(indice)) md$tipo_grafico[indice] else NA_character_,
-        if (!is.na(indice)) md$data_class_id[indice] else NA_integer_)
       rotulo_x <- painel_rotulo_tempo(
         if (!is.na(indice)) md$freq_name[indice] else NA_character_)
       p <- if (identical(tipo, "banda")) {
