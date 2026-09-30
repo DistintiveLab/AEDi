@@ -1,3 +1,16 @@
+# AEDi 0.7.9
+
+## Seletor de visualização do gráfico da aba Região
+
+- O gráfico em destaque da aba Região ganha um seletor "Visualização"
+  com os quatro tipos já suportados pelo painel: linha, barras, lollipop
+  e banda (mínimo, máximo e mediana do nível territorial, com a série da
+  localidade em destaque — porte da `plotabanda_destaque` do painel_DAHU).
+- O default de cada indicador segue o DW como antes (override por
+  indicador em `mdata_grafico`, via `definir_tipo_grafico()`; sem
+  override, composto vira banda e os demais linha); trocar de indicador
+  realinha o seletor, e a escolha manual vale até a próxima troca.
+
 # AEDi 0.7.3.9000
 
 ## Municípios novos do IBGE no DW: `incorporar_municipio_ibge()`

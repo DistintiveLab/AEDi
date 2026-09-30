@@ -325,6 +325,17 @@ h3 { font-size: 19px; }
   gap: 22px; align-items: start;
 }
 .painel-regiao-grade .painel-card { margin-bottom: 0; }
+/* Seletor de visualizacao do grafico em destaque (linha/barras/lollipop/
+ * banda): linha compacta logo acima do plot, mesma linguagem da toolbar */
+.painel-serie-opcoes {
+  display: flex; align-items: center; justify-content: flex-end;
+  gap: 10px; margin: 0 0 8px;
+}
+.painel-serie-opcoes label {
+  margin: 0; font-size: 12px; font-weight: 600; color: var(--p-mudo);
+}
+.painel-serie-opcoes .form-group.shiny-input-container { margin: 0; }
+.painel-serie-opcoes .form-control { min-height: 36px; font-size: 13px; }
 
 /* ---- Aba Regiao: resumo da localidade + accordeon eixo > objetivo ---- */
 .painel-resumo-grade {
