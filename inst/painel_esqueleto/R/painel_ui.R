@@ -59,10 +59,22 @@ painel_opcoes_select <- function(placeholder, max_options = 10000L) {
   list(placeholder = placeholder, maxOptions = max_options)
 }
 
-#' Recursos de cabecalho (meta, CSS/JS do painel, Gov.br) e div raiz da paleta
+#' Recursos de cabecalho (meta, núcleo do tema, CSS/JS do painel, Gov.br)
+#' e div raiz da paleta
+#'
+#' O núcleo do tema (aedi-tema.css/js: variáveis --p-* e o toggle
+#' gov.br/pb) entra ANTES dos assets locais — assets do projeto
+#' (esqueleto) têm precedência, com fallback para o embutido no pacote
+#' (mesma resolução local-primeiro de [painel_marca_src()]).
+#'
 #' @keywords internal
 painel_recursos <- function(assets_dir, paleta = c("govbr", "pb")) {
   paleta <- match.arg(paleta)
+  tema_fonte <- function(arq) {
+    local <- file.path(assets_dir, arq)
+    if (file.exists(local)) local else
+      system.file("tema", arq, package = "AEDi")
+  }
   # publica o diretorio de assets por URL: o globo busca o contorno
   # mundial (painel-mundo.geojson) em painel_recursos/...
   shiny::addResourcePath("painel_recursos",
@@ -71,14 +83,30 @@ painel_recursos <- function(assets_dir, paleta = c("govbr", "pb")) {
     shiny::tags$head(
       shiny::tags$meta(name = "viewport",
                        content = "width=device-width, initial-scale = 1")),
+    htmltools::includeCSS(tema_fonte("aedi-tema.css")),
+    htmltools::includeScript(tema_fonte("aedi-tema.js")),
     htmltools::includeCSS(file.path(assets_dir, "painel.css")),
     htmltools::includeScript(file.path(assets_dir, "painel.js")),
     lapply(c("painel-geo.js", "painel-map.js", "painel-map-controls.js",
              "painel-globe.js"),
            \(arq) htmltools::includeScript(file.path(assets_dir, arq))),
     shinyGovBRstyle::use_govbr(),
-    shiny::tags$div(id = "painel_raiz", `data-paleta` = paleta,
+    shiny::tags$div(id = "aedi_tema_raiz", `data-paleta` = paleta,
                     class = "hidden"))
+}
+
+#' Botão de alternância do núcleo do tema (marcação local)
+#'
+#' Mesma marcação de `aedi_tema_botao()` do pacote, definida aqui para o
+#' esqueleto copiado por [deploy_panel()] não depender do AEDi em
+#' execução — o comportamento (toggle, rótulo, persistência) vive no
+#' aedi-tema.js compartilhado, que enxerga a classe `aedi-tema-btn`.
+#'
+#' @param id id do botão (o painel usa "painel_paleta_btn")
+#' @keywords internal
+painel_tema_botao <- function(id = "painel_paleta_btn") {
+  shiny::tags$button(id = id, type = "button", class = "aedi-tema-btn",
+                     `aria-pressed` = "true", "Preto e branco")
 }
 
 #' Topbar do painel com marca e botao de troca de paleta
@@ -94,9 +122,7 @@ painel_topbar <- function(titulo,
              shiny::tags$span(class = "painel-brand-name", titulo),
              shiny::tags$small(subtitulo))),
     shiny::tags$div(class = "painel-topbar-acoes",
-      shiny::tags$button(id = "painel_paleta_btn", type = "button",
-                  class = "painel-paleta-btn", `aria-pressed` = "true",
-                  "Preto e branco")))
+      painel_tema_botao()))
 }
 
 #' Abas do painel (uma tabPanel por modulo) — solte/adicione a vontade

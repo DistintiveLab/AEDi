@@ -1,30 +1,14 @@
 /* Painel de indicadores do banco de dados do painel — estrutura inspirada no labourvaluesdatapanel.
-   Duas paletas: govbr (padrao, azul gov.br #1351B4) e pb (preto e branco com
-   toques do roxo da Distintive #78529D), trocadas por classe em <body>. */
+   Chrome (layout, topbar, abas, cards) consumindo as variáveis --p-* do
+   NÚCLEO do tema (aedi-tema.css, compartilhado com o admin e o app AEDi):
+   as duas paletas — gov.br (padrao, azul #1351B4) e pb (preto e branco com
+   toques do roxo da Distintive #78529D) — são trocadas pela classe
+   aedi-pb em <body>, aplicada pelo aedi-tema.js. */
 
 :root {
-  --painel-font: Rawline, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  --p-tinta: #1351B4;          /* titulos, marca, abas ativas */
-  --p-destaque: #1351B4;       /* acoes primarias, foco */
-  --p-destaque-hover: #0C3F91;
-  --p-realce: #FFCD07;         /* sublinha/realce gov.br */
-  --p-texto: #333333;
-  --p-mudo: #656565;
-  --p-papel: #FFFFFF;
-  --p-superficie: #F2F5FA;     /* hero, cards de fundo */
-  --p-linha: #D9E0EC;
+  --painel-font: var(--aedi-fonte);
   --p-topbar-h: 56px;
   --p-nav-h: 104px;            /* topbar + navbar (atualizada por JS) */
-}
-body.painel-pb {
-  --p-tinta: #1B1B1B;
-  --p-destaque: #78529D;
-  --p-destaque-hover: #5E3F82;
-  --p-realce: #C9B9DE;         /* roxo claro da marca */
-  --p-texto: #242424;
-  --p-mudo: #6B6B6B;
-  --p-superficie: #F7F5FA;
-  --p-linha: #E4E1EA;
 }
 
 * { box-sizing: border-box; }
@@ -65,13 +49,7 @@ h3 { font-size: 19px; }
 .painel-brand-name { display: block; font-size: 21px; font-weight: 700; letter-spacing: -.03em; line-height: 1.05; }
 .painel-brand small { display: block; margin-top: 3px; font-size: 10px; font-weight: 500; color: var(--p-mudo); }
 .painel-topbar-acoes { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-.painel-paleta-btn {
-  min-height: 34px; height: 34px; padding: 5px 12px; font-size: 13px; font-weight: 600;
-  border: 1px solid var(--p-linha); border-radius: 6px; background: var(--p-papel);
-  color: var(--p-tinta); cursor: pointer;
-}
-.painel-paleta-btn:hover { background: var(--p-superficie); }
-.painel-paleta-btn::before { content: "\25CF\00A0"; color: var(--p-destaque); }
+/* botão de paleta: estilo no núcleo do tema (.aedi-tema em aedi-tema.css) */
 
 /* ---- Navbar (abas) ---- */
 .navbar {

@@ -16,13 +16,18 @@
 #'   (default "admin")
 #' @param raiz raiz do projeto orquestrado (default: diretorio corrente);
 #'   usada apenas para nomear o projeto no README
+#' @param tema paleta do tema visual, `"govbr"` ou `"pb"` (default: NULL
+#'   resolve a variavel de ambiente `aedi_paleta` e, sem ela, `"govbr"`);
+#'   fixada na launcher para o painel abrir sempre na mesma paleta
 #' @param sobrescrever substitui um app.R ja existente (default FALSE)
 #'
 #' @return caminho absoluto do diretorio da app (invisivel)
 #' @export
-deploy_admin <- function(diretorio = "admin", raiz = NULL,
+deploy_admin <- function(diretorio = "admin", raiz = NULL, tema = NULL,
                          sobrescrever = FALSE) {
   if (is.null(raiz)) raiz <- getwd()
+  tema <- if (is.null(tema)) aedi_tema_paleta_default()
+    else match.arg(tema, c("govbr", "pb"))
   projeto <- .nome_projeto(raiz)
   versao <- as.character(utils::packageVersion("AEDi"))
   dir.create(diretorio, recursive = TRUE, showWarnings = FALSE)
@@ -37,7 +42,7 @@ deploy_admin <- function(diretorio = "admin", raiz = NULL,
     paste0("# AEDi ", versao, " - ", format(Sys.Date(), "%Y-%m-%d"),
            " - atualizacoes chegam com o reinstall do pacote"),
     "# Credenciais do aedidb (variaveis de ambiente): user, password, host, dbname",
-    'AEDi::admin_app(raiz = "..")',
+    paste0("AEDi::admin_app(raiz = \"..\", tema = \"", tema, "\")"),
     ""), app_r, useBytes = TRUE)
   writeLines(c(
     "# Painel admin do lote",
@@ -47,6 +52,9 @@ deploy_admin <- function(diretorio = "admin", raiz = NULL,
     "pulos, inclusive dependencias), grafo de dependencias declarado, frescor",
     "das series no banco e historico das execucoes. Gerada por",
     "`AEDi::deploy_admin()` como launcher sobre o pacote AEDi.",
+    "",
+    paste0("Tema visual: paleta `", tema, "` (alternavel pelo botao da barra",
+    " superior)."),
     "",
     "## Rodar localmente",
     "",

@@ -1,36 +1,17 @@
-/* Painel de indicadores do banco de dados do painel: paleta govbr/pb persistente, ultima aba
-   visitada e sincronizacao da paleta com o servidor (cores dos graficos). */
+/* Painel de indicadores do banco de dados do painel: consumidor do núcleo
+   do tema (aedi-tema.js, que alterna as paletas gov.br/pb e despacha o
+   evento "aedi:paleta"). Aqui ficam só as responsabilidades do painel:
+   repassar a paleta ativa ao servidor (cores dos gráficos), restaurar a
+   última aba visitada e manter as alturas da topbar/navbar sincronizadas. */
 (function () {
   'use strict';
-  var atual = 'govbr';
 
-  function aplicar(paleta) {
-    document.body.classList.toggle('painel-pb', paleta === 'pb');
-    try { localStorage.setItem('painel_paleta', paleta); } catch (e) { /* ok */ }
-    var botao = document.getElementById('painel_paleta_btn');
-    if (botao) {
-      botao.textContent = paleta === 'pb' ? 'Cores Gov.br' : 'Preto e branco';
-      botao.setAttribute('aria-pressed', paleta === 'pb' ? 'false' : 'true');
-      botao.title = paleta === 'pb'
-        ? 'Mudar para a paleta Gov.br (azul)'
-        : 'Mudar para preto e branco com roxo Distintive';
-    }
-  }
-
-  function informarServidor() {
+  document.addEventListener('aedi:paleta', function (evento) {
     if (window.Shiny && Shiny.setInputValue) {
-      Shiny.setInputValue('painel_paleta_ativa', atual);
+      Shiny.setInputValue('painel_paleta_ativa',
+        evento.detail && evento.detail.paleta === 'pb' ? 'pb' : 'govbr');
     }
-  }
-
-  function inicial() {
-    var salva = null;
-    try { salva = localStorage.getItem('painel_paleta'); } catch (e) { /* ok */ }
-    if (salva === 'govbr' || salva === 'pb') return salva;
-    var raiz = document.getElementById('painel_raiz');
-    var param = raiz ? raiz.getAttribute('data-paleta') : null;
-    return param === 'pb' ? 'pb' : 'govbr';
-  }
+  });
 
   function atualizarAlturas() {
     var topbar = document.querySelector('.painel-topbar');
@@ -43,13 +24,6 @@
   }
 
   document.addEventListener('click', function (evento) {
-    var botao = evento.target.closest('#painel_paleta_btn');
-    if (botao) {
-      atual = atual === 'pb' ? 'govbr' : 'pb';
-      aplicar(atual);
-      informarServidor();
-      return;
-    }
     var aba = evento.target.closest('#painel_nav a[data-value]');
     if (aba) {
       try { localStorage.setItem('painel_aba', aba.dataset.value); } catch (e) { /* ok */ }
@@ -57,9 +31,6 @@
   });
 
   function inicializar() {
-    atual = inicial();
-    aplicar(atual);
-    informarServidor();
     atualizarAlturas();
     var aba = null;
     try { aba = localStorage.getItem('painel_aba'); } catch (e) { /* ok */ }
@@ -67,14 +38,6 @@
       var link = document.querySelector('#painel_nav a[data-value="' + aba + '"]');
       if (link) link.click();
     }
-  }
-
-  if (window.Shiny && Shiny.addCustomMessageHandler) {
-    Shiny.addCustomMessageHandler('painel-paleta', function (mensagem) {
-      atual = mensagem && mensagem.paleta === 'pb' ? 'pb' : 'govbr';
-      aplicar(atual);
-      informarServidor();
-    });
   }
 
   if (document.readyState === 'loading') {

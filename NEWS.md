@@ -1,3 +1,39 @@
+# AEDi 0.8.0
+
+## Tema institucional unificado (gov.br / preto e branco) no painel, admin e app
+
+- Novo núcleo de tema em `inst/tema/` (T1): `aedi-tema.css` define as
+  variáveis `--p-*` das duas paletas institucionais — gov.br (azul
+  #1351B4, default) e pb (preto e branco com o roxo da Distintive
+  #78529D) — e `aedi-tema.js` alterna a classe `aedi-pb` no `<body>`,
+  persiste a escolha em `localStorage` ("aedi_paleta"), respeita o
+  `data-paleta` inicial da div `#aedi_tema_raiz`, atualiza todos os
+  botões `.aedi-tema-btn` e despacha o evento `aedi:paleta` para
+  consumidores. Helpers `aedi_tema_paleta_default()` (env `aedi_paleta`),
+  `aedi_tema_recursos()` e `aedi_tema_botao()`.
+- Admin do lote (T2): `admin_app(tema = )` aplica o núcleo + chrome
+  próprio (`inst/tema/aedi-admin.css`, navbar/tabs/DT consumindo
+  `--p-*`) com botão de alternância na navbar;
+  `deploy_admin(tema = )` materializa a paleta resolvida na launcher.
+- App AEDi (T3): `app_ui(tema = )` inclui o núcleo + overrides AdminLTE
+  (`inst/tema/aedi-app.css`: header, sidebar, boxes, botões, controlbar)
+  e a barra lateral direita ganha a aba "Tema" com o botão.
+- Painel de indicadores (T4): unificado sobre o núcleo. `painel.css`
+  perde os blocos de paleta (variáveis vêm do núcleo) e o botão antigo
+  (`.painel-paleta-btn` → `.aedi-tema-btn`); `painel.js` fica só com a
+  sincronização com o servidor (escuta `aedi:paleta` → input
+  `painel_paleta_ativa`, sem mudança de nome), restauração de aba e
+  alturas; `painel_recursos()` inclui o núcleo antes dos assets locais
+  (assets do projeto primeiro, fallback para o pacote) e a div raiz
+  passa a `#aedi_tema_raiz`. Cores semânticas de badges/heatmap do painel
+  são mantidas nas duas paletas.
+- Esqueleto do painel: autossuficiente no tema — `deploy_panel()`
+  copia `aedi-tema.css/js` para `www/` e `R/painel_ui.R` traz o botão
+  local (`painel_tema_botao()`). Correção de bug latente: o `app.R`
+  gerado passou a carregar dinamicamente TODO `R/*.R` (a lista fixa não
+  carregava `mod_panel_baixar.R`/`painel_xlsx.R`, o que só não
+  quebrava com o AEDi carregado na mesma sessão).
+
 # AEDi 0.7.9
 
 ## Seletor de visualização do gráfico da aba Região

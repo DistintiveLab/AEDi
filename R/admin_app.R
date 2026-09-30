@@ -186,21 +186,33 @@
 #'   `.nome_projeto(raiz)`); informar explicitamente para monitorar um
 #'   lote hospedado em outro caminho
 #' @param titulo titulo da janela/aba
+#' @param tema paleta do tema gov.br/pb: `"govbr"` (azul) ou `"pb"`
+#'   (preto e branco com o roxo da Distintive); default (NULL) resolve
+#'   pela variavel de ambiente `aedi_paleta`. O botao de alternancia na
+#'   navbar troca em tempo real e persiste no navegador
 #'
 #' @return objeto `shiny_app` (usar via [deploy_admin()] ou
 #'   `shiny::runApp()`)
 #' @export
-admin_app <- function(raiz = NULL, projeto = NULL, titulo = NULL) {
+admin_app <- function(raiz = NULL, projeto = NULL, titulo = NULL,
+                      tema = NULL) {
   if (is.null(raiz)) raiz <- getwd()
   raiz <- normalizePath(raiz, mustWork = FALSE)
   if (is.null(projeto)) projeto <- .nome_projeto(raiz)
   if (is.null(titulo))
     titulo <- sprintf("Admin do lote - %s", projeto)
+  tema <- if (is.null(tema)) aedi_tema_paleta_default() else
+    match.arg(tema, c("govbr", "pb"))
   versao <- as.character(utils::packageVersion("AEDi"))
 
-  ui <- shiny::navbarPage(
-    titulo, id = "admin_nav", windowTitle = titulo, collapsible = TRUE,
-    lang = "pt-BR",
+  ui <- shiny::tagList(
+    aedi_tema_recursos(tema),
+    htmltools::includeCSS(
+      system.file("tema", "aedi-admin.css", package = "AEDi")),
+    shiny::navbarPage(
+      shiny::tagList(titulo, aedi_tema_botao("admin_tema_btn")),
+      id = "admin_nav", windowTitle = titulo, collapsible = TRUE,
+      lang = "pt-BR",
     shiny::tabPanel(
       "Status do lote",
       shiny::fluidRow(
@@ -266,8 +278,8 @@ admin_app <- function(raiz = NULL, projeto = NULL, titulo = NULL) {
         shiny::helpText("Ranking de |r| de um indicador alvo contra os ",
                         "demais, com sinal e n de pares; clique numa ",
                         "linha para abrir o par na correlação par a par."),
-        mod_explorar_preditores_ui("admin_pred")))))
-
+        mod_explorar_preditores_ui("admin_pred"))))))
+  
   server <- function(input, output, session) {
     dados <- shiny::reactive({
       input$recarregar

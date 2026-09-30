@@ -37,6 +37,7 @@ test_that("deploy_panel(esqueleto=TRUE) materializa copia autonoma", {
   expect_true(all(file.exists(file.path(p, c(
     "R/app_ui.R", "R/app_server.R", "www/painel.css", "www/painel.js",
     "www/painel-map.js", "www/aedi-Wide.png", "README.md",
+    "www/aedi-tema.css", "www/aedi-tema.js",
     "esqueleto_manifest.json")))))
   # substituicoes: sem placeholders remanescentes, com titulo e paleta
   app_ui <- readLines(file.path(p, "R/app_ui.R"), warn = FALSE)
@@ -93,6 +94,28 @@ test_that("esqueleto traz mundo, slider 7s/40% e nenhuma mencao a DW do AEDi", {
   # slider ocupando ~40% da barra
   css <- readLines(file.path(d, "www/painel.css"), warn = FALSE)
   expect_true(any(grepl("painel-mapa-ano .*40%", css)))
+  # núcleo do tema autônomo: variáveis e toggle vêm de www/aedi-tema.*
+  nucleo_css <- paste(readLines(file.path(d, "www/aedi-tema.css"),
+                                warn = FALSE), collapse = "\n")
+  expect_true(grepl("body.aedi-pb", nucleo_css, fixed = TRUE))
+  nucleo_js <- paste(readLines(file.path(d, "www/aedi-tema.js"),
+                               warn = FALSE), collapse = "\n")
+  expect_true(grepl("aedi:paleta", nucleo_js, fixed = TRUE))
+  # painel.css já não define as variáveis de paleta nem o botão antigo
+  expect_false(any(grepl("--p-tinta:", css, fixed = TRUE)))
+  expect_false(any(grepl("painel-paleta-btn", css, fixed = TRUE)))
+  # painel.js só consome o núcleo (sem toggle próprio)
+  painel_js <- paste(readLines(file.path(d, "www/painel.js"),
+                               warn = FALSE), collapse = "\n")
+  expect_true(grepl("aedi:paleta", painel_js, fixed = TRUE))
+  expect_true(grepl("painel_paleta_ativa", painel_js, fixed = TRUE))
+  expect_false(grepl("painel-pb", painel_js, fixed = TRUE))
+  # painel_ui referencia o núcleo com resolução local-primeiro
+  ui_r <- paste(readLines(file.path(d, "R/painel_ui.R"), warn = FALSE),
+                collapse = "\n")
+  expect_true(grepl('aedi-tema.css', ui_r, fixed = TRUE))
+  expect_true(grepl('aedi_tema_raiz', ui_r, fixed = TRUE))
+  expect_true(grepl('painel_tema_botao()', ui_r, fixed = TRUE))
   # globo buscando o asset e o resumo da aba Regiao presentes
   expect_true(any(grepl("painel-mundo.geojson",
     readLines(file.path(d, "www/painel-globe.js"), warn = FALSE),
