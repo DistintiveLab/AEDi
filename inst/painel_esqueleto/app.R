@@ -9,18 +9,9 @@
 
 library(shiny)  # modulos usam NS(), tagList(), reactive() etc. sem prefixo
 
-for (f in c(
-  "R/branding.R",
-  "R/painel_basemap.R",
-  "R/painel_cache.R",
-  "R/painel_dw.R",
-  "R/painel_ui.R",
-  "R/mod_panel_globe.R",
-  "R/mod_panel_map.R",
-  "R/mod_panel_regiao.R",
-  "R/mod_panel_sobre.R",
-  "R/app_ui.R",
-  "R/app_server.R"
-)) source(f, encoding = "UTF-8")
+# carrega todos os blocos da propria app (qualquer R/*.R do esqueleto —
+# inclusive abas adicionadas pelo projeto depois do deploy)
+for (f in list.files("R", pattern = "[.]R$", full.names = TRUE))
+  source(f, encoding = "UTF-8")
 
 shiny::shinyApp(ui = app_ui(), server = app_server)

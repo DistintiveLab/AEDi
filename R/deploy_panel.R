@@ -102,8 +102,12 @@ deploy_panel <- function(diretorio = "painel",
   # copias exatas dos fontes compartilhados com o pacote + server
   for (rel in c(names(exatas), "R/app_server.R"))
     conteudo[[rel]] <- ler_tpl(rel)
-  assets <- list.files(system.file("painel", package = "AEDi"),
-                       full.names = TRUE)
+  # assets do painel + núcleo do tema (o esqueleto continua autônomo:
+  # painel_recursos() prefere os arquivos locais de www/)
+  assets <- c(list.files(system.file("painel", package = "AEDi"),
+                         full.names = TRUE),
+              system.file("tema", "aedi-tema.css", package = "AEDi"),
+              system.file("tema", "aedi-tema.js", package = "AEDi"))
   logo <- system.file("app", "www", "aedi-Wide.png", package = "AEDi")
   list(conteudo = conteudo, assets = assets, logo = logo)
 }

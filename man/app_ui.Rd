@@ -4,7 +4,14 @@
 \alias{app_ui}
 \title{App UI}
 \usage{
-app_ui()
+app_ui(tema = NULL)
+}
+\arguments{
+\item{tema}{paleta do tema gov.br/pb: \code{"govbr"} (azul) ou \code{"pb"}
+(preto e branco com o roxo da Distintive); default (NULL) resolve
+pela variavel de ambiente \code{aedi_paleta}. O botao de alternancia na
+barra lateral direita (aba Tema) troca em tempo real e persiste no
+navegador}
 }
 \value{
 tagList for app's UI

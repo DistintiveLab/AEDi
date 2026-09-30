@@ -1,0 +1,137 @@
+/* Chrome do app AEDi (shinydashboardPlus/AdminLTE, skin-black) sobre o
+   núcleo do tema (aedi-tema.css): header, sidebar, boxes, botões e
+   controlbar consumindo as variáveis --p-*, alternáveis entre gov.br e
+   preto-e-branco pela classe aedi-pb no <body>. Convive com o
+   app/www/styles.css (regras de sortable/bucket-list, cores neutras). */
+
+body {
+  font-family: var(--aedi-fonte); color: var(--p-texto);
+}
+a { color: var(--p-destaque); }
+a:hover { color: var(--p-destaque-hover); }
+.help-block, .text-muted { color: var(--p-mudo); }
+
+/* ---- Header (main-header) ---- */
+.skin-black .main-header {
+  border-top: 3px solid var(--p-tinta);
+}
+.skin-black .main-header .navbar {
+  background: var(--p-papel);
+  border-bottom: 1px solid var(--p-linha);
+}
+.skin-black .main-header .navbar .nav > li > a { color: var(--p-tinta); }
+.skin-black .main-header .navbar .nav > li > a:hover,
+.skin-black .main-header .navbar .nav .open > a,
+.skin-black .main-header .navbar .nav > .active > a {
+  color: var(--p-destaque); background: var(--p-superficie);
+}
+.skin-black .main-header > .logo,
+.skin-black .main-header .navbar-brand {
+  background: var(--p-papel); color: var(--p-tinta);
+  font-family: var(--aedi-fonte); font-weight: 700;
+  border-right: 1px solid var(--p-linha);
+}
+.skin-black .main-header > .logo:hover { background: var(--p-superficie); }
+.skin-black .main-header .navbar .sidebar-toggle { color: var(--p-tinta); }
+.skin-black .main-header .navbar .sidebar-toggle:hover {
+  color: var(--p-destaque); background: var(--p-superficie);
+}
+.skin-black .main-header .navbar .navbar-nav > li > a {
+  border-right: 1px solid var(--p-linha);
+}
+.skin-black .main-header .navbar .navbar-custom-menu .navbar-nav > li > a,
+.skin-black .main-header .navbar .navbar-right > li > a {
+  border-left: 1px solid var(--p-linha);
+}
+
+/* ---- Sidebar (main-sidebar) ---- */
+.skin-black .main-sidebar, .skin-black .left-side {
+  background: var(--p-superficie);
+}
+.skin-black .main-sidebar .sidebar-menu > li.header {
+  color: var(--p-mudo); background: var(--p-linha);
+  font-family: var(--aedi-fonte); font-size: 12px;
+}
+.skin-black .main-sidebar .sidebar a { color: var(--p-texto); }
+.skin-black .main-sidebar .sidebar-menu > li > a {
+  border-left: 3px solid transparent;
+}
+.skin-black .main-sidebar .sidebar-menu > li:hover > a,
+.skin-black .main-sidebar .sidebar-menu > li.active > a {
+  color: var(--p-destaque); background: var(--p-papel);
+  border-left-color: var(--p-destaque);
+}
+.skin-black .main-sidebar .sidebar-menu > li > .treeview-menu {
+  background: var(--p-papel);
+}
+.skin-black .main-sidebar .treeview-menu > li > a { color: var(--p-mudo); }
+.skin-black .main-sidebar .treeview-menu > li.active > a,
+.skin-black .main-sidebar .treeview-menu > li > a:hover {
+  color: var(--p-destaque);
+}
+.skin-black .user-panel > .info,
+.skin-black .user-panel > .info > a { color: var(--p-texto); }
+
+/* ---- Conteúdo e boxes ---- */
+.content-header h1, .content-header .h1 {
+  color: var(--p-tinta); font-family: var(--aedi-fonte);
+  font-size: 22px;
+}
+.box {
+  border-top: 3px solid var(--p-linha); border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .08);
+}
+.box.box-solid > .box-header { border-bottom: 1px solid var(--p-linha); }
+.box-header { color: var(--p-tinta); }
+.box-header > .box-title {
+  color: var(--p-tinta); font-family: var(--aedi-fonte);
+  font-size: 15px; font-weight: 700;
+}
+.box-header > .box-tools .btn { color: var(--p-mudo); }
+.box-body { color: var(--p-texto); }
+.box-footer { border-top: 1px solid var(--p-linha); background: none; }
+.small-box > .small-box-footer { color: var(--p-mudo); background: none; }
+
+/* ---- Abas (nav-tabs / nav-pills) ---- */
+.nav-tabs > li > a { color: var(--p-tinta); }
+.nav-tabs > li > a:hover { color: var(--p-destaque); }
+.nav-tabs > li.active > a,
+.nav-tabs > li.active > a:hover,
+.nav-tabs > li.active > a:focus {
+  color: var(--p-destaque); border: 1px solid var(--p-linha);
+  border-bottom-color: transparent;
+}
+.nav-pills > li.active > a,
+.nav-pills > li.active > a:hover,
+.nav-pills > li.active > a:focus {
+  background: var(--p-destaque);
+}
+
+/* ---- Botões ---- */
+.btn-primary, .btn-primary:hover, .btn-primary:focus {
+  background: var(--p-destaque); border-color: var(--p-destaque); color: #fff;
+}
+.btn-default {
+  background: var(--p-papel); border-color: var(--p-linha);
+  color: var(--p-tinta);
+}
+.btn-default:hover, .btn-default:focus {
+  background: var(--p-superficie); color: var(--p-tinta);
+}
+.btn-link { color: var(--p-destaque); }
+
+/* ---- Controlbar (right sidebar) ---- */
+.controlbar {
+  background: var(--p-papel); color: var(--p-texto);
+  border-left: 1px solid var(--p-linha);
+  font-family: var(--aedi-fonte);
+}
+.controlbar .nav-tabs > li > a { color: var(--p-tinta); }
+.controlbar .nav-tabs > li.active > a { color: var(--p-destaque); }
+.aedi-tema-casa { padding: 14px; }
+
+/* ---- Formulários ---- */
+.form-control:focus {
+  border-color: var(--p-destaque);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--p-destaque) 25%, transparent);
+}

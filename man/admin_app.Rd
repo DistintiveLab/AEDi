@@ -4,7 +4,7 @@
 \alias{admin_app}
 \title{Painel admin (somente leitura) do lote de um projeto}
 \usage{
-admin_app(raiz = NULL, projeto = NULL, titulo = NULL)
+admin_app(raiz = NULL, projeto = NULL, titulo = NULL, tema = NULL)
 }
 \arguments{
 \item{raiz}{raiz do projeto orquestrado (default: diretorio corrente);
@@ -15,6 +15,11 @@ define o lote (\verb{coleta/}) e o projeto no controle (\code{basename})}
 lote hospedado em outro caminho}
 
 \item{titulo}{titulo da janela/aba}
+
+\item{tema}{paleta do tema gov.br/pb: \code{"govbr"} (azul) ou \code{"pb"}
+(preto e branco com o roxo da Distintive); default (NULL) resolve
+pela variavel de ambiente \code{aedi_paleta}. O botao de alternancia na
+navbar troca em tempo real e persiste no navegador}
 }
 \value{
 objeto \code{shiny_app} (usar via \code{\link[=deploy_admin]{deploy_admin()}} ou

@@ -14,7 +14,8 @@ test_that("deploy_admin grava launcher fina e idempotente com sobrescrever", {
   expect_true(file.exists(file.path(dir_app, "app.R")))
   expect_true(file.exists(file.path(dir_app, "README.md")))
   linhas <- readLines(file.path(dir_app, "app.R"))
-  expect_true(any(grepl('AEDi::admin_app\\(raiz = "\\.\\."\\)', linhas)))
+  expect_true(any(grepl('AEDi::admin_app\\(raiz = "\\.\\.", tema = "govbr"\\)',
+                        linhas)))
   expect_error(parse(file.path(dir_app, "app.R")), NA)
 
   # sem sobrescrever, recusa; com sobrescrever, regenera

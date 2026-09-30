@@ -4,7 +4,12 @@
 \alias{deploy_admin}
 \title{Materializa o painel admin do projeto (launcher)}
 \usage{
-deploy_admin(diretorio = "admin", raiz = NULL, sobrescrever = FALSE)
+deploy_admin(
+  diretorio = "admin",
+  raiz = NULL,
+  tema = NULL,
+  sobrescrever = FALSE
+)
 }
 \arguments{
 \item{diretorio}{caminho do diretorio da app, relativo ao projeto
@@ -12,6 +17,10 @@ deploy_admin(diretorio = "admin", raiz = NULL, sobrescrever = FALSE)
 
 \item{raiz}{raiz do projeto orquestrado (default: diretorio corrente);
 usada apenas para nomear o projeto no README}
+
+\item{tema}{paleta do tema visual, \code{"govbr"} ou \code{"pb"} (default: NULL
+resolve a variavel de ambiente \code{aedi_paleta} e, sem ela, \code{"govbr"});
+fixada na launcher para o painel abrir sempre na mesma paleta}
 
 \item{sobrescrever}{substitui um app.R ja existente (default FALSE)}
 }

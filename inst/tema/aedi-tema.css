@@ -1,0 +1,39 @@
+/* Núcleo de tema do AEDi: variáveis das duas paletas institucionais,
+   compartilhadas pelo painel de indicadores, pelo admin e pelo app AEDi.
+   Default gov.br (azul #1351B4) em :root; preto e branco com o roxo da
+   Distintive (#78529D) via classe aedi-pb no <body>, alternada pelo
+   aedi-tema.js (persiste em localStorage "aedi_paleta"). Consumers só
+   usam var(--p-*) — nunca cores literais. */
+
+:root {
+  --aedi-fonte: Rawline, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --p-tinta: #1351B4;          /* titulos, marca, abas ativas */
+  --p-destaque: #1351B4;       /* acoes primarias, foco */
+  --p-destaque-hover: #0C3F91;
+  --p-realce: #FFCD07;         /* sublinha/realce gov.br */
+  --p-texto: #333333;
+  --p-mudo: #656565;
+  --p-papel: #FFFFFF;
+  --p-superficie: #F2F5FA;     /* hero, cards de fundo */
+  --p-linha: #D9E0EC;
+}
+body.aedi-pb {
+  --p-tinta: #1B1B1B;
+  --p-destaque: #78529D;
+  --p-destaque-hover: #5E3F82;
+  --p-realce: #C9B9DE;         /* roxo claro da marca */
+  --p-texto: #242424;
+  --p-mudo: #6B6B6B;
+  --p-superficie: #F7F5FA;
+  --p-linha: #E4E1EA;
+}
+
+/* Botão de alternância de paleta (aedi_tema_botao()): o JS troca o
+   rotulo/aria conforme a paleta ativa ("Preto e branco" / "Cores Gov.br") */
+.aedi-tema-btn {
+  min-height: 34px; height: 34px; padding: 5px 12px; font-size: 13px;
+  font-weight: 600; border: 1px solid var(--p-linha); border-radius: 6px;
+  background: var(--p-papel); color: var(--p-tinta); cursor: pointer;
+}
+.aedi-tema-btn:hover { background: var(--p-superficie); }
+.aedi-tema-btn::before { content: "\25CF\00A0"; color: var(--p-destaque); }

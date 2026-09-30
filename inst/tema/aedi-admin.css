@@ -1,0 +1,81 @@
+/* Chrome do painel admin (admin_app) sobre o núcleo do tema AEDi
+   (aedi-tema.css): navbar/tabs/botões/DT/verbatim consumindo as
+   variáveis --p-*, alternáveis entre gov.br e preto-e-branco pela
+   classe aedi-pb no <body>. */
+
+body {
+  background: var(--p-papel); color: var(--p-texto);
+  font-family: var(--aedi-fonte); font-size: 15px; line-height: 1.5;
+}
+h1, h2, h3, h4 { color: var(--p-tinta); font-family: var(--aedi-fonte); }
+a { color: var(--p-destaque); }
+a:hover { color: var(--p-destaque-hover); }
+:focus-visible { outline: 3px solid var(--p-destaque) !important; outline-offset: 2px; }
+
+/* ---- Navbar (navbarPage BS3) ---- */
+.navbar-default {
+  background: var(--p-papel); border: 0;
+  border-top: 3px solid var(--p-tinta); border-bottom: 1px solid var(--p-linha);
+}
+.navbar-default .navbar-brand {
+  display: inline-flex; align-items: center; gap: 14px;
+  color: var(--p-tinta); font-family: var(--aedi-fonte);
+  font-size: 17px; font-weight: 700; height: 54px; padding: 0 15px;
+}
+.navbar-default .navbar-brand:hover,
+.navbar-default .navbar-brand:focus {
+  color: var(--p-tinta); background: none;
+}
+.navbar-default .navbar-nav > li > a {
+  position: relative; color: var(--p-tinta);
+  font-family: var(--aedi-fonte); font-size: 14.5px; font-weight: 600;
+}
+.navbar-default .navbar-nav > li > a:hover,
+.navbar-default .navbar-nav > li > a:focus,
+.navbar-default .navbar-nav > .active > a,
+.navbar-default .navbar-nav > .active > a:hover,
+.navbar-default .navbar-nav > .active > a:focus {
+  color: var(--p-destaque); background: none;
+}
+.navbar-default .navbar-nav > li > a::after {
+  content: ''; position: absolute; left: 10px; right: 10px; bottom: 4px;
+  height: 4px; border-radius: 3px 3px 0 0; background: var(--p-realce);
+  opacity: 0; transition: opacity .15s ease;
+}
+.navbar-default .navbar-nav > li > a:hover::after,
+.navbar-default .navbar-nav > .active > a::after { opacity: 1; }
+
+/* ---- Conteúdo ---- */
+.tab-content { padding: 18px 6px 40px; }
+.help-block { color: var(--p-mudo); font-size: 13px; }
+pre, .shiny-text-output[id$="cabecalho"] {
+  background: var(--p-superficie); color: var(--p-texto);
+  border: 1px solid var(--p-linha); border-radius: 8px;
+  font-family: var(--aedi-fonte); font-size: 13px; padding: 10px 14px;
+}
+.btn-default, .btn-default:hover {
+  background: var(--p-papel); border-color: var(--p-linha);
+  color: var(--p-tinta);
+}
+.btn-primary, .btn-primary:hover, .btn-primary:focus {
+  background: var(--p-destaque); border-color: var(--p-destaque); color: #fff;
+}
+
+/* ---- DataTables ---- */
+table.dataTable { font-family: var(--aedi-fonte); font-size: 13.5px; }
+table.dataTable thead th {
+  background: var(--p-superficie); color: var(--p-tinta);
+  border-bottom: 1px solid var(--p-linha);
+}
+table.dataTable tbody tr:hover td { background: var(--p-superficie); }
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter {
+  color: var(--p-mudo); font-size: 12.5px;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  color: var(--p-tinta) !important;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+  background: var(--p-destaque); color: #fff !important; border: 0;
+}

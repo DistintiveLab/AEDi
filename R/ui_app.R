@@ -1,14 +1,28 @@
 #' App UI
 #'
+#' @param tema paleta do tema gov.br/pb: `"govbr"` (azul) ou `"pb"`
+#'   (preto e branco com o roxo da Distintive); default (NULL) resolve
+#'   pela variavel de ambiente `aedi_paleta`. O botao de alternancia na
+#'   barra lateral direita (aba Tema) troca em tempo real e persiste no
+#'   navegador
+#'
 #' @name app_ui
 #' @return tagList for app's UI
 #' @importFrom shiny tagList
 #' @importFrom shinydashboardPlus dashboardPage
 #' @importFrom shinymath mathInput
 #' @export
-app_ui <- function(){
+app_ui <- function(tema = NULL){
+
+  tema <- if (is.null(tema)) aedi_tema_paleta_default() else
+    match.arg(tema, c("govbr", "pb"))
 
   shiny::tagList(
+
+    # núcleo do tema (variáveis --p-*, toggle gov.br/pb) + chrome do app
+    aedi_tema_recursos(tema),
+    htmltools::includeCSS(
+      system.file("tema", "aedi-app.css", package = "AEDi")),
 
     # adding external resources
     add_external_resources(),
