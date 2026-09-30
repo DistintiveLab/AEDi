@@ -1,3 +1,18 @@
+# AEDi 0.8.1
+
+## Correções
+
+- Aba "Atualização" do app: `listar_scripts_coleta()` com raiz sem
+  `coleta/` (app rodando fora da raiz do projeto) devolvia `NA` em vez
+  de `character(0)` — `paste0(character(0), ".ignore")` retorna
+  `".ignore"` e `arqs[TRUE]` num vetor vazio vira `NA` — o que
+  aparecia como uma linha em branco com botão "Atualizar" que
+  notificava "Script 'NA' não encontrado em coleta/". Agora devolve
+  `character(0)`, `.tabela_status_lote()` retorna tabela vazia (0
+  linhas, sem NA) quando não há lote e a aba mostra a raiz consultada
+  ("lote: .../coleta | projeto: ...") para tornar problemas de
+  working dir evidentes.
+
 # AEDi 0.8.0
 
 ## Tema institucional unificado (gov.br / preto e branco) no painel, admin e app

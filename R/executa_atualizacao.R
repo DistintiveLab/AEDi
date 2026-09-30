@@ -43,6 +43,11 @@ log_messages <- list(
 listar_scripts_coleta <- function(raiz = .aedi_raiz()) {
   dir_coleta <- file.path(raiz, "coleta")
   arqs <- list.files(dir_coleta, pattern = "\\.R$", ignore.case = TRUE)
+  # sem coleta/ ou sem .R: character(0). (paste0(character(0), ".ignore")
+  # devolve ".ignore" — length 1 — e arqs[TRUE] num vetor vazio vira NA,
+  # que aparecia como linha em branco com botao "Atualizar" na aba
+  # Atualizacao quando o app rodava com cwd sem coleta/)
+  if (!length(arqs)) return(character(0))
   ok <- !file.exists(file.path(dir_coleta, paste0(arqs, ".ignore")))
   arqs[ok]
 }
