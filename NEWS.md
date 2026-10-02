@@ -1,3 +1,19 @@
+# AEDi 0.8.1.9000
+
+## Contatos do header com logo configurável
+
+- Boxes do dropdown "Contato" do app ganham avatar (logo redondo de
+  40 px ao lado do nome/função): o 5º campo opcional de cada entrada de
+  `aedi_contatos` (`"nome|função|telefone|email|logo"`) define o logo
+  do box (arquivo local, URL http(s) ou caminho relativo a
+  `inst/app/www/`, mesma resolução de `aedi_logo`); `"none"` ou `"-"`
+  desliga. Sem 5º campo, vale a nova env `aedi_contato_logo` e, em
+  última instância, o padrão quadrado da marca
+  (`www/aedi-innovations-Square.png`) — no default o box da Distintive
+  traz o logo e o do autor fica sem. Suporte: `resolver_logo_src()`
+  foi fatorado na genérica `resolver_marca_src()` e o novo
+  `resolver_logo_contato()` decide o logo de cada box.
+
 # AEDi 0.8.1
 
 ## Correções
