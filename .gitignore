@@ -13,8 +13,9 @@
 *.sqlite
 *.sqlite3
 
-# Caches de dados brutos (volumosos, regeneráveis)
-coleta/cache/
+# Workspace de execução do AEDi (coleta gerada na raiz de onde o app roda;
+# o lote versionado vive no projeto concreto, ex.: pndr_dashboard/coleta)
+coleta/
 manipula/cache/
 documenta/cache/
 visualiza/cache/
@@ -31,7 +32,4 @@ data-raw/testdata/**/*.7z
 
 # Rascunhos e backups locais (não são fonte do pacote)
 AGENTSbckp.md
-coleta/diagnostico_objetivo2_3_dw.R.ignore
-coleta/governativas4_aedi_copia.R
-coleta/sust2_sem_microdados_so_planilhas.R
 data/sidrameta_bckp.rda
